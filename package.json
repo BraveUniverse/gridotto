@@ -1,0 +1,36 @@
+{
+  "name": "gridotto",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "export": "next export",
+    "deploy": "next build && next export",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@erc725/erc725.js": "^0.27.2",
+    "@headlessui/react": "^2.0.0",
+    "@heroicons/react": "^2.0.0",
+    "@lukso/up-provider": "^0.3.5",
+    "next": "15.2.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "web3": "^4.5.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.18",
+    "babel-plugin-transform-remove-console": "^6.9.4",
+    "eslint": "^9",
+    "eslint-config-next": "15.2.1",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
