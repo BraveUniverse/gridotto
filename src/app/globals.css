@@ -1,0 +1,353 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --border-radius-sm: 0.375rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-xl: 1rem;
+  --border-radius-2xl: 1.5rem;
+  
+  --color-primary: #FF2975;
+  --color-primary-hover: #E02568;
+  --color-secondary: #1D1D1F;
+  --color-secondary-hover: #2D2D2F;
+  --color-background: #FFFFFF;
+  --color-background-secondary: #F9F9F9;
+  --color-background-tertiary: #EDEDED;
+  --color-text: #1D1D1F;
+  --color-text-secondary: #6B6B6B;
+  --color-border: #E5E5E5;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  --transition-base: all 0.2s ease-in-out;
+  --transition-slow: all 0.3s ease-in-out;
+  --transition-fast: all 0.1s ease-in-out;
+  
+  --font-size-base: clamp(16px, 2.2vw, 18px);
+  --font-size-lg: clamp(18px, 2.8vw, 22px);
+  --font-size-xl: clamp(22px, 3.2vw, 26px);
+  --font-size-2xl: clamp(26px, 3.8vw, 32px);
+  --font-size-3xl: clamp(32px, 4.5vw, 38px);
+  --font-size-4xl: clamp(38px, 5.5vw, 46px);
+  --spacing-xs: clamp(6px, 0.8vw, 10px);
+  --spacing-sm: clamp(10px, 1.5vw, 16px);
+  --spacing-md: clamp(16px, 2.2vw, 24px);
+  --spacing-lg: clamp(24px, 3vw, 32px);
+  --spacing-xl: clamp(32px, 4vw, 48px);
+  --spacing-2xl: clamp(48px, 5vw, 64px);
+  
+  --font-sans: 'Montserrat', sans-serif;
+  --background: #FFFFFF;
+  --foreground: #1D1D1F;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Tailwind font-family utility */
+@layer utilities {
+  .font-montserrat {
+    font-family: 'Montserrat', sans-serif;
+  }
+  
+  .text-responsive-xs {
+    font-size: clamp(12px, 1.8vw, 14px);
+  }
+  
+  .text-responsive-sm {
+    font-size: clamp(14px, 2vw, 16px);
+  }
+  
+  .text-responsive-base {
+    font-size: var(--font-size-base);
+  }
+  
+  .text-responsive-lg {
+    font-size: var(--font-size-lg);
+  }
+  
+  .text-responsive-xl {
+    font-size: var(--font-size-xl);
+  }
+  
+  .text-responsive-2xl {
+    font-size: var(--font-size-2xl);
+  }
+  
+  .text-responsive-3xl {
+    font-size: var(--font-size-3xl);
+  }
+  
+  .text-responsive-4xl {
+    font-size: var(--font-size-4xl);
+  }
+  
+  .p-responsive-xs {
+    padding: var(--spacing-xs);
+  }
+  
+  .p-responsive-sm {
+    padding: var(--spacing-sm);
+  }
+  
+  .p-responsive-md {
+    padding: var(--spacing-md);
+  }
+  
+  .p-responsive-lg {
+    padding: var(--spacing-lg);
+  }
+  
+  .m-responsive-xs {
+    margin: var(--spacing-xs);
+  }
+  
+  .m-responsive-sm {
+    margin: var(--spacing-sm);
+  }
+  
+  .m-responsive-md {
+    margin: var(--spacing-md);
+  }
+  
+  .m-responsive-lg {
+    margin: var(--spacing-lg);
+  }
+  
+  .gap-responsive-xs {
+    gap: var(--spacing-xs);
+  }
+  
+  .gap-responsive-sm {
+    gap: var(--spacing-sm);
+  }
+  
+  .gap-responsive-md {
+    gap: var(--spacing-md);
+  }
+  
+  .gap-responsive-lg {
+    gap: var(--spacing-lg);
+  }
+}
+
+/* Responsive tasarım için */
+html, body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+/* iframe içinde düzgün görünüm için */
+.iframe-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: 100%;
+  padding: var(--spacing-lg);
+}
+
+/* Butonlar için responsive stil */
+.btn {
+  border-radius: var(--border-radius-md);
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  margin: var(--spacing-xs);
+  width: 100%;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-secondary {
+  background-color: var(--color-background-tertiary);
+  color: var(--color-text);
+}
+
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: clamp(14px, 1.8vw, 16px);
+}
+
+.btn-md {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+}
+
+.btn-lg {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-lg);
+}
+
+/* Responsive ayarlar */
+@media (max-width: 768px) {
+  .container {
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+    max-width: 100%;
+  }
+  
+  .btn-md {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 14px;
+  }
+  
+  /* Mobil cihazlarda tutarlı boşluklar */
+  .p-responsive-lg {
+    padding: var(--spacing-md);
+  }
+  
+  .m-responsive-lg {
+    margin: var(--spacing-md);
+  }
+  
+  .gap-responsive-lg {
+    gap: var(--spacing-md);
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding-left: 4px;
+    padding-right: 4px;
+    max-width: 100%;
+  }
+  
+  .btn-lg {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 16px;
+  }
+  
+  .btn-md {
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+  
+  /* Küçük ekranlarda daha kompakt görünüm */
+  h1, h2, h3 {
+    margin-top: 0.3em;
+    margin-bottom: 0.3em;
+  }
+  
+  .space-y-responsive-xl > * + * {
+    margin-top: 0.8rem;
+  }
+}
+
+/* Touch device optimizations */
+.touch-action-pan-y {
+  touch-action: pan-y;
+}
+
+.touch-action-manipulation {
+  touch-action: manipulation;
+}
+
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+/* Mobile Modal Touch Scrolling Fix */
+@media (max-width: 768px) {
+  /* Fix for iOS and Android touch scrolling */
+  .overflow-touch {
+    -webkit-overflow-scrolling: touch !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+  }
+  
+  /* Fixed Modal Content */
+  .modal-content-mobile {
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: touch !important;
+  }
+  
+  /* Better touch targets on mobile */
+  button, a, input, select, textarea {
+    min-height: 44px; /* Apple recommended minimum touch target size */
+  }
+  
+  /* Force mobile keyboard to not zoom */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Extreme modal fix for stubborn browsers */
+  .headlessui-dialog-panel {
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+  
+  /* Fix dialog scroll issues */
+  [role="dialog"] {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* Admin Panel specific fixes */
+  .admin-panel-container {
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+}
+
+/* Tailwind utility overrides for better scrolling */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* For Safari momentum scrolling */
+@supports (-webkit-touch-callout: none) {
+  .safari-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: scroll;
+  }
+}
