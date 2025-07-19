@@ -4,8 +4,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  basePath: '/miniapps/gridotto',
-  assetPrefix: '/miniapps/gridotto/',
+  // basePath: '/miniapps/gridotto',
+  // assetPrefix: '/miniapps/gridotto/',
   images: {
     unoptimized: true,
   },

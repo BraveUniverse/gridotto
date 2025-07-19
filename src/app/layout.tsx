@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   description: 'Experience the future of decentralized lotteries with multi-asset support, social features, and fair prize distribution on LUKSO blockchain.',
   keywords: 'lottery, blockchain, LUKSO, NFT, token, decentralized, Web3',
   authors: [{ name: 'Gridotto Team' }],
+  metadataBase: new URL('https://gridotto.com'),
   openGraph: {
     title: 'Gridotto | Next-Gen Lottery Platform',
     description: 'The most advanced lottery platform on LUKSO blockchain',
@@ -32,8 +33,13 @@ export const metadata: Metadata = {
     title: 'Gridotto | Next-Gen Lottery Platform',
     description: 'Experience the future of decentralized lotteries',
     images: ['/twitter-image.png']
-  },
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  }
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: '#FF2975'
 }
 
