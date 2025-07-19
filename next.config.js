@@ -6,7 +6,6 @@ const nextConfig = {
   },
   basePath: '/miniapps/gridotto',
   assetPrefix: '/miniapps/gridotto/',
-  output: 'export',
   images: {
     unoptimized: true,
   },

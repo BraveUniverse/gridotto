@@ -32,6 +32,8 @@ export interface UserDraw {
   tokenAddress?: string;
   nftContract?: string;
   nftTokenIds?: string[];
+  prizeModel?: number;
+  totalWinners?: number;
 }
 
 export const useGridottoContract = () => {

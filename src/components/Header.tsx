@@ -9,7 +9,7 @@ import {
   XMarkIcon,
   WalletIcon,
   PlusIcon,
-  ViewGridIcon,
+  Squares2X2Icon,
   UserCircleIcon,
   ChartBarIcon,
   CogIcon
@@ -31,8 +31,8 @@ export const Header = () => {
   }, []);
 
   const navigation = [
-    { name: 'Home', href: '/', icon: ViewGridIcon },
-    { name: 'All Draws', href: '/draws', icon: ViewGridIcon },
+    { name: 'Home', href: '/', icon: Squares2X2Icon },
+    { name: 'All Draws', href: '/draws', icon: Squares2X2Icon },
     { name: 'Create Draw', href: '/create-draw', icon: PlusIcon },
     { name: 'Leaderboard', href: '/leaderboard', icon: ChartBarIcon },
     { name: 'My Profile', href: '/profile', icon: UserCircleIcon },
