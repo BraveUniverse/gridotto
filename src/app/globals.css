@@ -27,12 +27,12 @@
     
     /* Text Colors */
     --text-primary: 255 255 255;
-    --text-secondary: 200 200 210;
-    --text-tertiary: 150 150 160;
+    --text-secondary: 220 220 230;
+    --text-tertiary: 180 180 190;
     
     /* Glass Effect Colors */
-    --glass-bg: 255 255 255 0.03;
-    --glass-border: 255 255 255 0.1;
+    --glass-bg: 255 255 255 0.06;
+    --glass-border: 255 255 255 0.15;
     --glass-shadow: 0 0 0 0.5;
     
     /* Status Colors */
@@ -160,12 +160,13 @@ body::after {
   
   /* Primary Button */
   .btn-primary {
-    @apply relative px-6 py-3 rounded-lg font-medium text-white overflow-hidden;
+    @apply relative px-6 py-3 rounded-lg font-semibold text-white overflow-hidden;
     background: linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--primary-dark)) 100%);
     box-shadow: 
-      0 4px 24px rgba(var(--primary), 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      0 4px 24px rgba(var(--primary), 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
     transition: all var(--animation-base) ease;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
   
   .btn-primary::before {
@@ -193,16 +194,17 @@ body::after {
   /* Secondary Button */
   .btn-secondary {
     @apply relative px-6 py-3 rounded-lg font-medium text-white overflow-hidden;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(var(--blur-sm));
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     transition: all var(--animation-base) ease;
   }
   
   .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
     transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
   }
   
   /* Input Styles */
