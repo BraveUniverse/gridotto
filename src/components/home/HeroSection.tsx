@@ -17,17 +17,33 @@ export const HeroSection = () => {
   const { getCurrentDrawInfo, getMonthlyDrawInfo } = useGridottoContract();
   const [weeklyPool, setWeeklyPool] = useState(0);
   const [monthlyPool, setMonthlyPool] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadPools = async () => {
-      const weekly = await getCurrentDrawInfo();
-      const monthly = await getMonthlyDrawInfo();
-      if (weekly) setWeeklyPool(Number(weekly.prizePool));
-      if (monthly) setMonthlyPool(Number(monthly.prizePool));
+      try {
+        setLoading(true);
+        const [weekly, monthly] = await Promise.all([
+          getCurrentDrawInfo(),
+          getMonthlyDrawInfo()
+        ]);
+        
+        if (weekly) setWeeklyPool(parseFloat(weekly.prizePool));
+        if (monthly) setMonthlyPool(parseFloat(monthly.prizePool));
+      } catch (error) {
+        console.error('Error loading pools:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     
     if (isConnected) {
       loadPools();
+      // Refresh every 30 seconds
+      const interval = setInterval(loadPools, 30000);
+      return () => clearInterval(interval);
+    } else {
+      setLoading(false);
     }
   }, [isConnected, getCurrentDrawInfo, getMonthlyDrawInfo]);
 
@@ -80,11 +96,23 @@ export const HeroSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mb-12">
           <div className="glass-card p-6">
             <h3 className="text-sm text-gray-400 mb-2">Weekly Prize Pool</h3>
-            <p className="text-3xl font-bold gradient-text">{weeklyPool.toFixed(2)} LYX</p>
+            {loading ? (
+              <div className="h-8 bg-white/10 rounded animate-pulse"></div>
+            ) : isConnected ? (
+              <p className="text-3xl font-bold gradient-text">{weeklyPool.toFixed(2)} LYX</p>
+            ) : (
+              <p className="text-sm text-gray-500">Connect wallet to view</p>
+            )}
           </div>
           <div className="glass-card p-6">
             <h3 className="text-sm text-gray-400 mb-2">Monthly Prize Pool</h3>
-            <p className="text-3xl font-bold gradient-text">{monthlyPool.toFixed(2)} LYX</p>
+            {loading ? (
+              <div className="h-8 bg-white/10 rounded animate-pulse"></div>
+            ) : isConnected ? (
+              <p className="text-3xl font-bold gradient-text">{monthlyPool.toFixed(2)} LYX</p>
+            ) : (
+              <p className="text-sm text-gray-500">Connect wallet to view</p>
+            )}
           </div>
         </div>
 

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { DrawCard } from '@/components/draws/DrawCard';
 import { DrawFilters } from '@/components/draws/DrawFilters';
+import { useGridottoContract } from '@/hooks/useGridottoContract';
+import { useUPProvider } from '@/hooks/useUPProvider';
 import { 
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -11,40 +13,37 @@ import {
   ArrowDownIcon 
 } from '@heroicons/react/24/outline';
 
-// Mock data - will be replaced with API calls
-const mockDraws = Array.from({ length: 20 }, (_, i) => ({
-  id: i + 1,
-  type: i % 3 === 0 ? 'PLATFORM' : 'USER',
-  title: [
-    'Weekly Mega Draw',
-    'Rare NFT Collection',
-    'Community Token Pool',
-    'VIP Exclusive Draw',
-    'Artist NFT Drop',
-    'DeFi Token Lottery'
-  ][i % 6],
-  creator: `0x${Math.random().toString(16).substr(2, 8)}...${Math.random().toString(16).substr(2, 4)}`,
-  prizePool: Math.floor(Math.random() * 10000) + 100,
-  ticketPrice: [0.01, 0.05, 0.1, 0.5, 1][Math.floor(Math.random() * 5)],
-  ticketsSold: Math.floor(Math.random() * 5000),
-  maxTickets: Math.floor(Math.random() * 5000) + 5000,
-  endTime: Date.now() + Math.floor(Math.random() * 604800000), // Random time within a week
-  drawType: ['LYX', 'TOKEN', 'NFT'][i % 3],
-  isMultiWinner: i % 4 === 0,
-  winnerCount: i % 4 === 0 ? Math.floor(Math.random() * 10) + 1 : 1,
-  tokenSymbol: i % 3 === 1 ? ['USDT', 'USDC', 'DAI', 'LINK'][i % 4] : undefined,
-  nftImage: i % 3 === 2 ? '/api/placeholder/400/400' : undefined
-}));
+interface Draw {
+  id: number;
+  type: 'PLATFORM' | 'USER';
+  title: string;
+  creator: string;
+  prizePool: number;
+  ticketPrice: number;
+  ticketsSold: number;
+  maxTickets: number;
+  endTime: number;
+  drawType: 'LYX' | 'TOKEN' | 'NFT';
+  isMultiWinner: boolean;
+  winnerCount?: number;
+  tokenSymbol?: string;
+  nftImage?: string;
+  tokenAddress?: string;
+  nftContract?: string;
+}
 
 type SortOption = 'endTime' | 'prizePool' | 'ticketPrice' | 'popularity';
 
 export default function DrawsPage() {
-  const [draws, setDraws] = useState(mockDraws);
-  const [filteredDraws, setFilteredDraws] = useState(mockDraws);
+  const { isConnected } = useUPProvider();
+  const { getActiveUserDraws, getCurrentDrawInfo, getMonthlyDrawInfo, getContractInfo } = useGridottoContract();
+  const [draws, setDraws] = useState<Draw[]>([]);
+  const [filteredDraws, setFilteredDraws] = useState<Draw[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('endTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     type: 'all',
     status: 'active',
@@ -52,6 +51,95 @@ export default function DrawsPage() {
     vipRequired: false,
     followRequired: false
   });
+
+  // Load draws from blockchain
+  useEffect(() => {
+    const loadDraws = async () => {
+      if (!isConnected) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const allDraws: Draw[] = [];
+
+        // Get platform draws
+        const [weeklyInfo, monthlyInfo, contractInfo] = await Promise.all([
+          getCurrentDrawInfo(),
+          getMonthlyDrawInfo(),
+          getContractInfo()
+        ]);
+
+        if (weeklyInfo && contractInfo) {
+          allDraws.push({
+            id: 0,
+            type: 'PLATFORM',
+            title: 'Weekly Mega Draw',
+            creator: 'Platform',
+            prizePool: parseFloat(weeklyInfo.prizePool),
+            ticketPrice: parseFloat(contractInfo.ticketPrice),
+            ticketsSold: parseInt(weeklyInfo.ticketCount),
+            maxTickets: 100000,
+            endTime: Date.now() + parseInt(weeklyInfo.remainingTime) * 1000,
+            drawType: 'LYX',
+            isMultiWinner: false
+          });
+        }
+
+        if (monthlyInfo && contractInfo) {
+          allDraws.push({
+            id: -1,
+            type: 'PLATFORM',
+            title: 'Monthly Grand Draw',
+            creator: 'Platform',
+            prizePool: parseFloat(monthlyInfo.prizePool),
+            ticketPrice: parseFloat(contractInfo.ticketPrice),
+            ticketsSold: parseInt(monthlyInfo.ticketCount),
+            maxTickets: 100000,
+            endTime: Date.now() + parseInt(monthlyInfo.remainingTime) * 1000,
+            drawType: 'LYX',
+            isMultiWinner: false
+          });
+        }
+
+        // Get user draws
+        const userDraws = await getActiveUserDraws();
+        
+        userDraws.forEach(draw => {
+          const drawType = draw.drawType === 0 ? 'LYX' : draw.drawType === 1 ? 'TOKEN' : 'NFT';
+          
+          allDraws.push({
+            id: draw.id,
+            type: 'USER',
+            title: `${drawType} Draw #${draw.id}`,
+            creator: draw.creator,
+            prizePool: parseFloat(draw.currentPrizePool),
+            ticketPrice: parseFloat(draw.ticketPrice),
+            ticketsSold: parseInt(draw.ticketsSold),
+            maxTickets: parseInt(draw.maxTickets),
+            endTime: parseInt(draw.endTime) * 1000,
+            drawType: drawType,
+            isMultiWinner: false,
+            tokenAddress: draw.tokenAddress,
+            nftContract: draw.nftContract
+          });
+        });
+
+        setDraws(allDraws);
+      } catch (error) {
+        console.error('Error loading draws:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDraws();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(loadDraws, 30000);
+    return () => clearInterval(interval);
+  }, [isConnected, getActiveUserDraws, getCurrentDrawInfo, getMonthlyDrawInfo, getContractInfo]);
 
   // Apply filters and search
   useEffect(() => {
@@ -74,6 +162,11 @@ export default function DrawsPage() {
         if (filters.type === 'nft') return draw.drawType === 'NFT';
         return true;
       });
+    }
+
+    // Status filter (only active draws for now)
+    if (filters.status === 'active') {
+      filtered = filtered.filter(draw => draw.endTime > Date.now());
     }
 
     // Sort
@@ -120,89 +213,117 @@ export default function DrawsPage() {
               All <span className="gradient-text">Draws</span>
             </h1>
             <p className="text-gray-400 text-lg">
-              Explore and participate in active lottery draws
+              {isConnected 
+                ? 'Explore and participate in active lottery draws'
+                : 'Connect your wallet to view and participate in draws'
+              }
             </p>
           </div>
 
-          {/* Search and Sort Bar */}
-          <div className="flex flex-col lg:flex-row gap-4 mb-8">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search draws..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input-glass pl-10 w-full"
-              />
+          {!isConnected ? (
+            <div className="glass-card p-12 text-center">
+              <p className="text-gray-400 text-lg">Please connect your Universal Profile to view draws</p>
             </div>
+          ) : (
+            <>
+              {/* Search and Sort Bar */}
+              <div className="flex flex-col lg:flex-row gap-4 mb-8">
+                {/* Search */}
+                <div className="flex-1 relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search draws..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="input-glass pl-10 w-full"
+                  />
+                </div>
 
-            {/* Sort Options */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="btn-secondary flex items-center space-x-2 lg:hidden"
-              >
-                <FunnelIcon className="w-5 h-5" />
-                <span>Filters</span>
-              </button>
+                {/* Sort Options */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="btn-secondary flex items-center space-x-2 lg:hidden"
+                  >
+                    <FunnelIcon className="w-5 h-5" />
+                    <span>Filters</span>
+                  </button>
 
-              {['endTime', 'prizePool', 'ticketPrice', 'popularity'].map((option) => (
-                <button
-                  key={option}
-                  onClick={() => handleSort(option as SortOption)}
-                  className={`hidden md:flex items-center space-x-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    sortBy === option
-                      ? 'bg-[rgb(var(--primary))] text-white'
-                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                  }`}
-                >
-                  <span>
-                    {option === 'endTime' && 'Time Left'}
-                    {option === 'prizePool' && 'Prize'}
-                    {option === 'ticketPrice' && 'Price'}
-                    {option === 'popularity' && 'Popular'}
-                  </span>
-                  {sortBy === option && (
-                    sortOrder === 'asc' ? 
-                      <ArrowUpIcon className="w-4 h-4" /> : 
-                      <ArrowDownIcon className="w-4 h-4" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex gap-8">
-            {/* Filters Sidebar - Desktop */}
-            <aside className="hidden lg:block w-64 flex-shrink-0">
-              <DrawFilters filters={filters} onFiltersChange={setFilters} />
-            </aside>
-
-            {/* Draws Grid */}
-            <div className="flex-1">
-              {/* Results Count */}
-              <p className="text-gray-400 mb-6">
-                Showing {filteredDraws.length} draws
-              </p>
-
-              {/* Grid */}
-              {filteredDraws.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredDraws.map((draw) => (
-                    <DrawCard key={draw.id} draw={draw} />
+                  {['endTime', 'prizePool', 'ticketPrice', 'popularity'].map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => handleSort(option as SortOption)}
+                      className={`hidden md:flex items-center space-x-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        sortBy === option
+                          ? 'bg-[rgb(var(--primary))] text-white'
+                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                      }`}
+                    >
+                      <span>
+                        {option === 'endTime' && 'Time Left'}
+                        {option === 'prizePool' && 'Prize'}
+                        {option === 'ticketPrice' && 'Price'}
+                        {option === 'popularity' && 'Popular'}
+                      </span>
+                      {sortBy === option && (
+                        sortOrder === 'asc' ? 
+                          <ArrowUpIcon className="w-4 h-4" /> : 
+                          <ArrowDownIcon className="w-4 h-4" />
+                      )}
+                    </button>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-400 text-lg mb-4">No draws found</p>
-                  <p className="text-gray-500">Try adjusting your filters or search query</p>
+              </div>
+
+              {/* Main Content */}
+              <div className="flex gap-8">
+                {/* Filters Sidebar - Desktop */}
+                <aside className="hidden lg:block w-64 flex-shrink-0">
+                  <DrawFilters filters={filters} onFiltersChange={setFilters} />
+                </aside>
+
+                {/* Draws Grid */}
+                <div className="flex-1">
+                  {/* Results Count */}
+                  <p className="text-gray-400 mb-6">
+                    {loading ? 'Loading draws...' : `Showing ${filteredDraws.length} draws`}
+                  </p>
+
+                  {/* Grid */}
+                  {loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="glass-card h-96 animate-pulse">
+                          <div className="p-6">
+                            <div className="h-6 bg-white/10 rounded mb-4"></div>
+                            <div className="h-4 bg-white/10 rounded w-2/3 mb-8"></div>
+                            <div className="h-20 bg-white/10 rounded mb-6"></div>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="h-16 bg-white/10 rounded"></div>
+                              <div className="h-16 bg-white/10 rounded"></div>
+                              <div className="h-16 bg-white/10 rounded"></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : filteredDraws.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {filteredDraws.map((draw) => (
+                        <DrawCard key={draw.id} draw={draw} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-gray-400 text-lg mb-4">No draws found</p>
+                      <p className="text-gray-500">Try adjusting your filters or search query</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </main>
 

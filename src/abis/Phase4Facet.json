@@ -1,0 +1,271 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "drawId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "creator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "enum LibGridottoStorage.DrawType",
+        "name": "drawType",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "enum LibGridottoStorage.PrizeModel",
+        "name": "prizeModel",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalWinners",
+        "type": "uint256"
+      }
+    ],
+    "name": "AdvancedDrawCreated",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "enum LibGridottoStorage.DrawType",
+        "name": "drawType",
+        "type": "uint8"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "ticketPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "duration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxTickets",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "initialPrize",
+            "type": "uint256"
+          },
+          {
+            "internalType": "enum LibGridottoStorage.ParticipationRequirement",
+            "name": "requirement",
+            "type": "uint8"
+          },
+          {
+            "internalType": "address",
+            "name": "requiredToken",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minTokenAmount",
+            "type": "uint256"
+          },
+          {
+            "components": [
+              {
+                "internalType": "enum LibGridottoStorage.PrizeModel",
+                "name": "model",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint256",
+                "name": "creatorContribution",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "addParticipationFees",
+                "type": "bool"
+              },
+              {
+                "internalType": "uint256",
+                "name": "participationFeePercent",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "totalWinners",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct LibGridottoStorage.DrawPrizeConfig",
+            "name": "prizeConfig",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "bool",
+                "name": "requireFollowing",
+                "type": "bool"
+              },
+              {
+                "internalType": "address",
+                "name": "followAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "minFollowerCount",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct LibGridottoStorage.LSP26Config",
+            "name": "lsp26Config",
+            "type": "tuple"
+          },
+          {
+            "internalType": "address",
+            "name": "tokenAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "nftContract",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes32[]",
+            "name": "nftTokenIds",
+            "type": "bytes32[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "tierNumber",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "winnerCount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "prizePercentage",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "fixedPrize",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "nftTokenId",
+                "type": "bytes32"
+              }
+            ],
+            "internalType": "struct LibGridottoStorage.TierConfig[]",
+            "name": "tiers",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct IGridottoFacet.AdvancedDrawConfig",
+        "name": "config",
+        "type": "tuple"
+      }
+    ],
+    "name": "createAdvancedDraw",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "drawId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "drawId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getDrawTiers",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "tierNumber",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "winnerCount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "prizePercentage",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "fixedPrize",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "nftTokenId",
+            "type": "bytes32"
+          }
+        ],
+        "internalType": "struct LibGridottoStorage.TierConfig[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "drawId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tier",
+        "type": "uint256"
+      }
+    ],
+    "name": "getTierNFTAssignment",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

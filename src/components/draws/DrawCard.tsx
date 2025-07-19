@@ -64,7 +64,7 @@ export const DrawCard = ({ draw }: DrawProps) => {
   const progress = (draw.ticketsSold / draw.maxTickets) * 100;
 
   return (
-    <Link href={`/draw/${draw.id}`}>
+    <Link href={`/draws/${draw.id}`}>
       <div className="glass-card h-full group cursor-pointer transition-all duration-300 hover:scale-[1.02]">
         {/* Header */}
         <div className="p-6 pb-4">

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useInView } from '@/hooks/useInView';
+import { useGridottoContract } from '@/hooks/useGridottoContract';
+import { useUPProvider } from '@/hooks/useUPProvider';
 
 interface StatProps {
   label: string;
@@ -17,7 +19,7 @@ const AnimatedStat = ({ label, value, suffix = '', prefix = '' }: StatProps) => 
   const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (isInView && !hasAnimated.current) {
+    if (isInView && !hasAnimated.current && value > 0) {
       hasAnimated.current = true;
       const duration = 2000;
       const steps = 60;
@@ -49,12 +51,70 @@ const AnimatedStat = ({ label, value, suffix = '', prefix = '' }: StatProps) => 
 };
 
 export const StatsSection = () => {
-  const stats = [
-    { label: 'Total Prize Pool', value: 50000, prefix: '', suffix: ' LYX' },
-    { label: 'Active Users', value: 12500, prefix: '', suffix: '+' },
-    { label: 'Draws Created', value: 3200, prefix: '', suffix: '' },
-    { label: 'Winners Paid', value: 8900, prefix: '', suffix: '+' },
-  ];
+  const { isConnected } = useUPProvider();
+  const { getCurrentDrawInfo, getMonthlyDrawInfo, getActiveUserDraws } = useGridottoContract();
+  const [stats, setStats] = useState([
+    { label: 'Total Prize Pool', value: 0, prefix: '', suffix: ' LYX' },
+    { label: 'Active Draws', value: 0, prefix: '', suffix: '' },
+    { label: 'Total Participants', value: 0, prefix: '', suffix: '+' },
+    { label: 'Tickets Sold', value: 0, prefix: '', suffix: '+' },
+  ]);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!isConnected) return;
+
+      try {
+        const [weeklyInfo, monthlyInfo, userDraws] = await Promise.all([
+          getCurrentDrawInfo(),
+          getMonthlyDrawInfo(),
+          getActiveUserDraws()
+        ]);
+
+        let totalPrizePool = 0;
+        let totalTickets = 0;
+        let activeDrawCount = 2; // Platform draws
+
+        // Add platform draws data
+        if (weeklyInfo) {
+          totalPrizePool += parseFloat(weeklyInfo.prizePool);
+          totalTickets += parseInt(weeklyInfo.ticketCount);
+        }
+
+        if (monthlyInfo) {
+          totalPrizePool += parseFloat(monthlyInfo.prizePool);
+          totalTickets += parseInt(monthlyInfo.ticketCount);
+        }
+
+        // Add user draws data
+        userDraws.forEach(draw => {
+          if (!draw.isCompleted) {
+            activeDrawCount++;
+            totalPrizePool += parseFloat(draw.currentPrizePool);
+            totalTickets += parseInt(draw.ticketsSold);
+          }
+        });
+
+        // Estimate unique participants (roughly 1 participant per 3 tickets)
+        const estimatedParticipants = Math.floor(totalTickets / 3);
+
+        setStats([
+          { label: 'Total Prize Pool', value: Math.floor(totalPrizePool), prefix: '', suffix: ' LYX' },
+          { label: 'Active Draws', value: activeDrawCount, prefix: '', suffix: '' },
+          { label: 'Total Participants', value: estimatedParticipants, prefix: '', suffix: '+' },
+          { label: 'Tickets Sold', value: totalTickets, prefix: '', suffix: '+' },
+        ]);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    };
+
+    loadStats();
+    
+    // Refresh every minute
+    const interval = setInterval(loadStats, 60000);
+    return () => clearInterval(interval);
+  }, [isConnected, getCurrentDrawInfo, getMonthlyDrawInfo, getActiveUserDraws]);
 
   return (
     <section className="py-24 px-4 relative">
@@ -72,7 +132,10 @@ export const StatsSection = () => {
             Platform <span className="gradient-text">Statistics</span>
           </h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Join thousands of users already experiencing the future of decentralized lotteries
+            {isConnected 
+              ? 'Real-time statistics from the LUKSO blockchain'
+              : 'Connect your wallet to see live statistics'
+            }
           </p>
         </div>
 
