@@ -1,37 +1,54 @@
-import type { Metadata, Viewport } from "next";
-import "./globals.css";
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter'
+})
 
 export const metadata: Metadata = {
-  title: "Gridotto",
-  description: "Transparent lottery on LUKSO blockchain",
-};
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-};
+  title: 'Gridotto | Next-Gen Lottery Platform on LUKSO',
+  description: 'Experience the future of decentralized lotteries with multi-asset support, social features, and fair prize distribution on LUKSO blockchain.',
+  keywords: 'lottery, blockchain, LUKSO, NFT, token, decentralized, Web3',
+  authors: [{ name: 'Gridotto Team' }],
+  openGraph: {
+    title: 'Gridotto | Next-Gen Lottery Platform',
+    description: 'The most advanced lottery platform on LUKSO blockchain',
+    type: 'website',
+    locale: 'en_US',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Gridotto Platform'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Gridotto | Next-Gen Lottery Platform',
+    description: 'Experience the future of decentralized lotteries',
+    images: ['/twitter-image.png']
+  },
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  themeColor: '#FF2975'
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <meta name="theme-color" content="#FF2975" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-      </head>
-      <body className="font-montserrat bg-white text-responsive-base">
-        <div className="iframe-container">
+    <html lang="en" className={inter.variable}>
+      <body className="font-sans antialiased">
+        <div className="min-h-screen flex flex-col">
           {children}
         </div>
       </body>
     </html>
-  );
+  )
 }
