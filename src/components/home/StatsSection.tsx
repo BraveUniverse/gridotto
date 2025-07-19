@@ -75,15 +75,15 @@ export const StatsSection = () => {
         let totalTickets = 0;
         let activeDrawCount = 2; // Platform draws
 
-        // Add platform draws data
-        if (weeklyInfo) {
-          totalPrizePool += parseFloat(weeklyInfo.prizePool);
-          totalTickets += parseInt(weeklyInfo.ticketCount);
+                // Add platform draws data
+        if (weeklyInfo && weeklyInfo.prizePool) {
+          totalPrizePool += parseFloat(weeklyInfo.prizePool) || 0;
+          totalTickets += parseInt(weeklyInfo.ticketCount) || 0;
         }
-
-        if (monthlyInfo) {
-          totalPrizePool += parseFloat(monthlyInfo.prizePool);
-          totalTickets += parseInt(monthlyInfo.ticketCount);
+        
+        if (monthlyInfo && monthlyInfo.prizePool) {
+          totalPrizePool += parseFloat(monthlyInfo.prizePool) || 0;
+          totalTickets += parseInt(monthlyInfo.ticketCount) || 0;
         }
 
         // Add user draws data
