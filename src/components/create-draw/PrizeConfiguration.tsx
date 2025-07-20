@@ -5,7 +5,6 @@ import { DrawData } from '@/types';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import AssetSelector from './AssetSelector';
 import { useUPProvider } from '@/hooks/useUPProvider';
-import { useLSP4DigitalAsset } from '@/hooks/useLSP4DigitalAsset';
 import Image from 'next/image';
 
 interface PrizeConfigurationProps {
@@ -16,7 +15,6 @@ interface PrizeConfigurationProps {
 export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurationProps) => {
   const { account } = useUPProvider();
   const [nftTokenIdInput, setNftTokenIdInput] = useState('');
-  const { metadata: selectedAssetMetadata } = useLSP4DigitalAsset(drawData.prizeAsset || null);
 
   const handleAddNFTTokenId = () => {
     if (nftTokenIdInput.trim()) {
@@ -83,28 +81,40 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
             </label>
             
             {/* Show selected asset if any */}
-            {drawData.prizeAsset && selectedAssetMetadata && (
+            {drawData.selectedAsset && (
               <div className="glass-card p-4 mb-4 flex items-center gap-4">
                 <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
-                  {selectedAssetMetadata.icon?.[0]?.url ? (
+                  {drawData.selectedAsset.metadata?.icon?.[0]?.url ? (
                     <Image
-                      src={selectedAssetMetadata.icon[0].url}
-                      alt={selectedAssetMetadata.name || 'Token'}
+                      src={drawData.selectedAsset.metadata.icon[0].url}
+                      alt={drawData.selectedAsset.name || 'Token'}
+                      width={64}
+                      height={64}
+                      className="object-cover"
+                    />
+                  ) : drawData.selectedAsset.metadata?.images?.[0]?.url ? (
+                    <Image
+                      src={drawData.selectedAsset.metadata.images[0].url}
+                      alt={drawData.selectedAsset.name || 'Token'}
                       width={64}
                       height={64}
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500" />
+                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-white">
+                        {drawData.selectedAsset.symbol?.charAt(0) || drawData.selectedAsset.name?.charAt(0) || '?'}
+                      </span>
+                    </div>
                   )}
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-medium text-white">{selectedAssetMetadata.name || 'Unknown Token'}</h4>
-                  <p className="text-sm text-gray-400">{selectedAssetMetadata.symbol || 'TOKEN'}</p>
-                  <p className="text-xs text-gray-500 font-mono">{drawData.prizeAsset}</p>
+                  <h4 className="font-medium text-white">{drawData.selectedAsset.name || 'Unknown Token'}</h4>
+                  <p className="text-sm text-gray-400">{drawData.selectedAsset.symbol || 'TOKEN'}</p>
+                  <p className="text-xs text-gray-500 font-mono">{drawData.selectedAsset.address}</p>
                 </div>
                 <button
-                  onClick={() => updateDrawData({ prizeAsset: '', selectedAsset: null })}
+                  onClick={() => updateDrawData({ prizeAsset: '', selectedAsset: undefined })}
                   className="text-red-400 hover:text-red-300 text-sm"
                 >
                   Change
@@ -113,7 +123,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
             )}
 
             {/* Asset Selector */}
-            {!drawData.prizeAsset && (
+            {!drawData.selectedAsset && (
               <AssetSelector
                 address={account}
                 onSelect={(asset) => {
@@ -143,7 +153,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
                 placeholder="Enter prize amount"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                {selectedAssetMetadata?.symbol || 'TOKEN'}
+                {drawData.selectedAsset?.symbol || 'TOKEN'}
               </span>
             </div>
           </div>
@@ -159,28 +169,40 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
             </label>
             
             {/* Show selected asset if any */}
-            {drawData.prizeAsset && selectedAssetMetadata && (
+            {drawData.selectedAsset && (
               <div className="glass-card p-4 mb-4 flex items-center gap-4">
                 <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
-                  {(selectedAssetMetadata.images?.[0]?.url || selectedAssetMetadata.icon?.[0]?.url) ? (
+                  {drawData.selectedAsset.metadata?.images?.[0]?.url ? (
                     <Image
-                      src={selectedAssetMetadata.images?.[0]?.url || selectedAssetMetadata.icon?.[0]?.url || ''}
-                      alt={selectedAssetMetadata.name || 'NFT'}
+                      src={drawData.selectedAsset.metadata.images[0].url}
+                      alt={drawData.selectedAsset.name || 'NFT'}
+                      width={64}
+                      height={64}
+                      className="object-cover"
+                    />
+                  ) : drawData.selectedAsset.metadata?.icon?.[0]?.url ? (
+                    <Image
+                      src={drawData.selectedAsset.metadata.icon[0].url}
+                      alt={drawData.selectedAsset.name || 'NFT'}
                       width={64}
                       height={64}
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-pink-500 to-rose-500" />
+                    <div className="w-full h-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-white">
+                        {drawData.selectedAsset.symbol?.charAt(0) || drawData.selectedAsset.name?.charAt(0) || '?'}
+                      </span>
+                    </div>
                   )}
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-medium text-white">{selectedAssetMetadata.name || 'Unknown NFT'}</h4>
-                  <p className="text-sm text-gray-400">{selectedAssetMetadata.symbol || 'NFT'}</p>
-                  <p className="text-xs text-gray-500 font-mono">{drawData.prizeAsset}</p>
+                  <h4 className="font-medium text-white">{drawData.selectedAsset.name || 'Unknown NFT'}</h4>
+                  <p className="text-sm text-gray-400">{drawData.selectedAsset.symbol || 'NFT'}</p>
+                  <p className="text-xs text-gray-500 font-mono">{drawData.selectedAsset.address}</p>
                 </div>
                 <button
-                  onClick={() => updateDrawData({ prizeAsset: '', selectedAsset: null })}
+                  onClick={() => updateDrawData({ prizeAsset: '', selectedAsset: undefined })}
                   className="text-red-400 hover:text-red-300 text-sm"
                 >
                   Change
@@ -189,7 +211,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
             )}
 
             {/* Asset Selector */}
-            {!drawData.prizeAsset && (
+            {!drawData.selectedAsset && (
               <AssetSelector
                 address={account}
                 onSelect={(asset) => {
