@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ReceivedAsset } from '@/hooks/useLSP5ReceivedAssets';
 import Web3 from 'web3';
+import ERC725js from '@erc725/erc725.js';
 
 interface NFTTokenSelectorProps {
   asset: ReceivedAsset;
@@ -18,6 +19,10 @@ interface TokenMetadata {
   description?: string;
   image?: string;
 }
+
+// LSP8 token metadata key for specific tokenId
+// keccak256('LSP8MetadataTokenURI') + bytes12(0) + tokenId
+const LSP8_METADATA_KEY_PREFIX = '0x1339e76a390b7b9ec9010000';
 
 export default function NFTTokenSelector({ 
   asset, 
@@ -41,7 +46,46 @@ export default function NFTTokenSelector({
       try {
         const web3Instance = new Web3(web3Provider);
         
-        // For each token, try to get metadata
+        // Create contract instance for LSP8
+        const nftContract = new web3Instance.eth.Contract([
+          {
+            inputs: [{ name: 'dataKey', type: 'bytes32' }],
+            name: 'getData',
+            outputs: [{ name: '', type: 'bytes' }],
+            stateMutability: 'view',
+            type: 'function'
+          },
+          {
+            inputs: [
+              { name: 'tokenId', type: 'bytes32' },
+              { name: 'dataKey', type: 'bytes32' }
+            ],
+            name: 'getDataForTokenId',
+            outputs: [{ name: '', type: 'bytes' }],
+            stateMutability: 'view',
+            type: 'function'
+          }
+        ], asset.address);
+
+        // Create ERC725 instance for decoding
+        const erc725 = new ERC725js(
+          [
+            {
+              name: 'LSP8MetadataTokenURI:<bytes32>',
+              key: '0x1339e76a390b7b9ec9010000<bytes32>',
+              keyType: 'Mapping',
+              valueType: 'bytes',
+              valueContent: 'VerifiableURI'
+            }
+          ],
+          asset.address,
+          web3Provider,
+          {
+            ipfsGateway: 'https://api.universalprofile.cloud/ipfs/'
+          }
+        );
+        
+        // For each token, get its metadata
         for (const tokenId of asset.tokenIds) {
           let metadata: TokenMetadata = { 
             tokenId,
@@ -49,33 +93,104 @@ export default function NFTTokenSelector({
           };
 
           try {
-            // Try to get metadata from the asset's general metadata
-            // Many LSP8 collections use the same base metadata for all tokens
-            if (asset.metadata) {
-              // Check if there's a base URI pattern
-              if (asset.metadata.description) {
-                metadata.description = asset.metadata.description;
-              }
-
-              // For images, check if there's a pattern or use collection image
-              if (asset.metadata.images?.[0]?.url || asset.metadata.icon?.[0]?.url) {
-                const baseImage = asset.metadata.images?.[0]?.url || asset.metadata.icon?.[0]?.url;
+            // Method 1: Try LSP8MetadataTokenURI with mapping
+            const metadataKey = LSP8_METADATA_KEY_PREFIX + tokenId.slice(2);
+            console.log(`Fetching metadata for token ${tokenId} with key ${metadataKey}`);
+            
+            const metadataBytes = await nftContract.methods.getData(metadataKey).call() as string;
+            
+            if (metadataBytes && metadataBytes !== '0x' && metadataBytes !== '0x0') {
+              try {
+                // Decode the VerifiableURI
+                const decoded = erc725.decodeData([{
+                  keyName: 'LSP8MetadataTokenURI:<bytes32>',
+                  dynamicKeyParts: tokenId,
+                  value: metadataBytes
+                }]);
                 
-                // Some NFTs use a pattern like {id} in the URL
-                if (baseImage.includes('{id}')) {
-                  metadata.image = baseImage.replace('{id}', parseInt(tokenId, 16).toString());
-                } else {
-                  // Use collection image as fallback
-                  metadata.image = baseImage;
+                if (decoded && decoded[0] && decoded[0].value) {
+                  const metadataValue = decoded[0].value as any;
+                  let metadataUrl = '';
+                  
+                  if (metadataValue.url) {
+                    metadataUrl = metadataValue.url;
+                  } else if (typeof metadataValue === 'string') {
+                    metadataUrl = metadataValue;
+                  }
+                  
+                  // Handle IPFS URLs
+                  if (metadataUrl.startsWith('ipfs://')) {
+                    metadataUrl = `https://api.universalprofile.cloud/ipfs/${metadataUrl.slice(7)}`;
+                  }
+                  
+                  console.log(`Fetching metadata from URL: ${metadataUrl}`);
+                  
+                  // Fetch the metadata JSON
+                  if (metadataUrl) {
+                    const response = await fetch(metadataUrl);
+                    if (response.ok) {
+                      const json = await response.json();
+                      
+                      // Handle both LSP4 and standard NFT metadata formats
+                      if (json.LSP4Metadata) {
+                        // LSP4 format
+                        metadata.name = json.LSP4Metadata.name || metadata.name;
+                        metadata.description = json.LSP4Metadata.description;
+                        
+                        if (json.LSP4Metadata.images && json.LSP4Metadata.images[0]) {
+                          metadata.image = json.LSP4Metadata.images[0].url;
+                          if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                            metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                          }
+                        } else if (json.LSP4Metadata.icon && json.LSP4Metadata.icon[0]) {
+                          metadata.image = json.LSP4Metadata.icon[0].url;
+                          if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                            metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                          }
+                        }
+                      } else {
+                        // Standard NFT metadata format
+                        metadata.name = json.name || metadata.name;
+                        metadata.description = json.description;
+                        
+                        if (json.image) {
+                          metadata.image = json.image.startsWith('ipfs://') 
+                            ? `https://api.universalprofile.cloud/ipfs/${json.image.slice(7)}`
+                            : json.image;
+                        }
+                      }
+                    }
+                  }
                 }
+              } catch (decodeErr) {
+                console.log('Error decoding metadata:', decodeErr);
+              }
+            } else {
+              // Method 2: Try standard LSP4Metadata key with getDataForTokenId
+              console.log(`Trying getDataForTokenId for token ${tokenId}`);
+              const lsp4MetadataKey = '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e';
+              
+              try {
+                const tokenMetadataBytes = await nftContract.methods.getDataForTokenId(tokenId, lsp4MetadataKey).call() as string;
+                
+                if (tokenMetadataBytes && tokenMetadataBytes !== '0x' && tokenMetadataBytes !== '0x0') {
+                  // Similar decoding logic as above
+                  console.log('Found metadata with getDataForTokenId');
+                }
+              } catch (err) {
+                console.log('getDataForTokenId failed:', err);
               }
             }
-
-            // If the collection has individual metadata per token, we could fetch it here
-            // But for now, we'll use the pattern-based approach which is more common
-            
           } catch (err) {
-            console.log(`Error processing metadata for token ${tokenId}:`, err);
+            console.log(`Error fetching metadata for token ${tokenId}:`, err);
+          }
+
+          // If no individual metadata found, use collection metadata
+          if (!metadata.image && asset.metadata) {
+            if (asset.metadata.images?.[0]?.url || asset.metadata.icon?.[0]?.url) {
+              const baseImage = asset.metadata.images?.[0]?.url || asset.metadata.icon?.[0]?.url;
+              metadata.image = baseImage;
+            }
           }
 
           metadatas.push(metadata);
