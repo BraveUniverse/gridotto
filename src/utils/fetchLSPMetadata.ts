@@ -58,11 +58,18 @@ export async function fetchLSP4Metadata(
     );
     
     // LSP4 verilerini çek
-    const [tokenNameData, tokenSymbolData, metadataData] = await Promise.all([
-      erc725.getData('LSP4TokenName').catch(() => null),
-      erc725.getData('LSP4TokenSymbol').catch(() => null),
-      erc725.getData('LSP4Metadata').catch(() => null)
-    ]);
+    let tokenNameData, tokenSymbolData, metadataData;
+    
+    try {
+      [tokenNameData, tokenSymbolData, metadataData] = await Promise.all([
+        erc725.getData('LSP4TokenName').catch(() => null),
+        erc725.getData('LSP4TokenSymbol').catch(() => null),
+        erc725.getData('LSP4Metadata').catch(() => null)
+      ]);
+    } catch (err) {
+      console.log('Error fetching LSP4 data:', err);
+      return null;
+    }
     
     const metadata: LSP4Metadata = {};
     
@@ -98,7 +105,8 @@ export async function fetchLSP4Metadata(
           });
           
           if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+            console.log(`HTTP error! Status: ${response.status}`);
+            return metadata;
           }
           
           const jsonData = await response.json();
@@ -147,14 +155,16 @@ export async function fetchLSP4Metadata(
             }
           }
         } catch (err) {
-          console.error('Error fetching metadata JSON:', err);
+          console.log('Error fetching metadata JSON:', err);
+          // Return what we have so far
+          return metadata;
         }
       }
     }
     
     return metadata;
   } catch (err) {
-    console.error('Error fetching LSP4 metadata:', err);
+    console.log('Error in fetchLSP4Metadata:', err);
     return null;
   }
 }

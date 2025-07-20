@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUPProvider } from './useUPProvider';
+import { fetchLSP4Metadata } from '@/utils/fetchLSPMetadata';
 import ERC725js from '@erc725/erc725.js';
 import LSP5ReceivedAssetsSchema from '@erc725/erc725.js/schemas/LSP5ReceivedAssets.json';
 import Web3 from 'web3';
@@ -55,6 +56,7 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
         } catch (err) {
           console.log('No LSP5 assets found or not a Universal Profile');
           setAssets([]);
+          setLoading(false);
           return;
         }
         
@@ -65,6 +67,14 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
           // Her asset için detayları çek
           for (const assetAddress of assetAddresses) {
             try {
+              // Skip if invalid address
+              if (!assetAddress || assetAddress === '0x0000000000000000000000000000000000000000') {
+                continue;
+              }
+
+              // Fetch LSP4 metadata
+              const metadata = await fetchLSP4Metadata(assetAddress, web3.currentProvider);
+              
               // Asset contract instance oluştur
               const assetContract = new web3.eth.Contract([
                 {
@@ -75,16 +85,9 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
                   type: 'function'
                 },
                 {
-                  inputs: [],
-                  name: 'name',
-                  outputs: [{ name: '', type: 'string' }],
-                  stateMutability: 'view',
-                  type: 'function'
-                },
-                {
-                  inputs: [],
-                  name: 'symbol',
-                  outputs: [{ name: '', type: 'string' }],
+                  inputs: [{ name: 'account', type: 'address' }],
+                  name: 'balanceOf',
+                  outputs: [{ name: '', type: 'uint256' }],
                   stateMutability: 'view',
                   type: 'function'
                 },
@@ -94,41 +97,39 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
                   outputs: [{ name: '', type: 'uint8' }],
                   stateMutability: 'view',
                   type: 'function'
-                },
-                {
-                  inputs: [{ name: 'account', type: 'address' }],
-                  name: 'balanceOf',
-                  outputs: [{ name: '', type: 'uint256' }],
-                  stateMutability: 'view',
-                  type: 'function'
                 }
               ], assetAddress);
 
-              // Interface kontrolü
-              const [isLSP7, isLSP8] = await Promise.all([
-                assetContract.methods.supportsInterface(INTERFACE_IDS.LSP7).call().catch(() => false),
-                assetContract.methods.supportsInterface(INTERFACE_IDS.LSP8).call().catch(() => false)
-              ]);
-
-              // Temel bilgileri çek
-              const [name, symbol] = await Promise.all([
-                assetContract.methods.name().call().catch(() => 'Unknown Asset') as Promise<string>,
-                assetContract.methods.symbol().call().catch(() => 'UNKNOWN') as Promise<string>
-              ]);
+              // Interface kontrolü - try/catch ile sarmalayalım
+              let isLSP7 = false;
+              let isLSP8 = false;
+              
+              try {
+                isLSP7 = await assetContract.methods.supportsInterface(INTERFACE_IDS.LSP7).call();
+              } catch (err) {
+                // Interface check failed, skip
+              }
+              
+              try {
+                isLSP8 = await assetContract.methods.supportsInterface(INTERFACE_IDS.LSP8).call();
+              } catch (err) {
+                // Interface check failed, skip
+              }
 
               const asset: ReceivedAsset = {
                 address: assetAddress,
-                name,
-                symbol,
-                tokenType: isLSP7 ? 'LSP7' : isLSP8 ? 'LSP8' : 'Unknown'
+                name: metadata?.name || 'Unknown Asset',
+                symbol: metadata?.symbol || 'UNKNOWN',
+                tokenType: isLSP7 ? 'LSP7' : isLSP8 ? 'LSP8' : 'Unknown',
+                metadata
               };
 
               // LSP7 için balance ve decimals bilgisini çek
               if (isLSP7) {
                 try {
                   const [balance, decimals] = await Promise.all([
-                    assetContract.methods.balanceOf(profileAddress).call() as Promise<any>,
-                    assetContract.methods.decimals().call().catch(() => 18) as Promise<number>
+                    assetContract.methods.balanceOf(profileAddress).call().catch(() => '0'),
+                    assetContract.methods.decimals().call().catch(() => 18)
                   ]);
                   asset.balance = balance ? balance.toString() : '0';
                   asset.decimals = Number(decimals);
@@ -141,11 +142,13 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
               // LSP8 için tokenIds çek (ileride eklenebilir)
               if (isLSP8) {
                 asset.tokenIds = [];
+                // TODO: Implement tokenIds fetching for LSP8
               }
 
               assetsData.push(asset);
             } catch (err) {
               console.error(`Error fetching asset ${assetAddress}:`, err);
+              // Continue with next asset
             }
           }
 
