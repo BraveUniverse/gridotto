@@ -159,69 +159,90 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
               const metadata = await fetchLSP4Metadata(assetAddress, web3.currentProvider);
               console.log(`Metadata for ${assetAddress}:`, metadata);
               
-              // Asset contract instance oluştur
-              const assetContract = new web3.eth.Contract([
-                {
-                  inputs: [{ name: 'interfaceId', type: 'bytes4' }],
-                  name: 'supportsInterface',
-                  outputs: [{ name: '', type: 'bool' }],
-                  stateMutability: 'view',
-                  type: 'function'
-                },
-                {
-                  inputs: [{ name: 'account', type: 'address' }],
-                  name: 'balanceOf',
-                  outputs: [{ name: '', type: 'uint256' }],
-                  stateMutability: 'view',
-                  type: 'function'
-                },
-                {
-                  inputs: [],
-                  name: 'decimals',
-                  outputs: [{ name: '', type: 'uint8' }],
-                  stateMutability: 'view',
-                  type: 'function'
+              // Determine token type from metadata and contract data
+              let tokenType: 'LSP7' | 'LSP8' | 'Unknown' = 'Unknown';
+              
+              // First, try to determine from metadata
+              if (metadata) {
+                if (metadata.name && (metadata.name.includes('#') || metadata.name.includes('NFT'))) {
+                  // Names with # (like "GloryMint #5") are typically NFTs
+                  tokenType = 'LSP8';
+                  console.log(`Asset ${assetAddress} identified as LSP8 based on name: ${metadata.name}`);
                 }
-              ], assetAddress);
+              }
+              
+              // If still unknown, try contract methods
+              if (tokenType === 'Unknown') {
+                // Asset contract instance oluştur
+                const assetContract = new web3.eth.Contract([
+                  {
+                    inputs: [{ name: 'interfaceId', type: 'bytes4' }],
+                    name: 'supportsInterface',
+                    outputs: [{ name: '', type: 'bool' }],
+                    stateMutability: 'view',
+                    type: 'function'
+                  },
+                  {
+                    inputs: [{ name: 'account', type: 'address' }],
+                    name: 'balanceOf',
+                    outputs: [{ name: '', type: 'uint256' }],
+                    stateMutability: 'view',
+                    type: 'function'
+                  },
+                  {
+                    inputs: [],
+                    name: 'decimals',
+                    outputs: [{ name: '', type: 'uint8' }],
+                    stateMutability: 'view',
+                    type: 'function'
+                  },
+                  {
+                    inputs: [{ name: 'tokenId', type: 'bytes32' }],
+                    name: 'getDataForTokenId',
+                    outputs: [{ name: '', type: 'bytes' }],
+                    stateMutability: 'view',
+                    type: 'function'
+                  }
+                ], assetAddress);
 
-              // Interface kontrolü - try/catch ile sarmalayalım
-              let isLSP7 = false;
-              let isLSP8 = false;
-              
-              try {
-                isLSP7 = await assetContract.methods.supportsInterface(INTERFACE_IDS.LSP7).call();
-                console.log(`Asset ${assetAddress} - LSP7 check: ${isLSP7}`);
-              } catch (err: any) {
-                console.log(`Asset ${assetAddress} - LSP7 check failed:`, err);
-                // Check if error message indicates it's an NFT
-                if (err.message && (err.message.includes('GloryMint') || err.message.includes('NFT'))) {
-                  isLSP8 = true;
+                // Try to call decimals - if it works, it's likely LSP7
+                try {
+                  const decimals = await assetContract.methods.decimals().call();
+                  if (decimals !== undefined) {
+                    tokenType = 'LSP7';
+                    console.log(`Asset ${assetAddress} identified as LSP7 based on decimals method`);
+                  }
+                } catch (err) {
+                  // decimals failed, might be LSP8
                 }
-              }
-              
-              try {
-                isLSP8 = await assetContract.methods.supportsInterface(INTERFACE_IDS.LSP8).call();
-                console.log(`Asset ${assetAddress} - LSP8 check: ${isLSP8}`);
-              } catch (err: any) {
-                console.log(`Asset ${assetAddress} - LSP8 check failed:`, err);
-                // Check if error message indicates it's an NFT
-                if (err.message && (err.message.includes('GloryMint') || err.message.includes('NFT'))) {
-                  isLSP8 = true;
+                
+                // Try to call getDataForTokenId - if it exists, it's likely LSP8
+                if (tokenType === 'Unknown') {
+                  try {
+                    // Try with a dummy tokenId
+                    await assetContract.methods.getDataForTokenId('0x0000000000000000000000000000000000000000000000000000000000000001').call();
+                    tokenType = 'LSP8';
+                    console.log(`Asset ${assetAddress} identified as LSP8 based on getDataForTokenId method`);
+                  } catch (err) {
+                    // getDataForTokenId failed
+                  }
                 }
-              }
-              
-              // If interface checks fail, try to determine from metadata
-              if (!isLSP7 && !isLSP8 && metadata) {
-                // Check if it's an NFT based on metadata
-                if (metadata.tokenType) {
-                  isLSP7 = metadata.tokenType === 'Token' || metadata.tokenType === 'LSP7';
-                  isLSP8 = metadata.tokenType === 'NFT' || metadata.tokenType === 'LSP8';
-                } else if (metadata.name && (metadata.name.includes('NFT') || metadata.name.includes('#'))) {
-                  // If name contains NFT or # (like GloryMint #5), it's likely an NFT
-                  isLSP8 = true;
-                } else if (metadata.symbol && metadata.decimals !== undefined) {
-                  // If it has decimals, it's likely a token
-                  isLSP7 = true;
+                
+                // Final fallback - check if we can get balance
+                if (tokenType === 'Unknown') {
+                  try {
+                    const balance = await assetContract.methods.balanceOf(profileAddress).call();
+                    // If balanceOf works, assume it's a token (LSP7)
+                    tokenType = 'LSP7';
+                    console.log(`Asset ${assetAddress} identified as LSP7 based on balanceOf method`);
+                  } catch (err) {
+                    // If all else fails, check metadata patterns
+                    if (metadata?.symbol && metadata.symbol.length <= 5) {
+                      tokenType = 'LSP7'; // Short symbols are usually tokens
+                    } else {
+                      tokenType = 'LSP8'; // Default to NFT
+                    }
+                  }
                 }
               }
 
@@ -229,15 +250,32 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
                 address: assetAddress,
                 name: metadata?.name || 'Unknown Asset',
                 symbol: metadata?.symbol || 'UNKNOWN',
-                tokenType: isLSP7 ? 'LSP7' : isLSP8 ? 'LSP8' : 'Unknown',
+                tokenType: tokenType,
                 metadata
               };
               
               console.log(`Asset created:`, asset);
 
               // LSP7 için balance ve decimals bilgisini çek
-              if (isLSP7) {
+              if (tokenType === 'LSP7') {
                 try {
+                  const assetContract = new web3.eth.Contract([
+                    {
+                      inputs: [{ name: 'account', type: 'address' }],
+                      name: 'balanceOf',
+                      outputs: [{ name: '', type: 'uint256' }],
+                      stateMutability: 'view',
+                      type: 'function'
+                    },
+                    {
+                      inputs: [],
+                      name: 'decimals',
+                      outputs: [{ name: '', type: 'uint8' }],
+                      stateMutability: 'view',
+                      type: 'function'
+                    }
+                  ], assetAddress);
+                  
                   const [balance, decimals] = await Promise.all([
                     assetContract.methods.balanceOf(profileAddress).call().catch(() => '0'),
                     assetContract.methods.decimals().call().catch(() => 18)
@@ -251,7 +289,7 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
               }
 
               // LSP8 için tokenIds çek (ileride eklenebilir)
-              if (isLSP8) {
+              if (tokenType === 'LSP8') {
                 asset.tokenIds = [];
                 // TODO: Implement tokenIds fetching for LSP8
               }

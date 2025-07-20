@@ -7,6 +7,7 @@ export interface LSP4Metadata {
   name?: string;
   symbol?: string;
   description?: string;
+  tokenType?: string;
   icon?: Array<{
     url: string;
     width?: number;
