@@ -6,30 +6,12 @@ import { DrawCard } from '@/components/draws/DrawCard';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
 import { useUPProvider } from '@/hooks/useUPProvider';
-
-interface Draw {
-  id: number;
-  type: 'PLATFORM' | 'USER';
-  title: string;
-  creator: string;
-  prizePool: number;
-  ticketPrice: number;
-  ticketsSold: number;
-  maxTickets: number;
-  endTime: number;
-  drawType: 'LYX' | 'TOKEN' | 'NFT';
-  isMultiWinner: boolean;
-  winnerCount?: number;
-  tokenSymbol?: string;
-  nftImage?: string;
-  tokenAddress?: string;
-  nftContract?: string;
-}
+import { UserDraw } from '@/types/gridotto';
 
 export const ActiveDrawsSection = () => {
   const { isConnected } = useUPProvider();
-  const { getActiveUserDraws, getCurrentDrawInfo, getMonthlyDrawInfo, getContractInfo } = useGridottoContract();
-  const [draws, setDraws] = useState<Draw[]>([]);
+  const { getActiveUserDraws } = useGridottoContract();
+  const [draws, setDraws] = useState<UserDraw[]>([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
@@ -42,73 +24,13 @@ export const ActiveDrawsSection = () => {
 
       try {
         setLoading(true);
-        const allDraws: Draw[] = [];
-
-        // Get platform draws
-        const [weeklyInfo, monthlyInfo, contractInfo] = await Promise.all([
-          getCurrentDrawInfo(),
-          getMonthlyDrawInfo(),
-          getContractInfo()
-        ]);
-
-        if (weeklyInfo && contractInfo) {
-          allDraws.push({
-            id: 0,
-            type: 'PLATFORM',
-            title: 'Weekly Mega Draw',
-            creator: 'Platform',
-            prizePool: parseFloat(weeklyInfo.prizePool),
-            ticketPrice: parseFloat(contractInfo.ticketPrice),
-            ticketsSold: parseInt(weeklyInfo.ticketCount),
-            maxTickets: 100000, // Platform draws don't have max
-            endTime: Date.now() + parseInt(weeklyInfo.remainingTime) * 1000,
-            drawType: 'LYX',
-            isMultiWinner: false
-          });
-        }
-
-        if (monthlyInfo && contractInfo) {
-          allDraws.push({
-            id: -1,
-            type: 'PLATFORM',
-            title: 'Monthly Grand Draw',
-            creator: 'Platform',
-            prizePool: parseFloat(monthlyInfo.prizePool),
-            ticketPrice: parseFloat(contractInfo.ticketPrice),
-            ticketsSold: parseInt(monthlyInfo.ticketCount),
-            maxTickets: 100000,
-            endTime: Date.now() + parseInt(monthlyInfo.remainingTime) * 1000,
-            drawType: 'LYX',
-            isMultiWinner: false
-          });
-        }
-
-        // Get user draws
-        const userDraws = await getActiveUserDraws();
         
-        userDraws.forEach(draw => {
-          const drawType = draw.drawType === 0 ? 'LYX' : draw.drawType === 1 ? 'TOKEN' : 'NFT';
-          
-          allDraws.push({
-            id: draw.id,
-            type: 'USER',
-            title: `${drawType} Draw #${draw.id}`,
-            creator: `${draw.creator.slice(0, 6)}...${draw.creator.slice(-4)}`,
-            prizePool: parseFloat(draw.currentPrizePool),
-            ticketPrice: parseFloat(draw.ticketPrice),
-            ticketsSold: parseInt(draw.ticketsSold),
-            maxTickets: parseInt(draw.maxTickets),
-            endTime: parseInt(draw.endTime) * 1000,
-            drawType: drawType,
-            isMultiWinner: false, // Will be updated with Phase4 data
-            tokenAddress: draw.tokenAddress,
-            nftContract: draw.nftContract
-          });
-        });
-
-        setDraws(allDraws);
+        // Get only real user draws from blockchain
+        const userDraws = await getActiveUserDraws();
+        setDraws(userDraws);
       } catch (error) {
         console.error('Error loading draws:', error);
+        setDraws([]);
       } finally {
         setLoading(false);
       }
@@ -119,13 +41,14 @@ export const ActiveDrawsSection = () => {
     // Refresh every 30 seconds
     const interval = setInterval(loadDraws, 30000);
     return () => clearInterval(interval);
-  }, [isConnected, getActiveUserDraws, getCurrentDrawInfo, getMonthlyDrawInfo, getContractInfo]);
+  }, [isConnected, getActiveUserDraws]);
 
+  // Filter draws
   const filteredDraws = draws.filter(draw => {
     if (filter === 'all') return true;
-    if (filter === 'platform') return draw.type === 'PLATFORM';
-    if (filter === 'nft') return draw.drawType === 'NFT';
-    if (filter === 'token') return draw.drawType === 'TOKEN';
+    if (filter === 'platform') return draw.creator === '0x0000000000000000000000000000000000000000';
+    if (filter === 'nft') return draw.drawType === 2;
+    if (filter === 'token') return draw.drawType === 1;
     return true;
   });
 

@@ -36,80 +36,17 @@ export default function DrawsPage() {
   // Load draws from blockchain
   useEffect(() => {
     const loadDraws = async () => {
-      if (!isConnected) {
-        setLoading(false);
-        return;
-      }
+      if (!isConnected) return;
 
       try {
         setLoading(true);
-        const allDraws: UserDraw[] = [];
-
-        // Get platform draws
-        const [weeklyInfo, monthlyInfo, contractInfo] = await Promise.all([
-          getCurrentDrawInfo(),
-          getMonthlyDrawInfo(),
-          getContractInfo()
-        ]);
-
-        if (weeklyInfo && contractInfo) {
-          allDraws.push({
-            id: 0,
-            type: 'PLATFORM',
-            title: 'Weekly Mega Draw',
-            creator: 'Platform',
-            prizePool: parseFloat(weeklyInfo.prizePool),
-            ticketPrice: parseFloat(contractInfo.ticketPrice),
-            ticketsSold: parseInt(weeklyInfo.ticketCount),
-            maxTickets: 100000,
-            endTime: Date.now() + parseInt(weeklyInfo.remainingTime) * 1000,
-            drawType: 'LYX',
-            isMultiWinner: false
-          });
-        }
-
-        if (monthlyInfo && contractInfo) {
-          allDraws.push({
-            id: -1,
-            type: 'PLATFORM',
-            title: 'Monthly Grand Draw',
-            creator: 'Platform',
-            prizePool: parseFloat(monthlyInfo.prizePool),
-            ticketPrice: parseFloat(contractInfo.ticketPrice),
-            ticketsSold: parseInt(monthlyInfo.ticketCount),
-            maxTickets: 100000,
-            endTime: Date.now() + parseInt(monthlyInfo.remainingTime) * 1000,
-            drawType: 'LYX',
-            isMultiWinner: false
-          });
-        }
-
-        // Get user draws
-        const userDraws = await getActiveUserDraws();
         
-        userDraws.forEach(draw => {
-          const drawType = draw.drawType === 0 ? 'LYX' : draw.drawType === 1 ? 'TOKEN' : 'NFT';
-          
-          allDraws.push({
-            id: draw.id,
-            type: 'USER',
-            title: `${drawType} Draw #${draw.id}`,
-            creator: draw.creator,
-            prizePool: parseFloat(draw.currentPrizePool),
-            ticketPrice: parseFloat(draw.ticketPrice),
-            ticketsSold: parseInt(draw.ticketsSold),
-            maxTickets: parseInt(draw.maxTickets),
-            endTime: parseInt(draw.endTime) * 1000,
-            drawType: drawType,
-            isMultiWinner: false,
-            tokenAddress: draw.tokenAddress,
-            nftContract: draw.nftContract
-          });
-        });
-
-        setDraws(allDraws);
+        // Get only real user draws from blockchain
+        const userDraws = await getActiveUserDraws();
+        setDraws(userDraws);
       } catch (error) {
         console.error('Error loading draws:', error);
+        setDraws([]);
       } finally {
         setLoading(false);
       }
@@ -120,51 +57,54 @@ export default function DrawsPage() {
     // Refresh every 30 seconds
     const interval = setInterval(loadDraws, 30000);
     return () => clearInterval(interval);
-  }, [isConnected, getActiveUserDraws, getCurrentDrawInfo, getMonthlyDrawInfo, getContractInfo]);
+  }, [isConnected, getActiveUserDraws]);
 
   // Apply filters and search
   useEffect(() => {
     let filtered = [...draws];
 
-    // Search filter
+    // Search filter - search by creator address or draw ID
     if (searchQuery) {
       filtered = filtered.filter(draw => 
-        draw.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        draw.creator.toLowerCase().includes(searchQuery.toLowerCase())
+        draw.creator.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        draw.id.toString().includes(searchQuery)
       );
     }
 
-    // Type filter
-    if (filters.type !== 'all') {
-      filtered = filtered.filter(draw => {
-        if (filters.type === 'platform') return draw.type === 'PLATFORM';
-        if (filters.type === 'lyx') return draw.drawType === 'LYX';
-        if (filters.type === 'token') return draw.drawType === 'TOKEN';
-        if (filters.type === 'nft') return draw.drawType === 'NFT';
-        return true;
-      });
+    // Draw type filter
+    if (filters.drawType !== 'all') {
+      const typeMap = { 'LYX': 0, 'TOKEN': 1, 'NFT': 2 };
+      filtered = filtered.filter(draw => draw.drawType === typeMap[filters.drawType as keyof typeof typeMap]);
     }
 
-    // Status filter (only active draws for now)
+    // Status filter
     if (filters.status === 'active') {
-      filtered = filtered.filter(draw => draw.endTime > Date.now());
+      filtered = filtered.filter(draw => !draw.isCompleted);
+    } else if (filters.status === 'completed') {
+      filtered = filtered.filter(draw => draw.isCompleted);
     }
+
+    // Prize range filter
+    filtered = filtered.filter(draw => {
+      const prize = parseFloat(draw.currentPrizePool);
+      return prize >= filters.prizeRange[0] && prize <= filters.prizeRange[1];
+    });
 
     // Sort
     filtered.sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
         case 'endTime':
-          comparison = a.endTime - b.endTime;
+          comparison = parseInt(a.endTime) - parseInt(b.endTime);
           break;
         case 'prizePool':
-          comparison = a.prizePool - b.prizePool;
+          comparison = parseFloat(a.currentPrizePool) - parseFloat(b.currentPrizePool);
           break;
         case 'ticketPrice':
-          comparison = a.ticketPrice - b.ticketPrice;
+          comparison = parseFloat(a.ticketPrice) - parseFloat(b.ticketPrice);
           break;
         case 'popularity':
-          comparison = a.ticketsSold - b.ticketsSold;
+          comparison = parseInt(a.ticketsSold) - parseInt(b.ticketsSold);
           break;
       }
       return sortOrder === 'asc' ? comparison : -comparison;

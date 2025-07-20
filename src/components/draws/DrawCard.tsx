@@ -18,7 +18,7 @@ interface DrawCardProps {
   draw: UserDraw;
 }
 
-const drawTypeConfig = {
+const drawTypeConfig: Record<number, { icon: any; label: string; color: string }> = {
   0: { // LYX
     icon: CurrencyDollarIcon,
     label: 'LYX Prize',
