@@ -123,7 +123,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
           <p className="text-sm text-gray-400 mb-2">Created by</p>
           <ProfileDisplay 
             address={draw.creator} 
-            size="small"
+            size="sm"
             showName={true}
           />
         </div>

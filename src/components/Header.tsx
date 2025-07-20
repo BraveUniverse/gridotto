@@ -82,9 +82,8 @@ export const Header = () => {
               <div className="flex items-center space-x-4">
                 <ProfileDisplay 
                   address={account} 
-                  size="small"
+                  size="sm"
                   showName={true}
-                  className="hidden md:flex"
                 />
                 <Link href="/admin" className="p-2 rounded-lg hover:bg-white/10 transition-colors">
                   <CogIcon className="w-5 h-5 text-gray-300" />
@@ -136,10 +135,8 @@ export const Header = () => {
               <div className="mt-4 pt-4 border-t border-white/10">
                 <ProfileDisplay 
                   address={account} 
-                  size="medium"
+                  size="md"
                   showName={true}
-                  showTags={true}
-                  className="px-4"
                 />
               </div>
             )}
