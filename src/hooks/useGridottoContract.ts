@@ -424,12 +424,16 @@ export const useGridottoContract = () => {
         tokenAddress: params.tokenAddress || '0x0000000000000000000000000000000000000000',
         nftContract: params.nftContract || '0x0000000000000000000000000000000000000000',
         nftTokenIds: nftTokenIds,
-        tiers: [] // Empty tiers for equal distribution
+        tiers: [] as Array<{prizePercentage: number, fixedPrize: number, nftTokenId: string}>
       };
       
       // Validation
       if (!config.maxTickets || config.maxTickets === 0) {
         throw new Error('Max tickets must be greater than 0');
+      }
+      
+      if (!config.ticketPrice || config.ticketPrice === '0') {
+        throw new Error('Ticket price must be greater than 0');
       }
       
       console.log('DrawType enum:', drawTypeEnum);

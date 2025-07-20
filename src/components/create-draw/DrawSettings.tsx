@@ -24,14 +24,14 @@ export function DrawSettings({ drawData, updateDrawData }: DrawSettingsProps) {
           <input
             type="number"
             step="0.01"
-            min="0"
+            min="0.01"
             value={drawData.ticketPrice || ''}
-            onChange={(e) => updateDrawData({ ticketPrice: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => updateDrawData({ ticketPrice: parseFloat(e.target.value) || 0.01 })}
             className="input-glass w-full"
-            placeholder="0 for free draw"
+            placeholder="0.01"
           />
           <p className="text-xs text-gray-400 mt-1">
-            Set to 0 for a free draw
+            Minimum 0.01 LYX per ticket
           </p>
         </div>
 

@@ -52,8 +52,9 @@ export const phase4Abi = [
             name: "tiers",
             type: "tuple[]",
             components: [
-              { name: "winnersCount", type: "uint256" },
-              { name: "prizePercent", type: "uint256" }
+              { name: "prizePercentage", type: "uint256" },
+              { name: "fixedPrize", type: "uint256" },
+              { name: "nftTokenId", type: "bytes32" }
             ]
           }
         ]

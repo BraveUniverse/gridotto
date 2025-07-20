@@ -25,7 +25,7 @@ export default function CreateDrawPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [drawData, setDrawData] = useState<DrawData>({
     drawType: 'LYX',
-    ticketPrice: 1,
+    ticketPrice: 0.01, // Minimum ticket price
     duration: 7,
     maxTickets: 100,
     requirementType: 0,
