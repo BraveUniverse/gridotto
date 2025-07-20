@@ -18,7 +18,7 @@ import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isConnected, address, connect, disconnect } = useUPProvider();
+  const { isConnected, account, refreshConnection } = useUPProvider();
   const router = useRouter();
 
   useEffect(() => {
@@ -29,6 +29,10 @@ export const Header = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleConnect = async () => {
+    await refreshConnection();
+  };
 
   const navigation = [
     { name: 'Home', href: '/', icon: Squares2X2Icon },
@@ -74,24 +78,21 @@ export const Header = () => {
           {/* Right Section */}
           <div className="flex items-center space-x-4">
             {/* Connect Button / Profile */}
-            {isConnected && address ? (
+            {isConnected && account ? (
               <div className="flex items-center space-x-4">
                 <ProfileDisplay 
-                  address={address} 
+                  address={account} 
                   size="small"
                   showName={true}
                   className="hidden md:flex"
                 />
-                <button
-                  onClick={disconnect}
-                  className="btn-secondary text-sm"
-                >
-                  Disconnect
-                </button>
+                <Link href="/admin" className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                  <CogIcon className="w-5 h-5 text-gray-300" />
+                </Link>
               </div>
             ) : (
               <button
-                onClick={connect}
+                onClick={handleConnect}
                 className="btn-primary"
               >
                 <span>Connect Wallet</span>
@@ -131,10 +132,10 @@ export const Header = () => {
             })}
             
             {/* Mobile Profile */}
-            {isConnected && address && (
+            {isConnected && account && (
               <div className="mt-4 pt-4 border-t border-white/10">
                 <ProfileDisplay 
-                  address={address} 
+                  address={account} 
                   size="medium"
                   showName={true}
                   showTags={true}

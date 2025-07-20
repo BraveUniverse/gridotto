@@ -50,14 +50,14 @@ export const AssetSelector = ({
   assetType = 'all',
   className = '' 
 }: AssetSelectorProps) => {
-  const { web3, address } = useUPProvider();
+  const { web3, account } = useUPProvider();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAssets = async () => {
-      if (!web3 || !address) return;
+      if (!web3 || !account) return;
 
       try {
         setLoading(true);
@@ -84,7 +84,7 @@ export const AssetSelector = ({
           }
         ];
 
-        const erc725 = new ERC725(LSP5Schema, address, web3.currentProvider);
+        const erc725 = new ERC725(LSP5Schema, account, web3.currentProvider);
         const receivedAssets = await erc725.fetchData('LSP5ReceivedAssets[]');
 
         if (!receivedAssets?.value || !Array.isArray(receivedAssets.value)) {
@@ -156,7 +156,7 @@ export const AssetSelector = ({
                 }
               ], assetAddress);
 
-              balance = await contract.methods.balanceOf(address).call();
+              balance = await contract.methods.balanceOf(account).call();
             } else {
               // Get LSP8 token IDs
               const contract = new web3.eth.Contract([
@@ -168,7 +168,7 @@ export const AssetSelector = ({
                 }
               ], assetAddress);
 
-              tokenIds = await contract.methods.tokenIdsOf(address).call();
+              tokenIds = await contract.methods.tokenIdsOf(account).call();
             }
 
             return {
@@ -195,7 +195,7 @@ export const AssetSelector = ({
     };
 
     fetchAssets();
-  }, [web3, address, assetType]);
+  }, [web3, account, assetType]);
 
   const getImageUrl = (image: any) => {
     if (!image?.url) return null;

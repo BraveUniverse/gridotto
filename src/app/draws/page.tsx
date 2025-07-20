@@ -6,6 +6,7 @@ import { DrawCard } from '@/components/draws/DrawCard';
 import { DrawFilters } from '@/components/draws/DrawFilters';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
 import { useUPProvider } from '@/hooks/useUPProvider';
+import { UserDraw } from '@/types/gridotto';
 import { 
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -13,32 +14,13 @@ import {
   ArrowDownIcon 
 } from '@heroicons/react/24/outline';
 
-interface Draw {
-  id: number;
-  type: 'PLATFORM' | 'USER';
-  title: string;
-  creator: string;
-  prizePool: number;
-  ticketPrice: number;
-  ticketsSold: number;
-  maxTickets: number;
-  endTime: number;
-  drawType: 'LYX' | 'TOKEN' | 'NFT';
-  isMultiWinner: boolean;
-  winnerCount?: number;
-  tokenSymbol?: string;
-  nftImage?: string;
-  tokenAddress?: string;
-  nftContract?: string;
-}
-
 type SortOption = 'endTime' | 'prizePool' | 'ticketPrice' | 'popularity';
 
 export default function DrawsPage() {
   const { isConnected } = useUPProvider();
   const { getActiveUserDraws, getCurrentDrawInfo, getMonthlyDrawInfo, getContractInfo } = useGridottoContract();
-  const [draws, setDraws] = useState<Draw[]>([]);
-  const [filteredDraws, setFilteredDraws] = useState<Draw[]>([]);
+  const [draws, setDraws] = useState<UserDraw[]>([]);
+  const [filteredDraws, setFilteredDraws] = useState<UserDraw[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('endTime');
@@ -48,8 +30,7 @@ export default function DrawsPage() {
     type: 'all',
     status: 'active',
     prizeRange: [0, 10000],
-    vipRequired: false,
-    followRequired: false
+    drawType: 'all'
   });
 
   // Load draws from blockchain
@@ -62,7 +43,7 @@ export default function DrawsPage() {
 
       try {
         setLoading(true);
-        const allDraws: Draw[] = [];
+        const allDraws: UserDraw[] = [];
 
         // Get platform draws
         const [weeklyInfo, monthlyInfo, contractInfo] = await Promise.all([
