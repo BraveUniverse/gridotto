@@ -1,15 +1,65 @@
 export const phase4Abi = [
+  // Events
+  {
+    inputs: [
+      { name: "drawId", type: "uint256" },
+      { name: "creator", type: "address" },
+      { name: "drawType", type: "uint8" }
+    ],
+    name: "AdvancedDrawCreated",
+    type: "event"
+  },
   // Functions
   {
     inputs: [
-      { name: "endTime", type: "uint256" },
-      { name: "ticketPrice", type: "uint256" },
-      { name: "maxTickets", type: "uint256" },
-      { name: "minTickets", type: "uint256" }
+      { name: "drawType", type: "uint8" },
+      {
+        name: "config",
+        type: "tuple",
+        components: [
+          { name: "ticketPrice", type: "uint256" },
+          { name: "duration", type: "uint256" },
+          { name: "maxTickets", type: "uint256" },
+          { name: "initialPrize", type: "uint256" },
+          { name: "requirement", type: "uint8" },
+          { name: "requiredToken", type: "address" },
+          { name: "minTokenAmount", type: "uint256" },
+          {
+            name: "prizeConfig",
+            type: "tuple",
+            components: [
+              { name: "model", type: "uint8" },
+              { name: "creatorContribution", type: "uint256" },
+              { name: "addParticipationFees", type: "bool" },
+              { name: "participationFeePercent", type: "uint256" },
+              { name: "totalWinners", type: "uint256" }
+            ]
+          },
+          {
+            name: "lsp26Config",
+            type: "tuple",
+            components: [
+              { name: "enabled", type: "bool" },
+              { name: "followersRequired", type: "uint256" }
+            ]
+          },
+          { name: "tokenAddress", type: "address" },
+          { name: "nftContract", type: "address" },
+          { name: "nftTokenIds", type: "bytes32[]" },
+          {
+            name: "tiers",
+            type: "tuple[]",
+            components: [
+              { name: "winnersCount", type: "uint256" },
+              { name: "prizePercent", type: "uint256" }
+            ]
+          }
+        ]
+      }
     ],
-    name: "createDraw",
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "nonpayable",
+    name: "createAdvancedDraw",
+    outputs: [{ name: "drawId", type: "uint256" }],
+    stateMutability: "payable",
     type: "function"
   },
   {
@@ -20,18 +70,6 @@ export const phase4Abi = [
     name: "purchaseTickets",
     outputs: [],
     stateMutability: "payable",
-    type: "function"
-  },
-  {
-    inputs: [
-      { name: "drawId", type: "uint256" },
-      { name: "prizeModel", type: "uint256" },
-      { name: "totalWinners", type: "uint256" },
-      { name: "winnerShares", type: "uint256[]" }
-    ],
-    name: "createAdvancedDraw",
-    outputs: [],
-    stateMutability: "nonpayable",
     type: "function"
   },
   {

@@ -33,25 +33,32 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
       setIsCreating(true);
       setError(null);
 
-      // Calculate end time
-      const endTime = Math.floor(Date.now() / 1000) + (drawData.duration * 86400); // Convert days to seconds
+      // Prepare parameters based on draw type
+      const params: any = {
+        drawType: drawData.drawType,
+        ticketPrice: Web3.utils.toWei(drawData.ticketPrice.toString(), 'ether'),
+        duration: drawData.duration * 86400, // Convert days to seconds
+        maxTickets: drawData.maxTickets,
+        requirement: drawData.requirementType,
+        requiredToken: drawData.requiredToken,
+        minTokenAmount: drawData.minTokenAmount ? Web3.utils.toWei(drawData.minTokenAmount.toString(), 'ether') : undefined,
+        prizeModel: 0, // CREATOR_FUNDED
+        totalWinners: drawData.winnerCount || 1
+      };
 
-      // Create draw based on type
+      // Add type-specific parameters
       if (drawData.drawType === 'LYX') {
-        const params = {
-          endTime,
-          ticketPrice: Web3.utils.toWei(drawData.ticketPrice.toString(), 'ether'),
-          maxTickets: drawData.maxTickets,
-          minTickets: 1
-        };
-
-        await createDraw(params);
-      } else {
-        // For now, only support LYX draws
-        setError('Token and NFT draws are not yet supported in this version');
-        return;
+        params.initialPrize = drawData.prizeAmount ? Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether') : '0';
+      } else if (drawData.drawType === 'TOKEN') {
+        params.tokenAddress = drawData.tokenAddress;
+        params.initialPrize = drawData.prizeAmount ? Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether') : '0';
+      } else if (drawData.drawType === 'NFT') {
+        params.nftContract = drawData.nftContract;
+        params.nftTokenIds = drawData.tokenIds;
       }
 
+      await createDraw(params);
+      
       onCreate();
       router.push('/draws');
     } catch (err: any) {

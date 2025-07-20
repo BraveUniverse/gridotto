@@ -73,5 +73,26 @@ export const uiHelperAbi = [
     ],
     stateMutability: "view",
     type: "function"
+  },
+  {
+    inputs: [{ name: "drawId", type: "uint256" }],
+    name: "getUserDraw",
+    outputs: [
+      { name: "creator", type: "address" },
+      { name: "drawType", type: "uint8" },
+      { name: "startTime", type: "uint256" },
+      { name: "endTime", type: "uint256" },
+      { name: "ticketPrice", type: "uint256" },
+      { name: "maxTickets", type: "uint256" },
+      { name: "ticketsSold", type: "uint256" },
+      { name: "currentPrizePool", type: "uint256" },
+      { name: "isCompleted", type: "bool" },
+      { name: "isExecuted", type: "bool" },
+      { name: "requirement", type: "uint8" },
+      { name: "requiredToken", type: "address" },
+      { name: "minTokenAmount", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
   }
 ] as const;

@@ -229,31 +229,69 @@ export const useGridottoContract = () => {
     }
   }, [contract, getUserCreatedDraws, getUserDrawStats]);
 
+  // Get full draw details
+  const getUserDraw = useCallback(async (drawId: number) => {
+    if (!contract) return null;
+    
+    try {
+      const draw = await contract.methods.getUserDraw(drawId).call();
+      return {
+        creator: draw.creator,
+        drawType: draw.drawType,
+        startTime: draw.startTime,
+        endTime: draw.endTime,
+        ticketPrice: draw.ticketPrice,
+        maxTickets: draw.maxTickets,
+        ticketsSold: draw.ticketsSold,
+        currentPrizePool: draw.currentPrizePool,
+        isCompleted: draw.isCompleted,
+        isExecuted: draw.isExecuted,
+        requirement: draw.requirement,
+        requiredToken: draw.requiredToken,
+        minTokenAmount: draw.minTokenAmount
+      };
+    } catch (err) {
+      console.error('Error fetching user draw:', err);
+      return null;
+    }
+  }, [contract]);
+
   const getDrawInfo = useCallback(async (drawId: number): Promise<UserDraw | null> => {
     if (!contract) return null;
     
     try {
-      const stats = await getUserDrawStats(drawId);
-      if (!stats) return null;
+      const [draw, stats] = await Promise.all([
+        getUserDraw(drawId),
+        getUserDrawStats(drawId)
+      ]);
+      
+      if (!draw || !stats) return null;
+      
+      // Map drawType to prizeType
+      const prizeTypeMap: Record<number, 'LYX' | 'LSP7' | 'LSP8'> = {
+        2: 'LYX',    // USER_LYX
+        3: 'LSP7',   // USER_LSP7
+        4: 'LSP8'    // USER_LSP8
+      };
       
       return {
         drawId,
-        creator: stats.creator,
-        endTime: stats.endTime,
-        prizeType: 'LYX',
-        prizeAmount: stats.prizePool,
-        ticketPrice: '1000000000000000000', // 1 LYX default
-        maxTickets: 100,
+        creator: draw.creator,
+        endTime: draw.endTime,
+        prizeType: prizeTypeMap[draw.drawType] || 'LYX',
+        prizeAmount: draw.currentPrizePool,
+        ticketPrice: draw.ticketPrice,
+        maxTickets: Number(draw.maxTickets),
         minTickets: 1,
-        isActive: Number(stats.endTime) > Date.now() / 1000,
-        totalTicketsSold: Number(stats.totalTicketsSold),
+        isActive: !draw.isCompleted && Number(draw.endTime) > Date.now() / 1000,
+        totalTicketsSold: Number(draw.ticketsSold),
         participants: []
       };
     } catch (err) {
       console.error('Error fetching draw info:', err);
       return null;
     }
-  }, [contract, getUserDrawStats]);
+  }, [contract, getUserDraw, getUserDrawStats]);
 
   const purchaseTickets = useCallback(async (drawId: number, ticketCount: number, ticketPrice: string) => {
     if (!contract || !account) throw new Error('Contract or account not available');
@@ -272,20 +310,79 @@ export const useGridottoContract = () => {
   }, [contract, account]);
 
   const createDraw = useCallback(async (params: {
-    endTime: number;
+    drawType: 'LYX' | 'TOKEN' | 'NFT';
     ticketPrice: string;
+    duration: number;
     maxTickets: number;
-    minTickets: number;
+    initialPrize?: string;
+    tokenAddress?: string;
+    nftContract?: string;
+    nftTokenIds?: string[];
+    requirement?: number;
+    requiredToken?: string;
+    minTokenAmount?: string;
+    prizeModel?: number;
+    totalWinners?: number;
   }) => {
     if (!contract || !account) throw new Error('Contract or account not available');
     
     try {
-      const tx = await contract.methods.createDraw(
-        params.endTime,
-        params.ticketPrice,
-        params.maxTickets,
-        params.minTickets
-      ).send({ from: account });
+      // Map drawType to contract enum
+      const drawTypeMap = {
+        'LYX': 2,    // USER_LYX
+        'TOKEN': 3,  // USER_LSP7
+        'NFT': 4     // USER_LSP8
+      };
+      
+      // Default prize config
+      const prizeConfig = {
+        model: params.prizeModel || 0, // CREATOR_FUNDED
+        creatorContribution: params.initialPrize || '0',
+        addParticipationFees: true,
+        participationFeePercent: 0,
+        totalWinners: params.totalWinners || 1
+      };
+      
+      // LSP26 config (disabled by default)
+      const lsp26Config = {
+        enabled: false,
+        followersRequired: 0
+      };
+      
+      // Convert string tokenIds to bytes32
+      const nftTokenIds = params.nftTokenIds?.map(id => 
+        Web3.utils.padLeft(Web3.utils.toHex(id), 64)
+      ) || [];
+      
+      // Prepare config object
+      const config = {
+        ticketPrice: params.ticketPrice,
+        duration: params.duration,
+        maxTickets: params.maxTickets,
+        initialPrize: params.initialPrize || '0',
+        requirement: params.requirement || 0,
+        requiredToken: params.requiredToken || '0x0000000000000000000000000000000000000000',
+        minTokenAmount: params.minTokenAmount || '0',
+        prizeConfig,
+        lsp26Config,
+        tokenAddress: params.tokenAddress || '0x0000000000000000000000000000000000000000',
+        nftContract: params.nftContract || '0x0000000000000000000000000000000000000000',
+        nftTokenIds,
+        tiers: [] // Empty tiers for now
+      };
+      
+      const value = params.drawType === 'LYX' && params.initialPrize 
+        ? params.initialPrize 
+        : '0';
+      
+      const tx = await contract.methods.createAdvancedDraw(
+        drawTypeMap[params.drawType],
+        config
+      ).send({ 
+        from: account,
+        value 
+      });
+      
       return tx;
     } catch (err) {
       console.error('Error creating draw:', err);
@@ -301,6 +398,7 @@ export const useGridottoContract = () => {
     getActiveUserDraws,
     getUserCreatedDraws,
     getUserDrawStats,
+    getUserDraw,
     getAllClaimablePrizes,
     getOfficialDrawInfo,
     claimAll,
