@@ -32,13 +32,58 @@ export const gridottoAbi = [
     type: "function"
   },
   {
+    inputs: [
+      { name: "amount", type: "uint256" }
+    ],
+    name: "buyTickets",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "amount", type: "uint256" }
+    ],
+    name: "buyMonthlyTickets",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getTicketPrice",
+    outputs: [
+      { name: "", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getCurrentDrawPrize",
+    outputs: [
+      { name: "", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getMonthlyPrize",
+    outputs: [
+      { name: "", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
     inputs: [],
     name: "getDrawInfo",
     outputs: [
-      { name: "drawNumber", type: "uint256" },
-      { name: "endTime", type: "uint256" },
-      { name: "prize", type: "uint256" },
-      { name: "ticketsSold", type: "uint256" }
+      { name: "currentDraw", type: "uint256" },
+      { name: "currentMonthlyDraw", type: "uint256" },
+      { name: "drawTime", type: "uint256" },
+      { name: "monthlyDrawTime", type: "uint256" }
     ],
     stateMutability: "view",
     type: "function"
@@ -56,33 +101,65 @@ export const gridottoAbi = [
     type: "function"
   },
   {
-    inputs: [{ name: "drawId", type: "uint256" }],
-    name: "getUserDraw",
+    inputs: [],
+    name: "getContractBalance",
     outputs: [
-      { name: "creator", type: "address" },
-      { name: "drawType", type: "uint256" },
-      { name: "ticketPrice", type: "uint256" },
-      { name: "ticketsSold", type: "uint256" },
-      { name: "maxTickets", type: "uint256" },
-      { name: "currentPrizePool", type: "uint256" },
-      { name: "endTime", type: "uint256" },
-      { name: "isCompleted", type: "bool" }
+      { name: "", type: "uint256" }
     ],
     stateMutability: "view",
     type: "function"
   },
   {
     inputs: [],
-    name: "nextDrawId",
-    outputs: [{ name: "", type: "uint256" }],
+    name: "DEFAULT_ADMIN_ROLE",
+    outputs: [
+      { name: "", type: "bytes32" }
+    ],
     stateMutability: "view",
     type: "function"
   },
   {
-    inputs: [],
-    name: "owner",
-    outputs: [{ name: "", type: "address" }],
+    inputs: [
+      { name: "role", type: "bytes32" },
+      { name: "account", type: "address" }
+    ],
+    name: "hasRole",
+    outputs: [
+      { name: "", type: "bool" }
+    ],
     stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "amount", type: "uint256" }
+    ],
+    name: "adminWithdraw",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "price", type: "uint256" }
+    ],
+    name: "setTicketPrice",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "pause",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "unpause",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function"
   }
 ] as const;

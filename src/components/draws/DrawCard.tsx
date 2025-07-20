@@ -46,7 +46,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = Math.floor(Date.now() / 1000);
-      const endTime = parseInt(draw.endTime);
+      const endTime = typeof draw.endTime === 'string' ? parseInt(draw.endTime) : Number(draw.endTime);
       const diff = endTime - now;
 
       if (diff <= 0) {
