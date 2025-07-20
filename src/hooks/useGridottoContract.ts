@@ -392,42 +392,60 @@ export const useGridottoContract = () => {
         'NFT': 4     // USER_LSP8
       };
       
+      const drawTypeEnum = drawTypeMap[params.drawType];
+      
       // Convert string tokenIds to bytes32
       const nftTokenIds = params.nftTokenIds?.map(id => 
         Web3.utils.padLeft(Web3.utils.toHex(id), 64)
       ) || [];
       
-      // Prepare config object according to new structure
+      // Prepare config object according to contract structure
       const config = {
-        drawType: drawTypeMap[params.drawType],
-        ticketPrice: params.ticketPrice || '0', // 0 = free draw
+        ticketPrice: params.ticketPrice || '0',
         duration: params.duration,
-        prizeToken: params.tokenAddress || '0x0000000000000000000000000000000000000000',
+        maxTickets: params.maxTickets || 0,
         initialPrize: params.initialPrize || '0',
-        nftTokenIds,
-        numberOfWinners: params.numberOfWinners || 1,
-        tiers: [], // Empty for equal distribution
-        requirement: params.requirement || 0, // 0 = NONE
+        requirement: params.requirement || 0,
         requiredToken: params.requiredToken || '0x0000000000000000000000000000000000000000',
         minTokenAmount: params.minTokenAmount || '0',
-        minFollowers: 0, // Not using followers for now
-        creatorFeePercent: params.creatorFeePercent || 0, // 0 = no creator fee
-        minParticipants: params.minParticipants || 0, // 0 = no minimum
-        maxParticipants: params.maxParticipants || 0, // 0 = no maximum
-        maxTicketsPerUser: params.maxTicketsPerUser || 0 // 0 = no limit
+        prizeConfig: {
+          model: 0, // CREATOR_FUNDED for LYX draws
+          creatorContribution: params.initialPrize || '0',
+          addParticipationFees: true,
+          participationFeePercent: params.creatorFeePercent || 0,
+          totalWinners: params.numberOfWinners || 1
+        },
+        lsp26Config: {
+          requireFollowing: false,
+          profileToFollow: '0x0000000000000000000000000000000000000000',
+          minFollowers: 0,
+          requireMutualFollow: false
+        },
+        tokenAddress: params.tokenAddress || '0x0000000000000000000000000000000000000000',
+        nftContract: params.nftContract || '0x0000000000000000000000000000000000000000',
+        nftTokenIds: nftTokenIds,
+        tiers: [] // Empty tiers for equal distribution
       };
       
-      // For NFT draws, use nftContract as prizeToken
-      if (params.drawType === 'NFT' && params.nftContract) {
-        config.prizeToken = params.nftContract;
+      // Validation
+      if (!config.maxTickets || config.maxTickets === 0) {
+        throw new Error('Max tickets must be greater than 0');
       }
       
+      console.log('DrawType enum:', drawTypeEnum);
       console.log('Contract config object:', config);
       console.log('Sending from account:', account);
       
-      // No need to send value for initial prize anymore
-      const tx = await contract.methods.createAdvancedDraw(config).send({ 
-        from: account
+      // Send value if it's a LYX draw with initial prize
+      const value = params.drawType === 'LYX' && params.initialPrize ? params.initialPrize : '0';
+      console.log('Transaction value:', value);
+      
+      const tx = await contract.methods.createAdvancedDraw(
+        drawTypeEnum,
+        config
+      ).send({ 
+        from: account,
+        value
       });
       
       console.log('Transaction successful:', tx);
