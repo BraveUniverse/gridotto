@@ -167,46 +167,61 @@ export const useGridottoContract = () => {
       setIsLoading(true);
       setError(null);
       
-      // Use getActiveDraws method from GridottoFacet
-      let drawIds = [];
-      try {
-        drawIds = await gridottoContract.methods.getActiveDraws().call();
-      } catch (e) {
-        console.log('getActiveDraws not found, returning empty array');
-        return [];
-      }
+      // Since there's no getActiveDraws method in the contract,
+      // we'll return an empty array for now
+      // In production, you would need to add this view function to the contract
+      console.log('Note: getActiveDraws method not implemented in contract');
       
+      // Alternative: Try to get user created draws if available
       const draws: UserDraw[] = [];
       
-      // Process real draw IDs only
-      for (const drawId of drawIds) {
-        try {
-          const drawInfo = await gridottoContract.methods.getUserDraw(drawId).call();
+      // You could implement a loop to check recent draw IDs
+      // For example, check the last 20 draw IDs
+      try {
+        // Get nextDrawId if available to know the range
+        const nextDrawId = await gridottoContract.methods.nextDrawId?.().call();
+        if (nextDrawId) {
+          const startId = Math.max(0, parseInt(nextDrawId) - 20);
           
-          // Handle both object and array returns
-          const creator = drawInfo.creator || drawInfo[0];
-          const drawType = drawInfo.drawType !== undefined ? drawInfo.drawType : drawInfo[1];
-          const ticketPrice = drawInfo.ticketPrice || drawInfo[2];
-          const ticketsSold = drawInfo.ticketsSold || drawInfo[3];
-          const maxTickets = drawInfo.maxTickets || drawInfo[4];
-          const currentPrizePool = drawInfo.currentPrizePool || drawInfo[5];
-          const endTime = drawInfo.endTime || drawInfo[6];
-          const isCompleted = drawInfo.isCompleted !== undefined ? drawInfo.isCompleted : drawInfo[7];
-          
-          draws.push({
-            id: parseInt(drawId),
-            creator: creator,
-            drawType: parseInt(drawType),
-            ticketPrice: Web3.utils.fromWei(ticketPrice.toString(), 'ether'),
-            ticketsSold: ticketsSold.toString(),
-            maxTickets: maxTickets.toString(),
-            currentPrizePool: Web3.utils.fromWei(currentPrizePool.toString(), 'ether'),
-            endTime: endTime.toString(),
-            isCompleted: isCompleted
-          });
-        } catch (err) {
-          console.error(`Error fetching draw ${drawId}:`, err);
+          for (let i = startId; i < parseInt(nextDrawId); i++) {
+            try {
+              const drawInfo = await gridottoContract.methods.getUserDraw(i).call();
+              
+              // Check if draw exists and is active
+              if (drawInfo && drawInfo.creator && drawInfo.creator !== '0x0000000000000000000000000000000000000000') {
+                const endTime = drawInfo.endTime || drawInfo[6];
+                const isCompleted = drawInfo.isCompleted !== undefined ? drawInfo.isCompleted : drawInfo[7];
+                
+                // Only add if not completed and not expired
+                if (!isCompleted && parseInt(endTime) > Math.floor(Date.now() / 1000)) {
+                  const creator = drawInfo.creator || drawInfo[0];
+                  const drawType = drawInfo.drawType !== undefined ? drawInfo.drawType : drawInfo[1];
+                  const ticketPrice = drawInfo.ticketPrice || drawInfo[2];
+                  const ticketsSold = drawInfo.ticketsSold || drawInfo[3];
+                  const maxTickets = drawInfo.maxTickets || drawInfo[4];
+                  const currentPrizePool = drawInfo.currentPrizePool || drawInfo[5];
+                  
+                  draws.push({
+                    id: i,
+                    creator: creator,
+                    drawType: parseInt(drawType),
+                    ticketPrice: Web3.utils.fromWei(ticketPrice.toString(), 'ether'),
+                    ticketsSold: ticketsSold.toString(),
+                    maxTickets: maxTickets.toString(),
+                    currentPrizePool: Web3.utils.fromWei(currentPrizePool.toString(), 'ether'),
+                    endTime: endTime.toString(),
+                    isCompleted: isCompleted
+                  });
+                }
+              }
+            } catch (err) {
+              // Draw doesn't exist or error reading it
+              continue;
+            }
+          }
         }
+      } catch (err) {
+        console.log('Could not fetch draw range');
       }
       
       return draws;
