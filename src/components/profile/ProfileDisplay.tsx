@@ -3,207 +3,158 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useUPProvider } from '@/hooks/useUPProvider';
+import ERC725 from '@erc725/erc725.js';
+import LSP3Schema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json';
+
+// IPFS Gateway
+const IPFS_GATEWAY = 'https://api.universalprofile.cloud/ipfs/';
+
+interface ProfileDisplayProps {
+  address: string;
+  size?: 'sm' | 'md' | 'lg';
+  showName?: boolean;
+}
 
 interface LSP3Profile {
   name?: string;
   description?: string;
   profileImage?: Array<{
     url: string;
-    width: number;
-    height: number;
-    verification?: {
-      method: string;
-      data: string;
-    };
-  }>;
-  backgroundImage?: Array<{
-    url: string;
-    width: number;
-    height: number;
-  }>;
-  tags?: string[];
-  links?: Array<{
-    title: string;
-    url: string;
+    width?: number;
+    height?: number;
   }>;
 }
 
-interface ProfileDisplayProps {
-  address: string;
-  size?: 'small' | 'medium' | 'large';
-  showName?: boolean;
-  showTags?: boolean;
-  className?: string;
-}
-
-export const ProfileDisplay = ({ 
-  address, 
-  size = 'medium', 
-  showName = true, 
-  showTags = false,
-  className = '' 
-}: ProfileDisplayProps) => {
-  const { web3 } = useUPProvider();
+export function ProfileDisplay({ address, size = 'md', showName = true }: ProfileDisplayProps) {
   const [profile, setProfile] = useState<LSP3Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { web3 } = useUPProvider();
 
-  const sizeMap = {
-    small: { image: 40, text: 'text-sm' },
-    medium: { image: 60, text: 'text-base' },
-    large: { image: 100, text: 'text-lg' }
+  const sizeClasses = {
+    sm: 'w-8 h-8',
+    md: 'w-10 h-10',
+    lg: 'w-12 h-12'
   };
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!web3 || !address) return;
+      if (!address || !web3) {
+        setLoading(false);
+        return;
+      }
 
       try {
-        setLoading(true);
-        setError(null);
-
-        // Import ERC725 dynamically
-        const { ERC725 } = await import('@erc725/erc725.js');
+        const config = {
+          ipfsGateway: IPFS_GATEWAY
+        };
         
-        // LSP3 Profile Schema
-        const LSP3Schema = [
-          {
-            name: 'LSP3Profile',
-            key: '0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5',
-            keyType: 'Singleton',
-            valueType: 'bytes',
-            valueContent: 'VerifiableURI'
-          }
-        ];
-
-        const erc725 = new ERC725(LSP3Schema, address, web3.currentProvider);
-        const profileData = await erc725.fetchData('LSP3Profile');
+        const erc725 = new ERC725(LSP3Schema, address, web3.currentProvider, config);
+        const profileData = await erc725.getData('LSP3Profile');
 
         if (profileData?.value) {
-          // Ensure value is a string
-          let url = '';
-          if (typeof profileData.value === 'string') {
-            url = profileData.value;
-          } else if (profileData.value && typeof profileData.value === 'object') {
-            // Handle VerifiableURI object format
-            url = (profileData.value as any).url || '';
-          }
-          
-          if (!url) {
-            console.log('No profile URL found');
-            return;
-          }
-          
-          // Fetch metadata from IPFS or URL
-          if (url.startsWith('ipfs://')) {
-            const ipfsUrl = url.replace('ipfs://', 'https://api.universalprofile.cloud/ipfs/');
-            const response = await fetch(ipfsUrl);
-            if (response.ok) {
-              const metadata = await response.json();
-              setProfile(metadata.LSP3Profile || metadata);
+          try {
+            // ERC725.js'den gelen veri yapısı:
+            // value: { url: "ipfs://...", verification: {...} }
+            const profileValue = profileData.value as any;
+            
+            if (profileValue.url) {
+              // IPFS URL'sini düzelt
+              let jsonUrl = profileValue.url;
+              if (jsonUrl.startsWith('ipfs://')) {
+                jsonUrl = `${IPFS_GATEWAY}${jsonUrl.slice(7)}`;
+              }
+              
+              // JSON içeriğini çek
+              const response = await fetch(jsonUrl, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json'
+                },
+                mode: 'cors',
+                cache: 'no-cache'
+              });
+              
+              if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+              }
+              
+              const responseText = await response.text();
+              const metadata = JSON.parse(responseText);
+              
+              if (metadata.LSP3Profile) {
+                // Profil resimlerini işle
+                const processedProfileImages = metadata.LSP3Profile.profileImage?.map((img: any) => {
+                  const processedImg = { ...img };
+                  
+                  // IPFS URL'lerini düzelt
+                  if (processedImg.url && processedImg.url.startsWith('ipfs://')) {
+                    processedImg.url = `${IPFS_GATEWAY}${processedImg.url.slice(7)}`;
+                  }
+                  
+                  return processedImg;
+                }) || [];
+                
+                // Profil verilerini ayarla
+                setProfile({
+                  name: metadata.LSP3Profile.name,
+                  description: metadata.LSP3Profile.description,
+                  profileImage: processedProfileImages
+                });
+              } else {
+                setFallbackProfile(address);
+              }
+            } else {
+              setFallbackProfile(address);
             }
-          } else if (url.startsWith('http')) {
-            const response = await fetch(url);
-            if (response.ok) {
-              const metadata = await response.json();
-              setProfile(metadata.LSP3Profile || metadata);
-            }
+          } catch (fetchError: any) {
+            console.error('Metadata fetch error:', fetchError);
+            setFallbackProfile(address);
           }
+        } else {
+          setFallbackProfile(address);
         }
       } catch (err: any) {
         console.error('Error fetching profile:', err);
-        setError('Failed to load profile');
+        setFallbackProfile(address);
       } finally {
         setLoading(false);
       }
     };
 
+    // Fallback profil verisi ayarla
+    const setFallbackProfile = (addr: string) => {
+      setProfile({
+        name: addr.slice(0, 6) + '...' + addr.slice(-4),
+        description: 'LUKSO Profile',
+        profileImage: []
+      });
+    };
+
     fetchProfile();
-  }, [web3, address]);
+  }, [address, web3]);
 
-  const getImageUrl = (image: any) => {
-    if (!image?.url) return null;
-    if (image.url.startsWith('ipfs://')) {
-      return image.url.replace('ipfs://', 'https://api.universalprofile.cloud/ipfs/');
-    }
-    return image.url;
-  };
-
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
-
-  if (loading) {
-    return (
-      <div className={`flex items-center space-x-3 ${className}`}>
-        <div 
-          className="rounded-full bg-white/10 animate-pulse"
-          style={{ 
-            width: sizeMap[size].image, 
-            height: sizeMap[size].image 
-          }}
-        />
-        {showName && (
-          <div className="h-4 bg-white/10 rounded w-24 animate-pulse" />
-        )}
-      </div>
-    );
-  }
-
-  const profileImage = profile?.profileImage?.[0];
-  const imageUrl = profileImage ? getImageUrl(profileImage) : null;
+  const displayName = profile?.name || `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const profileImage = profile?.profileImage?.[0]?.url;
 
   return (
-    <div className={`flex items-center space-x-3 ${className}`}>
-      {/* Profile Image */}
-      <div 
-        className="relative rounded-full overflow-hidden bg-gradient-to-br from-[#FF2975] to-[#FF2975]/50"
-        style={{ 
-          width: sizeMap[size].image, 
-          height: sizeMap[size].image 
-        }}
-      >
-        {imageUrl ? (
+    <div className="flex items-center gap-2">
+      <div className={`${sizeClasses[size]} relative rounded-full overflow-hidden bg-pink-500/20`}>
+        {profileImage ? (
           <Image
-            src={imageUrl}
-            alt={profile?.name || 'Profile'}
-            width={sizeMap[size].image}
-            height={sizeMap[size].image}
+            src={profileImage}
+            alt={displayName}
+            fill
             className="object-cover"
-            unoptimized
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-white font-bold">
-            {profile?.name?.[0]?.toUpperCase() || address[2].toUpperCase()}
+          <div className="w-full h-full flex items-center justify-center text-pink-400">
+            {displayName.charAt(0).toUpperCase()}
           </div>
         )}
       </div>
-
-      {/* Profile Info */}
       {showName && (
-        <div className="flex flex-col">
-          <span className={`font-semibold text-white ${sizeMap[size].text}`}>
-            {profile?.name || formatAddress(address)}
-          </span>
-          {profile?.description && size !== 'small' && (
-            <span className="text-gray-400 text-sm line-clamp-1">
-              {profile.description}
-            </span>
-          )}
-          {showTags && profile?.tags && profile.tags.length > 0 && (
-            <div className="flex gap-1 mt-1">
-              {profile.tags.slice(0, 3).map((tag, index) => (
-                <span 
-                  key={index}
-                  className="px-2 py-0.5 bg-[#FF2975]/20 text-[#FF2975] text-xs rounded-full"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+        <span className="text-sm text-gray-300">{displayName}</span>
       )}
     </div>
   );
-};
+}
