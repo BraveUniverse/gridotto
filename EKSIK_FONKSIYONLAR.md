@@ -356,27 +356,7 @@ function executeMonthlyDraw() external;
 ```
 **Açıklama:** Aylık çekilişi sonuçlandırır.
 
-## 14. WRITE FONKSİYONLARI - Sosyal Özellikler
-
-### `followUser()`
-```solidity
-function followUser(address user) external;
-```
-**Açıklama:** LSP26 ile kullanıcıyı takip eder.
-
-### `unfollowUser()`
-```solidity
-function unfollowUser(address user) external;
-```
-**Açıklama:** Takibi bırakır.
-
-### `tipCreator()`
-```solidity
-function tipCreator(uint256 drawId) external payable;
-```
-**Açıklama:** Çekiliş yaratıcısına bahşiş gönderir.
-
-## 15. Batch İşlemler
+## 14. Batch İşlemler
 
 ### `batchBuyTickets()`
 ```solidity
