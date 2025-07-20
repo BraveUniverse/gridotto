@@ -179,12 +179,15 @@ const ProfilePage = () => {
     <div className="min-h-screen py-20">
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="mb-8 flex items-center gap-4">
-          <ProfileDisplay address={account || ''} size="lg" showName={false} />
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">My Profile</h1>
-            <ProfileDisplay address={account || ''} size="lg" showName={true} showDescription={true} />
-          </div>
+        <div className="mb-8">
+          <ProfileDisplay 
+            address={account || ''} 
+            size="lg" 
+            showName={true} 
+            showDescription={true} 
+            className="mb-4"
+          />
+          <h1 className="text-4xl font-bold text-white">My Profile</h1>
         </div>
 
         {loading ? (

@@ -98,32 +98,43 @@ export const AssetSelector = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-        <span className="ml-3 text-gray-400">Loading your assets...</span>
+      <div className="glass-card p-8">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+          <span className="ml-3 text-gray-400">Loading your assets...</span>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-400">Error loading assets: {error}</p>
+      <div className="glass-card p-8">
+        <div className="text-center">
+          <PhotoIcon className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <p className="text-red-400">Unable to load assets</p>
+          <p className="text-sm text-gray-400 mt-2">Please make sure you're connected with a Universal Profile</p>
+        </div>
       </div>
     );
   }
 
   if (filteredAssets.length === 0) {
     return (
-      <div className="text-center py-12">
-        <PhotoIcon className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-        <p className="text-gray-400">
-          {assetType === 'LSP7' 
-            ? 'No tokens found in your profile' 
-            : assetType === 'LSP8'
-            ? 'No NFTs found in your profile'
-            : 'No assets found in your profile'}
-        </p>
+      <div className="glass-card p-8">
+        <div className="text-center">
+          <PhotoIcon className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+          <p className="text-gray-400 mb-2">
+            {assetType === 'LSP7' 
+              ? 'No tokens found in your profile' 
+              : assetType === 'LSP8'
+              ? 'No NFTs found in your profile'
+              : 'No assets found in your profile'}
+          </p>
+          <p className="text-sm text-gray-500">
+            Make sure you have {assetType === 'LSP7' ? 'LSP7 tokens' : assetType === 'LSP8' ? 'LSP8 NFTs' : 'digital assets'} in your Universal Profile
+          </p>
+        </div>
       </div>
     );
   }

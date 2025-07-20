@@ -49,9 +49,16 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
         );
 
         // LSP5ReceivedAssets[] verilerini çek
-        const receivedAssetsData = await erc725.getData('LSP5ReceivedAssets[]');
+        let receivedAssetsData;
+        try {
+          receivedAssetsData = await erc725.getData('LSP5ReceivedAssets[]');
+        } catch (err) {
+          console.log('No LSP5 assets found or not a Universal Profile');
+          setAssets([]);
+          return;
+        }
         
-        if (receivedAssetsData && receivedAssetsData.value) {
+        if (receivedAssetsData && receivedAssetsData.value && Array.isArray(receivedAssetsData.value)) {
           const assetAddresses = receivedAssetsData.value as string[];
           const assetsData: ReceivedAsset[] = [];
 
@@ -61,37 +68,37 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
               // Asset contract instance oluştur
               const assetContract = new web3.eth.Contract([
                 {
-                  inputs: [{ internalType: 'bytes4', name: 'interfaceId', type: 'bytes4' }],
+                  inputs: [{ name: 'interfaceId', type: 'bytes4' }],
                   name: 'supportsInterface',
-                  outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+                  outputs: [{ name: '', type: 'bool' }],
                   stateMutability: 'view',
                   type: 'function'
                 },
                 {
                   inputs: [],
                   name: 'name',
-                  outputs: [{ internalType: 'string', name: '', type: 'string' }],
+                  outputs: [{ name: '', type: 'string' }],
                   stateMutability: 'view',
                   type: 'function'
                 },
                 {
                   inputs: [],
                   name: 'symbol',
-                  outputs: [{ internalType: 'string', name: '', type: 'string' }],
+                  outputs: [{ name: '', type: 'string' }],
                   stateMutability: 'view',
                   type: 'function'
                 },
                 {
                   inputs: [],
                   name: 'decimals',
-                  outputs: [{ internalType: 'uint8', name: '', type: 'uint8' }],
+                  outputs: [{ name: '', type: 'uint8' }],
                   stateMutability: 'view',
                   type: 'function'
                 },
                 {
-                  inputs: [{ internalType: 'address', name: 'account', type: 'address' }],
+                  inputs: [{ name: 'account', type: 'address' }],
                   name: 'balanceOf',
-                  outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+                  outputs: [{ name: '', type: 'uint256' }],
                   stateMutability: 'view',
                   type: 'function'
                 }
