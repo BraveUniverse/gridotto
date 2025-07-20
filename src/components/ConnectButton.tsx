@@ -2,6 +2,7 @@
 
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useState } from 'react';
+import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import { 
   WalletIcon, 
   ArrowRightOnRectangleIcon,
@@ -30,13 +31,8 @@ export const ConnectButton = () => {
 
   if (isConnected && account) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg">
-          <CheckCircleIcon className="w-4 h-4 text-green-400" />
-          <span className="text-sm font-medium text-white">
-            {formatAddress(account)}
-          </span>
-        </div>
+      <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg">
+        <ProfileDisplay address={account} size="sm" showName={true} />
       </div>
     );
   }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
+import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import { 
   TrophyIcon, 
   FireIcon, 
@@ -137,10 +138,8 @@ const LeaderboardPage = () => {
                             {getRankIcon(index + 1)}
                           </div>
                           <div>
-                            <p className="font-mono text-white">
-                              {formatAddress(entry.address)}
-                            </p>
-                            <div className="flex items-center gap-4 text-sm text-gray-400">
+                            <ProfileDisplay address={entry.address} size="md" showName={true} />
+                            <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                               <span>{entry.drawsWon} wins</span>
                             </div>
                           </div>

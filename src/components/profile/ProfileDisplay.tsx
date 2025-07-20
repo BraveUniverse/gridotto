@@ -2,11 +2,13 @@
 
 import { useLSP3Profile } from '@/hooks/useLSP3Profile';
 import { UserCircleIcon } from '@heroicons/react/24/solid';
+import Image from 'next/image';
 
 interface ProfileDisplayProps {
   address: string;
   size?: 'sm' | 'md' | 'lg';
   showName?: boolean;
+  showDescription?: boolean;
   className?: string;
 }
 
@@ -14,6 +16,7 @@ export const ProfileDisplay = ({
   address, 
   size = 'md', 
   showName = false,
+  showDescription = false,
   className = ''
 }: ProfileDisplayProps) => {
   const { profileData, loading } = useLSP3Profile(address);
@@ -28,6 +31,12 @@ export const ProfileDisplay = ({
     sm: 'w-6 h-6',
     md: 'w-8 h-8',
     lg: 'w-10 h-10'
+  };
+
+  const textSizes = {
+    sm: 'text-xs',
+    md: 'text-sm',
+    lg: 'text-base'
   };
 
   const formatAddress = (addr: string) => {
@@ -52,26 +61,43 @@ export const ProfileDisplay = ({
   };
 
   const colorClass = getColorFromAddress(address);
+  const profileImage = profileData?.profileImage?.[0]?.url;
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <div className={`${sizeClasses[size]} rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center shadow-lg ${loading ? 'animate-pulse' : ''}`}>
-        {profileData?.name ? (
-          <span className="text-white font-bold text-sm">
-            {profileData.name.charAt(0).toUpperCase()}
-          </span>
+      <div className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center shadow-lg ${loading ? 'animate-pulse' : ''}`}>
+        {profileImage ? (
+          <div className="relative w-full h-full">
+            <Image
+              src={profileImage}
+              alt={profileData?.name || formatAddress(address)}
+              fill
+              className="object-cover"
+              sizes={size === 'sm' ? '32px' : size === 'md' ? '40px' : '48px'}
+            />
+          </div>
         ) : (
-          <UserCircleIcon className={`${iconSizes[size]} text-white/80`} />
+          <div className={`w-full h-full bg-gradient-to-br ${colorClass} flex items-center justify-center`}>
+            {profileData?.name ? (
+              <span className="text-white font-bold">
+                {profileData.name.charAt(0).toUpperCase()}
+              </span>
+            ) : (
+              <UserCircleIcon className={`${iconSizes[size]} text-white/80`} />
+            )}
+          </div>
         )}
       </div>
       
-      {showName && (
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-white">
-            {profileData?.name || formatAddress(address)}
-          </span>
-          {profileData?.description && (
-            <span className="text-xs text-gray-400 truncate max-w-[200px]">
+      {(showName || showDescription) && (
+        <div className="flex flex-col min-w-0">
+          {showName && (
+            <span className={`${textSizes[size]} font-medium text-white truncate`}>
+              {profileData?.name || formatAddress(address)}
+            </span>
+          )}
+          {showDescription && profileData?.description && (
+            <span className={`text-xs text-gray-400 truncate max-w-[200px]`}>
               {profileData.description}
             </span>
           )}
