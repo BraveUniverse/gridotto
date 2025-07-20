@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ReceivedAsset } from '@/hooks/useLSP5ReceivedAssets';
 import Web3 from 'web3';
-import ERC725js from '@erc725/erc725.js';
 
 interface NFTTokenSelectorProps {
   asset: ReceivedAsset;
@@ -40,75 +39,46 @@ export default function NFTTokenSelector({
       const metadatas: TokenMetadata[] = [];
 
       try {
-        // Create contract instance for LSP8
         const web3Instance = new Web3(web3Provider);
-        const nftContract = new web3Instance.eth.Contract([
-          {
-            inputs: [
-              { name: 'tokenId', type: 'bytes32' },
-              { name: 'dataKey', type: 'bytes32' }
-            ],
-            name: 'getDataForTokenId',
-            outputs: [{ name: '', type: 'bytes' }],
-            stateMutability: 'view',
-            type: 'function'
-          }
-        ], asset.address);
-
-        // Fetch metadata for each token
+        
+        // For each token, try to get metadata
         for (const tokenId of asset.tokenIds) {
+          let metadata: TokenMetadata = { 
+            tokenId,
+            name: `${asset.name} #${parseInt(tokenId, 16)}`
+          };
+
           try {
-            // Try to get token metadata URL
-            const metadataKey = '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e'; // LSP4Metadata key
-            const metadataBytes = await nftContract.methods.getDataForTokenId(tokenId, metadataKey).call() as string;
-            
-            let metadata: TokenMetadata = { tokenId };
+            // Try to get metadata from the asset's general metadata
+            // Many LSP8 collections use the same base metadata for all tokens
+            if (asset.metadata) {
+              // Check if there's a base URI pattern
+              if (asset.metadata.description) {
+                metadata.description = asset.metadata.description;
+              }
 
-            if (metadataBytes && metadataBytes !== '0x' && metadataBytes !== '0x0') {
-              try {
-                // Decode the metadata URL
-                const decodedUrl = Web3.utils.hexToUtf8(metadataBytes as string);
-                let metadataUrl = decodedUrl;
-
-                // Handle IPFS URLs
-                if (metadataUrl.startsWith('ipfs://')) {
-                  metadataUrl = `https://api.universalprofile.cloud/ipfs/${metadataUrl.slice(7)}`;
+              // For images, check if there's a pattern or use collection image
+              if (asset.metadata.images?.[0]?.url || asset.metadata.icon?.[0]?.url) {
+                const baseImage = asset.metadata.images?.[0]?.url || asset.metadata.icon?.[0]?.url;
+                
+                // Some NFTs use a pattern like {id} in the URL
+                if (baseImage.includes('{id}')) {
+                  metadata.image = baseImage.replace('{id}', parseInt(tokenId, 16).toString());
+                } else {
+                  // Use collection image as fallback
+                  metadata.image = baseImage;
                 }
-
-                // Fetch the metadata JSON
-                const response = await fetch(metadataUrl);
-                if (response.ok) {
-                  const json = await response.json();
-                  
-                  // Extract relevant fields
-                  metadata.name = json.name || `${asset.name} #${parseInt(tokenId, 16)}`;
-                  metadata.description = json.description;
-                  
-                  // Handle image URL
-                  if (json.image) {
-                    metadata.image = json.image.startsWith('ipfs://') 
-                      ? `https://api.universalprofile.cloud/ipfs/${json.image.slice(7)}`
-                      : json.image;
-                  }
-                }
-              } catch (err) {
-                console.log('Error parsing token metadata:', err);
               }
             }
 
-            // If no metadata found, use defaults
-            if (!metadata.name) {
-              metadata.name = `${asset.name} #${parseInt(tokenId, 16)}`;
-            }
-
-            metadatas.push(metadata);
+            // If the collection has individual metadata per token, we could fetch it here
+            // But for now, we'll use the pattern-based approach which is more common
+            
           } catch (err) {
-            console.log(`Error fetching metadata for token ${tokenId}:`, err);
-            metadatas.push({ 
-              tokenId, 
-              name: `${asset.name} #${parseInt(tokenId, 16)}` 
-            });
+            console.log(`Error processing metadata for token ${tokenId}:`, err);
           }
+
+          metadatas.push(metadata);
         }
       } catch (err) {
         console.error('Error fetching NFT token metadatas:', err);
@@ -183,14 +153,18 @@ export default function NFTTokenSelector({
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      onError={(e) => {
+                        // Hide broken image and show fallback
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
                     />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/10">
-                      <span className="text-4xl font-bold text-primary/50">
-                        #{parseInt(token.tokenId, 16)}
-                      </span>
-                    </div>
-                  )}
+                  ) : null}
+                  <div className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/10 ${token.image ? 'hidden' : ''}`}>
+                    <span className="text-4xl font-bold text-primary/50">
+                      #{parseInt(token.tokenId, 16)}
+                    </span>
+                  </div>
                   
                   {/* Selected Overlay */}
                   {isSelected && (
