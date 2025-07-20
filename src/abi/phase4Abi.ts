@@ -12,48 +12,35 @@ export const phase4Abi = [
   // Functions
   {
     inputs: [
-      { name: "drawType", type: "uint8" },
       {
         name: "config",
         type: "tuple",
         components: [
+          { name: "drawType", type: "uint8" },
           { name: "ticketPrice", type: "uint256" },
           { name: "duration", type: "uint256" },
-          { name: "maxTickets", type: "uint256" },
+          { name: "prizeToken", type: "address" },
           { name: "initialPrize", type: "uint256" },
-          { name: "requirement", type: "uint8" },
-          { name: "requiredToken", type: "address" },
-          { name: "minTokenAmount", type: "uint256" },
-          {
-            name: "prizeConfig",
-            type: "tuple",
-            components: [
-              { name: "model", type: "uint8" },
-              { name: "creatorContribution", type: "uint256" },
-              { name: "addParticipationFees", type: "bool" },
-              { name: "participationFeePercent", type: "uint256" },
-              { name: "totalWinners", type: "uint256" }
-            ]
-          },
-          {
-            name: "lsp26Config",
-            type: "tuple",
-            components: [
-              { name: "enabled", type: "bool" },
-              { name: "followersRequired", type: "uint256" }
-            ]
-          },
-          { name: "tokenAddress", type: "address" },
-          { name: "nftContract", type: "address" },
           { name: "nftTokenIds", type: "bytes32[]" },
+          { name: "numberOfWinners", type: "uint256" },
           {
             name: "tiers",
             type: "tuple[]",
             components: [
-              { name: "winnersCount", type: "uint256" },
-              { name: "prizePercent", type: "uint256" }
+              { name: "winnerCount", type: "uint256" },
+              { name: "prizePercentage", type: "uint256" },
+              { name: "fixedPrizeAmount", type: "uint256" },
+              { name: "specificNFTId", type: "bytes32" }
             ]
-          }
+          },
+          { name: "requirement", type: "uint8" },
+          { name: "requiredToken", type: "address" },
+          { name: "minTokenAmount", type: "uint256" },
+          { name: "minFollowers", type: "uint256" },
+          { name: "creatorFeePercent", type: "uint256" },
+          { name: "minParticipants", type: "uint256" },
+          { name: "maxParticipants", type: "uint256" },
+          { name: "maxTicketsPerUser", type: "uint256" }
         ]
       }
     ],

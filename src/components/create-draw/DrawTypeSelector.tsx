@@ -5,7 +5,7 @@ import {
   PhotoIcon,
   CircleStackIcon
 } from '@heroicons/react/24/outline';
-import { DrawData } from '@/types/create-draw';
+import { DrawData } from '@/types';
 
 interface DrawTypeSelectorProps {
   drawData: DrawData;

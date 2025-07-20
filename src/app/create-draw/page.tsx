@@ -10,7 +10,7 @@ import { Requirements } from '@/components/create-draw/Requirements';
 import { ReviewAndCreate } from '@/components/create-draw/ReviewAndCreate';
 import { StepIndicator } from '@/components/create-draw/StepIndicator';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { DrawData } from '@/types/create-draw';
+import { DrawData } from '@/types';
 
 const steps = [
   { id: 1, name: 'Draw Type', description: 'Select the type of draw' },
@@ -30,7 +30,6 @@ export default function CreateDrawPage() {
     maxTickets: 100,
     requirementType: 0,
     tokenIds: [],
-    isMultiWinner: false,
     winnerCount: 1
   });
 

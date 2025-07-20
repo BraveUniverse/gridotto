@@ -311,9 +311,9 @@ export const useGridottoContract = () => {
 
   const createDraw = useCallback(async (params: {
     drawType: 'LYX' | 'TOKEN' | 'NFT';
-    ticketPrice: string;
+    ticketPrice?: string;
     duration: number;
-    maxTickets: number;
+    maxTickets?: number;
     initialPrize?: string;
     tokenAddress?: string;
     nftContract?: string;
@@ -321,8 +321,11 @@ export const useGridottoContract = () => {
     requirement?: number;
     requiredToken?: string;
     minTokenAmount?: string;
-    prizeModel?: number;
-    totalWinners?: number;
+    numberOfWinners?: number;
+    creatorFeePercent?: number;
+    minParticipants?: number;
+    maxParticipants?: number;
+    maxTicketsPerUser?: number;
   }) => {
     if (!contract || !account) throw new Error('Contract or account not available');
     
@@ -334,58 +337,130 @@ export const useGridottoContract = () => {
         'NFT': 4     // USER_LSP8
       };
       
-      // Default prize config
-      const prizeConfig = {
-        model: params.prizeModel || 0, // CREATOR_FUNDED
-        creatorContribution: params.initialPrize || '0',
-        addParticipationFees: true,
-        participationFeePercent: 0,
-        totalWinners: params.totalWinners || 1
-      };
-      
-      // LSP26 config (disabled by default)
-      const lsp26Config = {
-        enabled: false,
-        followersRequired: 0
-      };
-      
       // Convert string tokenIds to bytes32
       const nftTokenIds = params.nftTokenIds?.map(id => 
         Web3.utils.padLeft(Web3.utils.toHex(id), 64)
       ) || [];
       
-      // Prepare config object
+      // Prepare config object according to new structure
       const config = {
-        ticketPrice: params.ticketPrice,
+        drawType: drawTypeMap[params.drawType],
+        ticketPrice: params.ticketPrice || '0', // 0 = free draw
         duration: params.duration,
-        maxTickets: params.maxTickets,
+        prizeToken: params.tokenAddress || '0x0000000000000000000000000000000000000000',
         initialPrize: params.initialPrize || '0',
-        requirement: params.requirement || 0,
+        nftTokenIds,
+        numberOfWinners: params.numberOfWinners || 1,
+        tiers: [], // Empty for equal distribution
+        requirement: params.requirement || 0, // 0 = NONE
         requiredToken: params.requiredToken || '0x0000000000000000000000000000000000000000',
         minTokenAmount: params.minTokenAmount || '0',
-        prizeConfig,
-        lsp26Config,
-        tokenAddress: params.tokenAddress || '0x0000000000000000000000000000000000000000',
-        nftContract: params.nftContract || '0x0000000000000000000000000000000000000000',
-        nftTokenIds,
-        tiers: [] // Empty tiers for now
+        minFollowers: 0, // Not using followers for now
+        creatorFeePercent: params.creatorFeePercent || 0, // 0 = no creator fee
+        minParticipants: params.minParticipants || 0, // 0 = no minimum
+        maxParticipants: params.maxParticipants || 0, // 0 = no maximum
+        maxTicketsPerUser: params.maxTicketsPerUser || 0 // 0 = no limit
       };
       
-      const value = params.drawType === 'LYX' && params.initialPrize 
-        ? params.initialPrize 
-        : '0';
+      // For NFT draws, use nftContract as prizeToken
+      if (params.drawType === 'NFT' && params.nftContract) {
+        config.prizeToken = params.nftContract;
+      }
       
-      const tx = await contract.methods.createAdvancedDraw(
-        drawTypeMap[params.drawType],
-        config
-      ).send({ 
-        from: account,
-        value 
+      // No need to send value for initial prize anymore
+      const tx = await contract.methods.createAdvancedDraw(config).send({ 
+        from: account
       });
       
       return tx;
     } catch (err) {
       console.error('Error creating draw:', err);
+      throw err;
+    }
+  }, [contract, account]);
+
+  // Get executor reward for a draw
+  const getUserDrawExecutorReward = useCallback(async (drawId: number): Promise<string> => {
+    if (!contract) return '0';
+    
+    try {
+      const reward = await contract.methods.getUserDrawExecutorReward(drawId).call();
+      return reward;
+    } catch (err) {
+      console.error('Error fetching executor reward:', err);
+      return '0';
+    }
+  }, [contract]);
+
+  // Get recent winners for leaderboard
+  const getRecentWinners = useCallback(async (offset: number = 0, limit: number = 10) => {
+    if (!contract) return [];
+    
+    try {
+      const winners = await contract.methods.getRecentWinners(offset, limit).call();
+      return winners;
+    } catch (err) {
+      console.error('Error fetching recent winners:', err);
+      return [];
+    }
+  }, [contract]);
+
+  // Get advanced draw info
+  const getAdvancedDrawInfo = useCallback(async (drawId: number) => {
+    if (!contract) return null;
+    
+    try {
+      const info = await contract.methods.getAdvancedDrawInfo(drawId).call();
+      return {
+        creator: info[0],
+        drawType: info[1],
+        startTime: info[2],
+        endTime: info[3],
+        ticketPrice: info[4],
+        totalTickets: info[5],
+        participantCount: info[6],
+        prizePool: info[7],
+        tokenAddress: info[8],
+        nftContract: info[9],
+        nftCount: info[10],
+        isCompleted: info[11],
+        winners: info[12],
+        minParticipants: info[13],
+        maxParticipants: info[14],
+        requirement: info[15],
+        executorReward: info[16]
+      };
+    } catch (err) {
+      console.error('Error fetching advanced draw info:', err);
+      return null;
+    }
+  }, [contract]);
+
+  // Check if user can participate
+  const canUserParticipate = useCallback(async (drawId: number, user: string) => {
+    if (!contract) return { canParticipate: false, reason: 'Contract not loaded' };
+    
+    try {
+      const result = await contract.methods.canUserParticipate(drawId, user).call();
+      return {
+        canParticipate: result[0],
+        reason: result[1]
+      };
+    } catch (err) {
+      console.error('Error checking participation:', err);
+      return { canParticipate: false, reason: 'Error checking eligibility' };
+    }
+  }, [contract]);
+
+  // Execute user draw
+  const executeUserDraw = useCallback(async (drawId: number) => {
+    if (!contract || !account) throw new Error('Contract or account not available');
+    
+    try {
+      const tx = await contract.methods.executeUserDraw(drawId).send({ from: account });
+      return tx;
+    } catch (err) {
+      console.error('Error executing draw:', err);
       throw err;
     }
   }, [contract, account]);
@@ -408,6 +483,11 @@ export const useGridottoContract = () => {
     getContractInfo,
     getPlatformStats,
     purchaseTickets,
-    createDraw
+    createDraw,
+    getUserDrawExecutorReward,
+    getRecentWinners,
+    getAdvancedDrawInfo,
+    canUserParticipate,
+    executeUserDraw
   };
 }; 

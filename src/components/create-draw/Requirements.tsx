@@ -1,6 +1,6 @@
 'use client';
 
-import { DrawData } from '@/types/create-draw';
+import { DrawData } from '@/types';
 import { 
   ShieldCheckIcon,
   CurrencyDollarIcon,

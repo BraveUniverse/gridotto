@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
-import { DrawData } from '@/types/create-draw';
+import { DrawData } from '@/types';
 import { 
   CheckCircleIcon,
   ExclamationCircleIcon 
@@ -36,22 +36,44 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
       // Prepare parameters based on draw type
       const params: any = {
         drawType: drawData.drawType,
-        ticketPrice: Web3.utils.toWei(drawData.ticketPrice.toString(), 'ether'),
         duration: drawData.duration * 86400, // Convert days to seconds
-        maxTickets: drawData.maxTickets,
-        requirement: drawData.requirementType,
-        requiredToken: drawData.requiredToken,
+        numberOfWinners: drawData.winnerCount || 1,
+        requirement: drawData.requirementType || 0,
+        requiredToken: drawData.requiredToken || undefined,
         minTokenAmount: drawData.minTokenAmount ? Web3.utils.toWei(drawData.minTokenAmount.toString(), 'ether') : undefined,
-        prizeModel: 0, // CREATOR_FUNDED
-        totalWinners: drawData.winnerCount || 1
       };
+
+      // Optional parameters
+      if (drawData.ticketPrice > 0) {
+        params.ticketPrice = Web3.utils.toWei(drawData.ticketPrice.toString(), 'ether');
+      }
+      
+      if (drawData.maxTickets > 0) {
+        params.maxTickets = drawData.maxTickets;
+      }
+
+      if (drawData.creatorFeePercent && drawData.creatorFeePercent > 0) {
+        params.creatorFeePercent = drawData.creatorFeePercent;
+      }
+
+      if (drawData.minParticipants && drawData.minParticipants > 0) {
+        params.minParticipants = drawData.minParticipants;
+      }
+
+      if (drawData.maxParticipants && drawData.maxParticipants > 0) {
+        params.maxParticipants = drawData.maxParticipants;
+      }
 
       // Add type-specific parameters
       if (drawData.drawType === 'LYX') {
-        params.initialPrize = drawData.prizeAmount ? Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether') : '0';
+        if (drawData.prizeAmount && drawData.prizeAmount > 0) {
+          params.initialPrize = Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether');
+        }
       } else if (drawData.drawType === 'TOKEN') {
         params.tokenAddress = drawData.tokenAddress;
-        params.initialPrize = drawData.prizeAmount ? Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether') : '0';
+        if (drawData.prizeAmount && drawData.prizeAmount > 0) {
+          params.initialPrize = Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether');
+        }
       } else if (drawData.drawType === 'NFT') {
         params.nftContract = drawData.nftContract;
         params.nftTokenIds = drawData.tokenIds;
@@ -132,7 +154,7 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
               
               <div>
                 <p className="text-sm text-gray-400">Token IDs</p>
-                <p className="text-white font-medium">{drawData.tokenIds.join(', ')}</p>
+                <p className="text-white font-medium">{drawData.tokenIds?.join(', ') || 'None'}</p>
               </div>
             </>
           )}

@@ -4,8 +4,7 @@ export const phase3Abi = [
     inputs: [
       { name: "drawId", type: "uint256" },
       { name: "creator", type: "address" },
-      { name: "tokenAddress", type: "address" },
-      { name: "prizeAmount", type: "uint256" }
+      { name: "tokenAddress", type: "address" }
     ],
     name: "TokenDrawCreated",
     type: "event"
@@ -15,7 +14,7 @@ export const phase3Abi = [
       { name: "drawId", type: "uint256" },
       { name: "creator", type: "address" },
       { name: "nftContract", type: "address" },
-      { name: "tokenIds", type: "bytes32[]" }
+      { name: "tokenId", type: "bytes32" }
     ],
     name: "NFTDrawCreated",
     type: "event"
@@ -24,53 +23,61 @@ export const phase3Abi = [
   {
     inputs: [
       { name: "tokenAddress", type: "address" },
-      { name: "prizeAmount", type: "uint256" },
-      { name: "ticketPrice", type: "uint256" },
+      { name: "initialPrize", type: "uint256" },
+      { name: "ticketPriceLYX", type: "uint256" },
       { name: "duration", type: "uint256" },
-      { name: "maxTickets", type: "uint256" },
-      { name: "requirement", type: "uint256" },
-      { name: "requiredToken", type: "address" },
-      { name: "minTokenAmount", type: "uint256" }
+      { name: "minParticipants", type: "uint256" },
+      { name: "maxParticipants", type: "uint256" },
+      { name: "creatorFeePercent", type: "uint256" }
     ],
     name: "createTokenDraw",
-    outputs: [],
-    stateMutability: "nonpayable",
+    outputs: [{ name: "drawId", type: "uint256" }],
+    stateMutability: "payable",
     type: "function"
   },
   {
     inputs: [
       { name: "nftContract", type: "address" },
-      { name: "tokenIds", type: "bytes32[]" },
+      { name: "tokenId", type: "bytes32" },
       { name: "ticketPrice", type: "uint256" },
       { name: "duration", type: "uint256" },
-      { name: "maxTickets", type: "uint256" },
-      { name: "requirement", type: "uint256" },
-      { name: "requiredToken", type: "address" },
-      { name: "minTokenAmount", type: "uint256" }
+      { name: "minParticipants", type: "uint256" },
+      { name: "maxParticipants", type: "uint256" }
     ],
     name: "createNFTDraw",
+    outputs: [{ name: "drawId", type: "uint256" }],
+    stateMutability: "payable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "drawId", type: "uint256" },
+      { name: "amount", type: "uint256" }
+    ],
+    name: "buyUserDrawTicket",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "drawId", type: "uint256" }],
+    name: "executeUserDraw",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function"
   },
   {
-    inputs: [
-      { name: "drawId", type: "uint256" },
-      { name: "amount", type: "uint256" }
-    ],
-    name: "buyTokenDrawTicket",
+    inputs: [{ name: "token", type: "address" }],
+    name: "claimTokenPrize",
     outputs: [],
-    stateMutability: "payable",
+    stateMutability: "nonpayable",
     type: "function"
   },
   {
-    inputs: [
-      { name: "drawId", type: "uint256" },
-      { name: "amount", type: "uint256" }
-    ],
-    name: "buyNFTDrawTicket",
+    inputs: [{ name: "nftContract", type: "address" }],
+    name: "claimNFTPrize",
     outputs: [],
-    stateMutability: "payable",
+    stateMutability: "nonpayable",
     type: "function"
   }
 ] as const;

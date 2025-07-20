@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DrawData } from '@/types/create-draw';
+import { DrawData } from '@/types';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
 interface PrizeConfigurationProps {
@@ -75,18 +75,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Token Symbol
-            </label>
-            <input
-              type="text"
-              value={drawData.tokenSymbol || ''}
-              onChange={(e) => updateDrawData({ tokenSymbol: e.target.value })}
-              className="input-glass w-full"
-              placeholder="e.g., USDT"
-            />
-          </div>
+
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -103,7 +92,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
                 placeholder="Enter prize amount"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                {drawData.tokenSymbol || 'TOKEN'}
+                TOKEN
               </span>
             </div>
           </div>
