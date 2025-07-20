@@ -196,7 +196,7 @@ export const useGridottoContract = () => {
       
       // If no method found, try to get individual values
       if (!result) {
-        result = {};
+        result = {} as any;
         try {
           if (gridottoContract.methods.ticketPrice) {
             result.ticketPrice = await gridottoContract.methods.ticketPrice().call();
