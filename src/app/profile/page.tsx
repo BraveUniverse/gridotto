@@ -34,7 +34,12 @@ interface ParticipationHistory {
 
 const ProfilePage = () => {
   const { account, isConnected } = useUPProvider();
-  const { getUserParticipationHistory, getAdvancedDrawInfo } = useGridottoContract();
+  const { 
+    getUserParticipationHistory, 
+    getAdvancedDrawInfo,
+    getUserCreatedDraws,
+    getUserDrawStats
+  } = useGridottoContract();
   const [userStats, setUserStats] = useState<UserStats>({
     totalWon: '0',
     totalSpent: '0',
@@ -43,7 +48,9 @@ const ProfilePage = () => {
     ticketsBought: 0
   });
   const [participationHistory, setParticipationHistory] = useState<ParticipationHistory[]>([]);
+  const [createdDraws, setCreatedDraws] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'participated' | 'created'>('participated');
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -109,6 +116,22 @@ const ProfilePage = () => {
         });
         
         setParticipationHistory(detailedHistory);
+        
+        // Load created draws
+        const createdDrawIds = await getUserCreatedDraws(account, 0, 100);
+        const createdDrawsData = [];
+        
+        for (const drawId of createdDrawIds) {
+          const stats = await getUserDrawStats(Number(drawId));
+          if (stats) {
+            createdDrawsData.push({
+              drawId: Number(drawId),
+              ...stats
+            });
+          }
+        }
+        
+        setCreatedDraws(createdDrawsData);
       } catch (err) {
         console.error('Error loading user data:', err);
       } finally {
@@ -117,7 +140,7 @@ const ProfilePage = () => {
     };
 
     loadUserData();
-  }, [account, getUserParticipationHistory, getAdvancedDrawInfo]);
+  }, [account, getUserParticipationHistory, getAdvancedDrawInfo, getUserCreatedDraws, getUserDrawStats]);
 
   if (!isConnected) {
     return (
@@ -223,12 +246,38 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            {/* Participation History */}
+            {/* Tab Navigation */}
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setActiveTab('participated')}
+                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                  activeTab === 'participated'
+                    ? 'bg-gradient-to-r from-primary to-purple-600 text-white'
+                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                }`}
+              >
+                Participated Draws ({participationHistory.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('created')}
+                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                  activeTab === 'created'
+                    ? 'bg-gradient-to-r from-primary to-purple-600 text-white'
+                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                }`}
+              >
+                Created Draws ({createdDraws.length})
+              </button>
+            </div>
+
+            {/* Tab Content */}
             <div className="glass-card p-6">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <ClockIcon className="w-6 h-6 text-primary" />
-                Participation History
-              </h2>
+              {activeTab === 'participated' ? (
+                <>
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                    <ClockIcon className="w-6 h-6 text-primary" />
+                    Participation History
+                  </h2>
 
               {participationHistory.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -302,7 +351,89 @@ const ProfilePage = () => {
                   </Link>
                 </div>
               )}
-            </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <SparklesIcon className="w-6 h-6 text-purple-400" />
+                Created Draws
+              </h2>
+
+              {createdDraws.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Draw ID</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Status</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Prize Pool</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Participants</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">End Time</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {createdDraws.map((draw, index) => {
+                        const isActive = Number(draw.endTime) > Date.now() / 1000;
+                        const endDate = new Date(Number(draw.endTime) * 1000);
+                        
+                        return (
+                          <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="py-3 px-4">
+                              <span className="font-mono text-white">#{draw.drawId}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              {isActive ? (
+                                <span className="flex items-center gap-1 text-green-400">
+                                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                  Active
+                                </span>
+                              ) : draw.isCompleted ? (
+                                <span className="text-blue-400">Completed</span>
+                              ) : (
+                                <span className="text-yellow-400">Pending</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-yellow-400 font-medium">
+                                {Web3.utils.fromWei(draw.prizePool || '0', 'ether')} LYX
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-white">{draw.totalTicketsSold || 0}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-gray-400 text-sm">
+                                {endDate.toLocaleDateString()}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <Link 
+                                href={`/draws/${draw.drawId}`}
+                                className="text-primary hover:text-primary/80 text-sm font-medium"
+                              >
+                                Manage
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <SparklesIcon className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-400">No draws created yet</p>
+                  <Link href="/create-draw" className="btn-primary mt-4 inline-flex items-center gap-2">
+                    <SparklesIcon className="w-5 h-5" />
+                    Create Your First Draw
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
+        </div>
           </>
         )}
       </div>

@@ -565,13 +565,14 @@ export const useGridottoContract = () => {
     }
   }, [contract, account]);
 
-  // Buy tickets for monthly draw
+  // Buy tickets for monthly draw (same as weekly, just different tracking)
   const buyMonthlyTickets = useCallback(async (amount: number) => {
     if (!contract || !account) throw new Error('Contract or account not available');
     
     console.log('=== BUY MONTHLY TICKETS ===');
     console.log('Amount:', amount);
     console.log('Account:', account);
+    console.log('Note: Monthly tickets use the same function as weekly tickets');
     
     try {
       const ticketPrice = await contract.methods.getTicketPrice().call();
@@ -580,16 +581,16 @@ export const useGridottoContract = () => {
       console.log('Ticket price:', ticketPrice);
       console.log('Total cost:', totalCost.toString());
       
-      // Use buyMultipleMonthlyTickets for multiple tickets, buyMonthlyTicket for single
+      // Monthly tickets are tracked separately but use the same buyTicket function
       if (amount === 1) {
-        const tx = await contract.methods.buyMonthlyTicket(account).send({
+        const tx = await contract.methods.buyTicket(account).send({
           from: account,
           value: totalCost.toString()
         });
         console.log('Buy monthly ticket transaction successful:', tx);
         return tx;
       } else {
-        const tx = await contract.methods.buyMultipleMonthlyTickets(account, amount).send({
+        const tx = await contract.methods.buyMultipleTickets(account, amount).send({
           from: account,
           value: totalCost.toString()
         });

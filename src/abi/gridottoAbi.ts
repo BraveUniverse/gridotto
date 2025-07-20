@@ -40,25 +40,7 @@ export const gridottoAbi = [
     stateMutability: "payable",
     type: "function"
   },
-  {
-    inputs: [
-      { name: "profile", type: "address" }
-    ],
-    name: "buyMonthlyTicket",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function"
-  },
-  {
-    inputs: [
-      { name: "profile", type: "address" },
-      { name: "amount", type: "uint256" }
-    ],
-    name: "buyMultipleMonthlyTickets",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function"
-  },
+
   {
     inputs: [],
     name: "getTicketPrice",
