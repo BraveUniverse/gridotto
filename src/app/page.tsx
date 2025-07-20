@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Header } from '@/components/Header';
 import { HeroSection } from '@/components/home/HeroSection';
 import { StatsSection } from '@/components/home/StatsSection';
 import { FeaturesSection } from '@/components/home/FeaturesSection';
@@ -32,8 +31,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[rgb(var(--background))] to-[rgb(var(--background-secondary))]">
-      <Header />
-      
       <main className="relative">
         {/* Hero Section */}
         <HeroSection />

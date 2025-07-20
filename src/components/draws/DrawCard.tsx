@@ -11,7 +11,8 @@ import {
   TrophyIcon,
   CurrencyDollarIcon,
   PhotoIcon,
-  SparklesIcon
+  SparklesIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 
@@ -57,18 +58,21 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
       const days = Math.floor(diff / 86400);
       const hours = Math.floor((diff % 86400) / 3600);
       const minutes = Math.floor((diff % 3600) / 60);
+      const seconds = diff % 60;
 
       if (days > 0) {
-        setTimeLeft(`${days}d ${hours}h`);
+        setTimeLeft(`${days}d ${hours}h ${minutes}m`);
       } else if (hours > 0) {
         setTimeLeft(`${hours}h ${minutes}m`);
+      } else if (minutes > 0) {
+        setTimeLeft(`${minutes}m ${seconds}s`);
       } else {
-        setTimeLeft(`${minutes}m`);
+        setTimeLeft(`${seconds}s`);
       }
     };
 
     calculateTimeLeft();
-    const interval = setInterval(calculateTimeLeft, 60000); // Update every minute
+    const interval = setInterval(calculateTimeLeft, 1000); // Update every second
 
     return () => clearInterval(interval);
   }, [draw.endTime]);
@@ -82,96 +86,103 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
     }
   }, [draw.totalTicketsSold, draw.maxTickets]);
 
-  const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const Icon = config.icon;
+  const prizeAmount = draw.prizeAmount || '0';
+  const prizeInLYX = Web3.utils.fromWei(prizeAmount, 'ether');
+  const ticketPriceInLYX = Web3.utils.fromWei(draw.ticketPrice, 'ether');
 
   return (
     <Link href={`/draws/${draw.drawId}`}>
-      <div className="glass-card glass-card-hover h-full p-6 group">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-lg bg-gradient-to-br ${config.color} bg-opacity-20`}>
-              <Icon className="w-5 h-5 text-white" />
+      <div className="group relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl overflow-hidden hover:scale-[1.02] transition-all duration-300 cursor-pointer h-full border border-white/10 hover:border-white/20">
+        {/* Gradient overlay */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${config.color} opacity-10 group-hover:opacity-20 transition-opacity`} />
+        
+        {/* Content */}
+        <div className="relative z-10 p-6 flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${config.color} flex items-center justify-center shadow-lg`}>
+                <config.icon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Draw #{draw.drawId}</h3>
+                <p className="text-xs text-gray-400">{config.label}</p>
+              </div>
             </div>
-            <div>
-              <span className="text-xs text-gray-400">Draw #{draw.drawId}</span>
-              <h3 className="font-semibold text-white">{config.label}</h3>
+            {draw.isActive ? (
+              <div className="flex items-center gap-1 text-xs text-green-400">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                Active
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500">Ended</div>
+            )}
+          </div>
+
+          {/* Prize Pool */}
+          <div className="mb-4">
+            <p className="text-sm text-gray-400 mb-1">Prize Pool</p>
+            <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
+              {prizeInLYX} LYX
+            </p>
+          </div>
+
+          {/* Info Grid */}
+          <div className="grid grid-cols-2 gap-3 mb-4 flex-1">
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <TicketIcon className="w-4 h-4 text-gray-400" />
+                <p className="text-xs text-gray-400">Ticket Price</p>
+              </div>
+              <p className="text-sm font-medium text-white">{ticketPriceInLYX} LYX</p>
             </div>
-          </div>
-          
-          <div className="flex items-center space-x-1 text-sm">
-            <ClockIcon className="w-4 h-4 text-gray-400" />
-            <span className={timeLeft === 'Ended' ? 'text-red-400' : 'text-gray-300'}>
-              {timeLeft}
-            </span>
-          </div>
-        </div>
-
-        {/* Prize Pool */}
-        <div className="mb-4">
-          <p className="text-sm text-gray-400 mb-1">Prize Pool</p>
-          <p className="text-3xl font-bold text-[#FF2975]">
-            {Web3.utils.fromWei(draw.prizeAmount, 'ether')} LYX
-          </p>
-        </div>
-
-        {/* Creator */}
-        <div className="mb-4">
-          <p className="text-sm text-gray-400 mb-2">Created by</p>
-          <ProfileDisplay 
-            address={draw.creator} 
-            size="sm"
-            showName={true}
-          />
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="flex items-center space-x-2">
-            <TicketIcon className="w-4 h-4 text-gray-400" />
-            <div>
-              <p className="text-xs text-gray-400">Ticket Price</p>
-              <p className="font-semibold text-white">{draw.ticketPrice} LYX</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <UsersIcon className="w-4 h-4 text-gray-400" />
-            <div>
-              <p className="text-xs text-gray-400">Participants</p>
-              <p className="font-semibold text-white">{draw.totalTicketsSold}</p>
+            
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <UsersIcon className="w-4 h-4 text-gray-400" />
+                <p className="text-xs text-gray-400">Participants</p>
+              </div>
+              <p className="text-sm font-medium text-white">{draw.participants?.length || 0}</p>
             </div>
           </div>
+
+          {/* Progress Bar */}
+          <div className="mb-4">
+            <div className="flex justify-between text-xs text-gray-400 mb-1">
+              <span>Tickets Sold</span>
+              <span>{draw.totalTicketsSold} / {draw.maxTickets}</span>
+            </div>
+            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-primary to-purple-600 transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Creator & Time */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ProfileDisplay address={draw.creator} size="sm" />
+              <div>
+                <p className="text-xs text-gray-400">Created by</p>
+                <p className="text-xs font-medium text-white">
+                  {draw.creator.slice(0, 6)}...{draw.creator.slice(-4)}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <ClockIcon className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-medium text-white">{timeLeft}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="mb-4">
-          <div className="flex justify-between text-xs text-gray-400 mb-1">
-            <span>Tickets Sold</span>
-            <span>{draw.totalTicketsSold} / {draw.maxTickets}</span>
-          </div>
-          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-[#FF2975] to-[#FF2975]/50 transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+        {/* Hover effect arrow */}
+        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ArrowRightIcon className="w-5 h-5 text-white" />
         </div>
-
-        {/* Multi-winner indicator */}
-        {false && (
-          <div className="flex items-center space-x-2 text-sm">
-            <TrophyIcon className="w-4 h-4 text-yellow-400" />
-            <span className="text-yellow-400">Multiple Winners</span>
-          </div>
-        )}
-
-        {/* Hover Effect */}
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#FF2975]/0 to-[#FF2975]/0 group-hover:from-[#FF2975]/10 group-hover:to-transparent transition-all duration-300 pointer-events-none" />
       </div>
     </Link>
   );
