@@ -42,33 +42,115 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
       setError(null);
 
       try {
-        // ERC725 instance oluştur
-        const erc725 = new ERC725js(
-          LSP5ReceivedAssetsSchema,
-          profileAddress,
-          web3.currentProvider
-        );
-
-        // LSP5ReceivedAssets[] verilerini çek
-        let receivedAssetsData;
-        try {
-          receivedAssetsData = await erc725.getData('LSP5ReceivedAssets[]');
-        } catch (err) {
-          console.log('No LSP5 assets found or not a Universal Profile');
+        // Check if it's a valid contract
+        const code = await web3.eth.getCode(profileAddress);
+        if (code === '0x' || code === '0x0') {
+          console.log('Not a contract address');
           setAssets([]);
           setLoading(false);
           return;
         }
+
+        // ERC725 instance oluştur
+        const erc725 = new ERC725js(
+          LSP5ReceivedAssetsSchema,
+          profileAddress,
+          web3.currentProvider,
+          {
+            ipfsGateway: 'https://api.universalprofile.cloud/ipfs/'
+          }
+        );
+
+        // Try multiple approaches to get assets
+        let assetAddresses: string[] = [];
         
-        if (receivedAssetsData && receivedAssetsData.value && Array.isArray(receivedAssetsData.value)) {
-          const assetAddresses = receivedAssetsData.value as string[];
+        try {
+          // Method 1: Try with full key
+          const result = await erc725.getData('LSP5ReceivedAssets[]');
+          if (result && result.value) {
+            assetAddresses = result.value as string[];
+          }
+        } catch (err) {
+          console.log('Method 1 failed, trying alternative method');
+          
+          try {
+            // Method 2: Get all data and filter
+            const allData = await erc725.getData() as Record<string, any>;
+            
+            // Find LSP5ReceivedAssets entries
+            const lsp5Keys = Object.keys(allData).filter(key => 
+              key.startsWith('0x6460ee3c0aac563ccbf76d6e1d07bada')
+            );
+            
+            if (lsp5Keys.length > 0) {
+              // Extract addresses from the data
+              for (const key of lsp5Keys) {
+                const value = allData[key];
+                if (value && typeof value === 'string' && value.startsWith('0x') && value.length === 42) {
+                  assetAddresses.push(value);
+                }
+              }
+            }
+          } catch (err2) {
+            console.log('Method 2 failed, trying direct call');
+            
+            try {
+              // Method 3: Direct contract call
+              const contract = new web3.eth.Contract([
+                {
+                  inputs: [{ name: 'dataKey', type: 'bytes32' }],
+                  name: 'getData',
+                  outputs: [{ name: '', type: 'bytes' }],
+                  stateMutability: 'view',
+                  type: 'function'
+                },
+                {
+                  inputs: [{ name: 'dataKeys', type: 'bytes32[]' }],
+                  name: 'getDataBatch',
+                  outputs: [{ name: '', type: 'bytes[]' }],
+                  stateMutability: 'view',
+                  type: 'function'
+                }
+              ], profileAddress);
+              
+              // Get array length first
+              const lengthKey = '0x6460ee3c0aac563ccbf76d6e1d07bada78e00500e6331e6584e24248846242e0';
+              const lengthData = await contract.methods.getData(lengthKey).call() as string;
+              
+              if (lengthData && lengthData !== '0x' && lengthData !== '0x0') {
+                const length = parseInt(lengthData, 16);
+                
+                // Get each asset
+                for (let i = 0; i < length; i++) {
+                  const indexKey = web3.utils.keccak256(
+                    web3.utils.encodePacked(
+                      { value: '0x6460ee3c0aac563ccbf76d6e1d07bada78e00500e6331e6584e24248846242e0', type: 'bytes32' },
+                      { value: i.toString(), type: 'uint256' }
+                    ) || ''
+                  );
+                  
+                  const assetData = await contract.methods.getData(indexKey).call() as string;
+                  if (assetData && assetData !== '0x' && assetData.length === 42) {
+                    assetAddresses.push(assetData);
+                  }
+                }
+              }
+            } catch (err3) {
+              console.log('All methods failed to get LSP5 assets');
+            }
+          }
+        }
+        
+        console.log('Found asset addresses:', assetAddresses);
+        
+        if (assetAddresses.length > 0) {
           const assetsData: ReceivedAsset[] = [];
 
           // Her asset için detayları çek
           for (const assetAddress of assetAddresses) {
             try {
               // Skip if invalid address
-              if (!assetAddress || assetAddress === '0x0000000000000000000000000000000000000000') {
+              if (!assetAddress || assetAddress === '0x0000000000000000000000000000000000000000' || !web3.utils.isAddress(assetAddress)) {
                 continue;
               }
 

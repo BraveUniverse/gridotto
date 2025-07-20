@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { DrawData } from '@/types';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
-import { AssetSelector } from '@/components/create-draw/AssetSelector';
+import AssetSelector from './AssetSelector';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useLSP4DigitalAsset } from '@/hooks/useLSP4DigitalAsset';
 import Image from 'next/image';
@@ -115,9 +115,14 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
             {/* Asset Selector */}
             {!drawData.prizeAsset && (
               <AssetSelector
-                profileAddress={account}
-                onSelectAsset={handleSelectAsset}
-                selectedAsset={drawData.prizeAsset}
+                address={account}
+                onSelect={(asset) => {
+                  updateDrawData({ 
+                    prizeAsset: asset?.address || '',
+                    selectedAsset: asset || undefined
+                  });
+                }}
+                selectedAsset={drawData.selectedAsset}
                 assetType="LSP7"
               />
             )}
@@ -186,9 +191,14 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
             {/* Asset Selector */}
             {!drawData.prizeAsset && (
               <AssetSelector
-                profileAddress={account}
-                onSelectAsset={handleSelectAsset}
-                selectedAsset={drawData.prizeAsset}
+                address={account}
+                onSelect={(asset) => {
+                  updateDrawData({ 
+                    prizeAsset: asset?.address || '',
+                    selectedAsset: asset || undefined
+                  });
+                }}
+                selectedAsset={drawData.selectedAsset}
                 assetType="LSP8"
               />
             )}
