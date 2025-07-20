@@ -3,25 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUPProvider } from './useUPProvider';
 import { CONTRACTS } from '@/config/contracts';
-import { gridottoAbi } from '@/abi/gridottoAbi';
-import { phase3Abi } from '@/abi/phase3Abi';
-import { phase4Abi } from '@/abi/phase4Abi';
-import { adminAbi } from '@/abi/adminAbi';
-import { uiHelperAbi } from '@/abi/uiHelperAbi';
-import { batchAbi } from '@/abi/batchAbi';
+import { combinedAbi } from '@/abi';
 import Web3 from 'web3';
 import { AbiItem } from 'web3-utils';
 import { UserDraw, DrawInfo, ContractInfo, PlatformStats } from '@/types/gridotto';
-
-// Combine all ABIs
-const combinedAbi = [
-  ...gridottoAbi,
-  ...phase3Abi,
-  ...phase4Abi,
-  ...adminAbi,
-  ...uiHelperAbi,
-  ...batchAbi
-] as AbiItem[];
 
 export const useGridottoContract = () => {
   const { web3, account } = useUPProvider();
@@ -43,15 +28,7 @@ export const useGridottoContract = () => {
         console.log('Contract Address:', CONTRACTS.LUKSO_TESTNET.DIAMOND);
         console.log('Account:', account);
         
-        // Combine all ABIs
-        const combinedAbi = [
-          ...gridottoAbi,
-          ...phase3Abi,
-          ...phase4Abi,
-          ...adminAbi,
-          ...uiHelperAbi,
-          ...batchAbi
-        ];
+
         
         console.log('Combined ABI length:', combinedAbi.length);
         
@@ -557,6 +534,7 @@ export const useGridottoContract = () => {
     
     console.log('=== BUY OFFICIAL TICKETS ===');
     console.log('Amount:', amount);
+    console.log('Account:', account);
     
     try {
       const ticketPrice = await contract.methods.getTicketPrice().call();
@@ -565,13 +543,22 @@ export const useGridottoContract = () => {
       console.log('Ticket price:', ticketPrice);
       console.log('Total cost:', totalCost.toString());
       
-      const tx = await contract.methods.buyTickets(amount).send({
-        from: account,
-        value: totalCost.toString()
-      });
-      
-      console.log('Buy tickets transaction successful:', tx);
-      return tx;
+      // Use buyMultipleTickets for multiple tickets, buyTicket for single
+      if (amount === 1) {
+        const tx = await contract.methods.buyTicket(account).send({
+          from: account,
+          value: totalCost.toString()
+        });
+        console.log('Buy ticket transaction successful:', tx);
+        return tx;
+      } else {
+        const tx = await contract.methods.buyMultipleTickets(account, amount).send({
+          from: account,
+          value: totalCost.toString()
+        });
+        console.log('Buy multiple tickets transaction successful:', tx);
+        return tx;
+      }
     } catch (err) {
       console.error('Error buying tickets:', err);
       throw err;
@@ -584,18 +571,31 @@ export const useGridottoContract = () => {
     
     console.log('=== BUY MONTHLY TICKETS ===');
     console.log('Amount:', amount);
+    console.log('Account:', account);
     
     try {
       const ticketPrice = await contract.methods.getTicketPrice().call();
       const totalCost = BigInt(ticketPrice) * BigInt(amount);
       
-      const tx = await contract.methods.buyMonthlyTickets(amount).send({
-        from: account,
-        value: totalCost.toString()
-      });
+      console.log('Ticket price:', ticketPrice);
+      console.log('Total cost:', totalCost.toString());
       
-      console.log('Buy monthly tickets transaction successful:', tx);
-      return tx;
+      // Use buyMultipleMonthlyTickets for multiple tickets, buyMonthlyTicket for single
+      if (amount === 1) {
+        const tx = await contract.methods.buyMonthlyTicket(account).send({
+          from: account,
+          value: totalCost.toString()
+        });
+        console.log('Buy monthly ticket transaction successful:', tx);
+        return tx;
+      } else {
+        const tx = await contract.methods.buyMultipleMonthlyTickets(account, amount).send({
+          from: account,
+          value: totalCost.toString()
+        });
+        console.log('Buy multiple monthly tickets transaction successful:', tx);
+        return tx;
+      }
     } catch (err) {
       console.error('Error buying monthly tickets:', err);
       throw err;
@@ -692,6 +692,88 @@ export const useGridottoContract = () => {
     }
   }, [contract]);
 
+  // Edge case improvement functions
+  const getExpiredDrawsWaitingExecution = useCallback(async (limit: number = 50) => {
+    if (!contract) return { drawIds: [], endTimes: [], participantCounts: [], minParticipants: [] };
+    
+    try {
+      const result = await contract.methods.getExpiredDrawsWaitingExecution(limit).call();
+      return {
+        drawIds: result.drawIds || result[0] || [],
+        endTimes: result.endTimes || result[1] || [],
+        participantCounts: result.participantCounts || result[2] || [],
+        minParticipants: result.minParticipants || result[3] || []
+      };
+    } catch (err) {
+      console.error('Error fetching expired draws:', err);
+      return { drawIds: [], endTimes: [], participantCounts: [], minParticipants: [] };
+    }
+  }, [contract]);
+
+  const canExecuteDraw = useCallback(async (drawId: number) => {
+    if (!contract) return { canExecute: false, reason: 'Contract not available' };
+    
+    try {
+      const result = await contract.methods.canExecuteDraw(drawId).call();
+      return {
+        canExecute: result.canExecute || result[0] || false,
+        reason: result.reason || result[1] || ''
+      };
+    } catch (err) {
+      console.error('Error checking draw execution:', err);
+      return { canExecute: false, reason: 'Error checking draw status' };
+    }
+  }, [contract]);
+
+  const forceExecuteDraw = useCallback(async (drawId: number) => {
+    if (!contract || !account) throw new Error('Contract or account not available');
+    
+    console.log('=== FORCE EXECUTE DRAW ===');
+    console.log('Draw ID:', drawId);
+    console.log('Account:', account);
+    
+    try {
+      const tx = await contract.methods.forceExecuteDraw(drawId).send({ from: account });
+      console.log('Force execute transaction successful:', tx);
+      return tx;
+    } catch (err) {
+      console.error('Error force executing draw:', err);
+      throw err;
+    }
+  }, [contract, account]);
+
+  const refundDraw = useCallback(async (drawId: number) => {
+    if (!contract || !account) throw new Error('Contract or account not available');
+    
+    console.log('=== REFUND DRAW ===');
+    console.log('Draw ID:', drawId);
+    
+    try {
+      const tx = await contract.methods.refundDraw(drawId).send({ from: account });
+      console.log('Refund draw transaction successful:', tx);
+      return tx;
+    } catch (err) {
+      console.error('Error refunding draw:', err);
+      throw err;
+    }
+  }, [contract, account]);
+
+  const claimRefund = useCallback(async (drawId: number) => {
+    if (!contract || !account) throw new Error('Contract or account not available');
+    
+    console.log('=== CLAIM REFUND ===');
+    console.log('Draw ID:', drawId);
+    
+    try {
+      const tx = await contract.methods.claimRefund(drawId).send({ from: account });
+      console.log('Claim refund transaction successful:', tx);
+      return tx;
+    } catch (err) {
+      console.error('Error claiming refund:', err);
+      throw err;
+    }
+  }, [contract, account]);
+
   return {
     contract,
     loading,
@@ -723,6 +805,12 @@ export const useGridottoContract = () => {
     getCurrentDrawInfo,
     getCurrentDrawPrize,
     getMonthlyPrize,
-    getTicketPrice
+    getTicketPrice,
+    // Edge case functions
+    getExpiredDrawsWaitingExecution,
+    canExecuteDraw,
+    forceExecuteDraw,
+    refundDraw,
+    claimRefund
   };
 }; 

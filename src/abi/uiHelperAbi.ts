@@ -193,5 +193,46 @@ export const uiHelperAbi = [
     ],
     stateMutability: "view",
     type: "function"
+  },
+  // Edge Case Improvement Functions
+  {
+    inputs: [
+      { name: "limit", type: "uint256" }
+    ],
+    name: "getExpiredDrawsWaitingExecution",
+    outputs: [
+      { name: "drawIds", type: "uint256[]" },
+      { name: "endTimes", type: "uint256[]" },
+      { name: "participantCounts", type: "uint256[]" },
+      { name: "minParticipants", type: "uint256[]" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "drawId", type: "uint256" }
+    ],
+    name: "canExecuteDraw",
+    outputs: [
+      { name: "canExecute", type: "bool" },
+      { name: "reason", type: "string" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "limit", type: "uint256" }
+    ],
+    name: "getDrawsForCleanup",
+    outputs: [
+      { name: "drawIds", type: "uint256[]" },
+      { name: "creators", type: "address[]" },
+      { name: "endTimes", type: "uint256[]" },
+      { name: "participantCounts", type: "uint256[]" }
+    ],
+    stateMutability: "view",
+    type: "function"
   }
 ] as const;

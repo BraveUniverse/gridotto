@@ -79,5 +79,24 @@ export const phase3Abi = [
     outputs: [],
     stateMutability: "nonpayable",
     type: "function"
+  },
+  // Refund Functions
+  {
+    inputs: [
+      { name: "drawId", type: "uint256" }
+    ],
+    name: "refundDraw",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "drawId", type: "uint256" }
+    ],
+    name: "claimRefund",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
   }
 ] as const;

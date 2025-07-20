@@ -20,11 +20,10 @@ export const gridottoAbi = [
     name: "WinnerSelected",
     type: "event"
   },
-  // Functions
+  // Functions - Official Draws
   {
     inputs: [
-      { name: "profileId", type: "address" },
-      { name: "amount", type: "uint256" }
+      { name: "profile", type: "address" }
     ],
     name: "buyTicket",
     outputs: [],
@@ -33,18 +32,29 @@ export const gridottoAbi = [
   },
   {
     inputs: [
+      { name: "profile", type: "address" },
       { name: "amount", type: "uint256" }
     ],
-    name: "buyTickets",
+    name: "buyMultipleTickets",
     outputs: [],
     stateMutability: "payable",
     type: "function"
   },
   {
     inputs: [
+      { name: "profile", type: "address" }
+    ],
+    name: "buyMonthlyTicket",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "profile", type: "address" },
       { name: "amount", type: "uint256" }
     ],
-    name: "buyMonthlyTickets",
+    name: "buyMultipleMonthlyTickets",
     outputs: [],
     stateMutability: "payable",
     type: "function"
@@ -160,6 +170,22 @@ export const gridottoAbi = [
     name: "unpause",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function"
+  },
+  // User participation history
+  {
+    inputs: [
+      { name: "user", type: "address" },
+      { name: "offset", type: "uint256" },
+      { name: "limit", type: "uint256" }
+    ],
+    name: "getUserParticipationHistory",
+    outputs: [
+      { name: "drawIds", type: "uint256[]" },
+      { name: "ticketsBought", type: "uint256[]" },
+      { name: "won", type: "bool[]" }
+    ],
+    stateMutability: "view",
     type: "function"
   }
 ] as const;
