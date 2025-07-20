@@ -302,10 +302,30 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
                 }
               }
 
-              // LSP8 için tokenIds çek (ileride eklenebilir)
+              // LSP8 için tokenIds çek
               if (tokenType === 'LSP8') {
-                asset.tokenIds = [];
-                // TODO: Implement tokenIds fetching for LSP8
+                try {
+                  const nftContract = new web3.eth.Contract([
+                    {
+                      inputs: [{ name: 'tokenOwner', type: 'address' }],
+                      name: 'tokenIdsOf',
+                      outputs: [{ name: '', type: 'bytes32[]' }],
+                      stateMutability: 'view',
+                      type: 'function'
+                    }
+                  ], assetAddress);
+                  
+                  try {
+                    const tokenIds = await nftContract.methods.tokenIdsOf(profileAddress).call() as string[];
+                    asset.tokenIds = tokenIds;
+                    console.log(`Found ${tokenIds.length} token IDs for NFT ${assetAddress}`);
+                  } catch (err) {
+                    console.log('Error fetching tokenIds:', err);
+                    asset.tokenIds = [];
+                  }
+                } catch (err) {
+                  asset.tokenIds = [];
+                }
               }
 
               assetsData.push(asset);

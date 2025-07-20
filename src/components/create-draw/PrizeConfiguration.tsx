@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { DrawData } from '@/types';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import AssetSelector from './AssetSelector';
+import NFTTokenSelector from './NFTTokenSelector';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import Image from 'next/image';
 
@@ -13,7 +14,7 @@ interface PrizeConfigurationProps {
 }
 
 export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurationProps) => {
-  const { account } = useUPProvider();
+  const { account, web3 } = useUPProvider();
   const [nftTokenIdInput, setNftTokenIdInput] = useState('');
 
   const handleAddNFTTokenId = () => {
@@ -165,7 +166,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Select NFT Prize
+              Select NFT Collection
             </label>
             
             {/* Show selected asset if any */}
@@ -202,7 +203,11 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
                   <p className="text-xs text-gray-500 font-mono">{drawData.selectedAsset.address}</p>
                 </div>
                 <button
-                  onClick={() => updateDrawData({ prizeAsset: '', selectedAsset: undefined })}
+                  onClick={() => updateDrawData({ 
+                    prizeAsset: '', 
+                    selectedAsset: undefined,
+                    tokenIds: []
+                  })}
                   className="text-red-400 hover:text-red-300 text-sm"
                 >
                   Change
@@ -217,7 +222,8 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
                 onSelect={(asset) => {
                   updateDrawData({ 
                     prizeAsset: asset?.address || '',
-                    selectedAsset: asset || undefined
+                    selectedAsset: asset || undefined,
+                    tokenIds: [] // Reset token IDs when changing collection
                   });
                 }}
                 selectedAsset={drawData.selectedAsset}
@@ -226,49 +232,15 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              NFT Token IDs
-            </label>
-            <div className="space-y-2">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={nftTokenIdInput}
-                  onChange={(e) => setNftTokenIdInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddNFTTokenId()}
-                  className="input-glass flex-1"
-                  placeholder="Enter token ID"
-                />
-                <button
-                  onClick={handleAddNFTTokenId}
-                  className="btn-secondary px-4"
-                >
-                  Add
-                </button>
-              </div>
-
-              {/* Token ID List */}
-              {drawData.tokenIds && drawData.tokenIds.length > 0 && (
-                <div className="glass-card p-4 space-y-2">
-                  {drawData.tokenIds.map((tokenId, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                      <span className="text-sm text-gray-300">Token ID: {tokenId}</span>
-                      <button
-                        onClick={() => handleRemoveNFTTokenId(index)}
-                        className="text-red-400 hover:text-red-300 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                  <p className="text-xs text-gray-400 mt-2">
-                    {drawData.tokenIds.length} NFT{drawData.tokenIds.length > 1 ? 's' : ''} will be given away
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* NFT Token Selector */}
+          {drawData.selectedAsset && web3 && (
+            <NFTTokenSelector
+              asset={drawData.selectedAsset}
+              selectedTokenIds={drawData.tokenIds || []}
+              onTokenIdsChange={(tokenIds) => updateDrawData({ tokenIds })}
+              web3Provider={web3.currentProvider}
+            />
+          )}
         </div>
       )}
 
