@@ -148,6 +148,26 @@ export const gridottoAbi = [
     type: "function"
   },
   {
+    inputs: [
+      { name: "drawId", type: "uint256" },
+      { name: "amount", type: "uint256" }
+    ],
+    name: "buyUserDrawTicket",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "drawId", type: "uint256" },
+      { name: "amount", type: "uint256" }
+    ],
+    name: "buyUserDrawTicketWithToken",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
     inputs: [],
     name: "unpause",
     outputs: [],

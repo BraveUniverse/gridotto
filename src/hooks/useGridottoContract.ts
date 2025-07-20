@@ -43,7 +43,7 @@ export const useGridottoContract = () => {
         // Log some key methods to verify they exist
         console.log('Key methods check:', {
           createAdvancedDraw: !!contractInstance.methods.createAdvancedDraw,
-          purchaseTickets: !!contractInstance.methods.purchaseTickets,
+          purchaseTickets: !!contractInstance.methods.buyUserDrawTicket,
           executeUserDraw: !!contractInstance.methods.executeUserDraw,
           getAdvancedDrawInfo: !!contractInstance.methods.getAdvancedDrawInfo
         });
@@ -315,25 +315,27 @@ export const useGridottoContract = () => {
   const purchaseTickets = useCallback(async (drawId: number, ticketCount: number, ticketPrice: string) => {
     if (!contract || !account) throw new Error('Contract or account not available');
     
-    console.log('=== PURCHASE TICKETS PARAMS ===');
+    console.log('=== PURCHASE USER DRAW TICKETS ===');
     console.log('Draw ID:', drawId);
     console.log('Ticket Count:', ticketCount);
     console.log('Ticket Price (wei):', ticketPrice);
+    console.log('Using function: buyUserDrawTicket');
     
     try {
       const totalCost = BigInt(ticketPrice) * BigInt(ticketCount);
       console.log('Total Cost (wei):', totalCost.toString());
       console.log('Total Cost (LYX):', Web3.utils.fromWei(totalCost.toString(), 'ether'));
       
-      const tx = await contract.methods.purchaseTickets(drawId, ticketCount).send({ 
+      // Use buyUserDrawTicket instead of purchaseTickets
+      const tx = await contract.methods.buyUserDrawTicket(drawId, ticketCount).send({ 
         from: account,
         value: totalCost.toString()
       });
       
-      console.log('Purchase tickets transaction successful:', tx);
+      console.log('Buy user draw tickets transaction successful:', tx);
       return tx;
     } catch (err) {
-      console.error('Error purchasing tickets:', err);
+      console.error('Error buying user draw tickets:', err);
       throw err;
     }
   }, [contract, account]);
