@@ -2,50 +2,60 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { UserDraw } from '@/types/gridotto';
 import { 
   ClockIcon, 
   TicketIcon, 
-  UserGroupIcon,
+  UsersIcon,
+  TrophyIcon,
+  CurrencyDollarIcon,
   PhotoIcon,
-  CurrencyDollarIcon 
+  SparklesIcon
 } from '@heroicons/react/24/outline';
+import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 
-interface DrawProps {
-  draw: {
-    id: number;
-    type: 'PLATFORM' | 'USER';
-    title: string;
-    creator: string;
-    prizePool: number;
-    ticketPrice: number;
-    ticketsSold: number;
-    maxTickets: number;
-    endTime: number;
-    drawType: 'LYX' | 'TOKEN' | 'NFT';
-    isMultiWinner?: boolean;
-    winnerCount?: number;
-    tokenSymbol?: string;
-    nftImage?: string;
-  };
+interface DrawCardProps {
+  draw: UserDraw;
 }
 
-export const DrawCard = ({ draw }: DrawProps) => {
+const drawTypeConfig = {
+  0: { // LYX
+    icon: CurrencyDollarIcon,
+    label: 'LYX Prize',
+    color: 'from-blue-500 to-cyan-500'
+  },
+  1: { // LSP7 Token
+    icon: SparklesIcon,
+    label: 'Token Prize',
+    color: 'from-purple-500 to-pink-500'
+  },
+  2: { // LSP8 NFT
+    icon: PhotoIcon,
+    label: 'NFT Prize',
+    color: 'from-pink-500 to-rose-500'
+  }
+};
+
+export const DrawCard = ({ draw }: DrawCardProps) => {
   const [timeLeft, setTimeLeft] = useState('');
+  const [progress, setProgress] = useState(0);
+
+  const config = drawTypeConfig[draw.drawType] || drawTypeConfig[0];
 
   useEffect(() => {
     const calculateTimeLeft = () => {
-      const now = Date.now();
-      const remaining = draw.endTime - now;
-      
-      if (remaining <= 0) {
+      const now = Math.floor(Date.now() / 1000);
+      const endTime = parseInt(draw.endTime);
+      const diff = endTime - now;
+
+      if (diff <= 0) {
         setTimeLeft('Ended');
         return;
       }
 
-      const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      const days = Math.floor(diff / 86400);
+      const hours = Math.floor((diff % 86400) / 3600);
+      const minutes = Math.floor((diff % 3600) / 60);
 
       if (days > 0) {
         setTimeLeft(`${days}d ${hours}h`);
@@ -57,119 +67,110 @@ export const DrawCard = ({ draw }: DrawProps) => {
     };
 
     calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 60000);
-    return () => clearInterval(timer);
+    const interval = setInterval(calculateTimeLeft, 60000); // Update every minute
+
+    return () => clearInterval(interval);
   }, [draw.endTime]);
 
-  const progress = (draw.ticketsSold / draw.maxTickets) * 100;
+  useEffect(() => {
+    const ticketsSold = parseInt(draw.ticketsSold);
+    const maxTickets = parseInt(draw.maxTickets);
+    
+    if (maxTickets > 0) {
+      setProgress((ticketsSold / maxTickets) * 100);
+    }
+  }, [draw.ticketsSold, draw.maxTickets]);
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const Icon = config.icon;
 
   return (
     <Link href={`/draws/${draw.id}`}>
-      <div className="glass-card h-full group cursor-pointer transition-all duration-300 hover:scale-[1.02]">
+      <div className="glass-card glass-card-hover h-full p-6 group">
         {/* Header */}
-        <div className="p-6 pb-4">
-          <div className="flex justify-between items-start mb-4">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className={`p-2 rounded-lg bg-gradient-to-br ${config.color} bg-opacity-20`}>
+              <Icon className="w-5 h-5 text-white" />
+            </div>
             <div>
-              <h3 className="text-xl font-semibold text-white mb-1 line-clamp-1">
-                {draw.title}
-              </h3>
-              <p className="text-sm text-gray-400">by {draw.creator}</p>
-            </div>
-            {/* Type Badge */}
-            <div className={`badge ${
-              draw.drawType === 'TOKEN' ? 'badge-token' : 
-              draw.drawType === 'NFT' ? 'badge-nft' : 
-              'bg-[rgb(var(--primary))/15] text-[rgb(var(--primary))] border-[rgb(var(--primary))/30]'
-            }`}>
-              {draw.drawType}
+              <span className="text-xs text-gray-400">Draw #{draw.id}</span>
+              <h3 className="font-semibold text-white">{config.label}</h3>
             </div>
           </div>
-
-          {/* Prize Display */}
-          <div className="mb-4">
-            {draw.drawType === 'NFT' && draw.nftImage ? (
-              <div className="relative w-full h-48 rounded-lg overflow-hidden mb-3">
-                <Image 
-                  src={draw.nftImage} 
-                  alt="NFT Prize" 
-                  fill 
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-sm text-gray-400 mb-1">Prize Pool</p>
-                <p className="text-3xl font-bold gradient-text">
-                  {draw.drawType === 'TOKEN' ? (
-                    `${draw.prizePool.toLocaleString()} ${draw.tokenSymbol}`
-                  ) : (
-                    `${draw.prizePool.toFixed(2)} LYX`
-                  )}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center text-gray-400 mb-1">
-                <TicketIcon className="w-4 h-4" />
-              </div>
-              <p className="text-sm font-medium text-white">{draw.ticketPrice} LYX</p>
-              <p className="text-xs text-gray-400">Per ticket</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center text-gray-400 mb-1">
-                <UserGroupIcon className="w-4 h-4" />
-              </div>
-              <p className="text-sm font-medium text-white">{draw.ticketsSold}</p>
-              <p className="text-xs text-gray-400">Sold</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center text-gray-400 mb-1">
-                <ClockIcon className="w-4 h-4" />
-              </div>
-              <p className="text-sm font-medium text-white">{timeLeft}</p>
-              <p className="text-xs text-gray-400">Left</p>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
-              <span>{draw.ticketsSold} / {draw.maxTickets}</span>
-              <span>{progress.toFixed(0)}%</span>
-            </div>
-            <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-[rgb(var(--primary))] to-[rgb(var(--primary-light))] transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Multi-Winner Badge */}
-          {draw.isMultiWinner && (
-            <div className="flex items-center justify-center space-x-2 text-green-400 text-sm">
-              <UserGroupIcon className="w-4 h-4" />
-              <span>{draw.winnerCount} Winners</span>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-3 bg-white/5 border-t border-white/10">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">
-              {draw.type === 'PLATFORM' ? 'Official Draw' : 'Community Draw'}
-            </span>
-            <span className="text-sm text-[rgb(var(--primary))] group-hover:translate-x-1 transition-transform inline-flex items-center">
-              View Details →
+          
+          <div className="flex items-center space-x-1 text-sm">
+            <ClockIcon className="w-4 h-4 text-gray-400" />
+            <span className={timeLeft === 'Ended' ? 'text-red-400' : 'text-gray-300'}>
+              {timeLeft}
             </span>
           </div>
         </div>
+
+        {/* Prize Pool */}
+        <div className="mb-4">
+          <p className="text-sm text-gray-400 mb-1">Prize Pool</p>
+          <p className="text-3xl font-bold text-[#FF2975]">
+            {draw.currentPrizePool} LYX
+          </p>
+        </div>
+
+        {/* Creator */}
+        <div className="mb-4">
+          <p className="text-sm text-gray-400 mb-2">Created by</p>
+          <ProfileDisplay 
+            address={draw.creator} 
+            size="small"
+            showName={true}
+          />
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center space-x-2">
+            <TicketIcon className="w-4 h-4 text-gray-400" />
+            <div>
+              <p className="text-xs text-gray-400">Ticket Price</p>
+              <p className="font-semibold text-white">{draw.ticketPrice} LYX</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <UsersIcon className="w-4 h-4 text-gray-400" />
+            <div>
+              <p className="text-xs text-gray-400">Participants</p>
+              <p className="font-semibold text-white">{draw.ticketsSold}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-4">
+          <div className="flex justify-between text-xs text-gray-400 mb-1">
+            <span>Tickets Sold</span>
+            <span>{draw.ticketsSold} / {draw.maxTickets}</span>
+          </div>
+          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-[#FF2975] to-[#FF2975]/50 transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Multi-winner indicator */}
+        {draw.prizeModel !== undefined && draw.totalWinners && draw.totalWinners > 1 && (
+          <div className="flex items-center space-x-2 text-sm">
+            <TrophyIcon className="w-4 h-4 text-yellow-400" />
+            <span className="text-yellow-400">{draw.totalWinners} Winners</span>
+          </div>
+        )}
+
+        {/* Hover Effect */}
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#FF2975]/0 to-[#FF2975]/0 group-hover:from-[#FF2975]/10 group-hover:to-transparent transition-all duration-300 pointer-events-none" />
       </div>
     </Link>
   );

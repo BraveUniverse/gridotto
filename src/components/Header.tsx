@@ -2,24 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { 
-  Bars3Icon, 
-  XMarkIcon,
-  WalletIcon,
-  PlusIcon,
   Squares2X2Icon,
-  UserCircleIcon,
+  PlusCircleIcon,
+  TrophyIcon,
   ChartBarIcon,
-  CogIcon
+  CogIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
+import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isConnected, account, refreshConnection } = useUPProvider();
-  const pathname = usePathname();
+  const { isConnected, address, connect, disconnect } = useUPProvider();
+  const router = useRouter();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,72 +32,68 @@ export const Header = () => {
 
   const navigation = [
     { name: 'Home', href: '/', icon: Squares2X2Icon },
-    { name: 'All Draws', href: '/draws', icon: Squares2X2Icon },
-    { name: 'Create Draw', href: '/create-draw', icon: PlusIcon },
-    { name: 'Leaderboard', href: '/leaderboard', icon: ChartBarIcon },
-    { name: 'My Profile', href: '/profile', icon: UserCircleIcon },
+    { name: 'All Draws', href: '/draws', icon: TrophyIcon },
+    { name: 'Create Draw', href: '/create-draw', icon: PlusCircleIcon },
+    { name: 'Stats', href: '/stats', icon: ChartBarIcon },
   ];
-
-  const handleConnect = async () => {
-    await refreshConnection();
-  };
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled ? 'backdrop-blur-xl bg-black/10' : 'backdrop-blur-md bg-transparent'
+      isScrolled ? 'bg-[rgb(var(--background))]/80 backdrop-blur-xl border-b border-white/10' : ''
     }`}>
-      <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <nav className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 group">
+          <Link href="/" className="flex items-center space-x-3 group">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-[rgb(var(--primary))] to-[rgb(var(--primary-light))] rounded-lg blur-lg opacity-75 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative bg-black/50 backdrop-blur-sm rounded-lg p-2">
-                <span className="text-2xl font-bold gradient-text">G</span>
+              <div className="absolute inset-0 bg-[rgb(var(--primary))] blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+              <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[rgb(var(--primary))] to-[rgb(var(--primary-dark))] flex items-center justify-center">
+                <span className="text-2xl font-bold text-white">G</span>
               </div>
             </div>
-            <span className="text-xl font-bold text-white">ridotto</span>
+            <span className="text-xl font-bold text-white">Gridotto</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-1">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  pathname === item.href
-                    ? 'bg-white/10 text-white'
-                    : 'text-gray-300 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <item.icon className="w-4 h-4" />
-                <span>{item.name}</span>
-              </Link>
-            ))}
+          <div className="hidden md:flex items-center space-x-1">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-200"
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
           </div>
 
           {/* Right Section */}
           <div className="flex items-center space-x-4">
-            {/* Connect Wallet Button */}
-            {isConnected ? (
-              <div className="hidden sm:flex items-center space-x-3">
-                <div className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white/5 backdrop-blur-sm">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-gray-300">
-                    {account?.slice(0, 6)}...{account?.slice(-4)}
-                  </span>
-                </div>
-                <Link href="/admin" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-                  <CogIcon className="w-5 h-5 text-gray-300" />
-                </Link>
+            {/* Connect Button / Profile */}
+            {isConnected && address ? (
+              <div className="flex items-center space-x-4">
+                <ProfileDisplay 
+                  address={address} 
+                  size="small"
+                  showName={true}
+                  className="hidden md:flex"
+                />
+                <button
+                  onClick={disconnect}
+                  className="btn-secondary text-sm"
+                >
+                  Disconnect
+                </button>
               </div>
             ) : (
               <button
-                onClick={handleConnect}
-                className="hidden sm:flex items-center space-x-2 btn-primary"
+                onClick={connect}
+                className="btn-primary"
               >
-                <WalletIcon className="w-5 h-5" />
                 <span>Connect Wallet</span>
               </button>
             )}
@@ -105,7 +101,7 @@ export const Header = () => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-white/5 transition-colors"
+              className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
             >
               {isMobileMenuOpen ? (
                 <XMarkIcon className="w-6 h-6 text-white" />
@@ -117,54 +113,37 @@ export const Header = () => {
         </div>
 
         {/* Mobile Menu */}
-        <div className={`lg:hidden transition-all duration-300 ease-in-out ${
-          isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
-        }`}>
-          <div className="py-4 space-y-2">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                  pathname === item.href
-                    ? 'bg-white/10 text-white'
-                    : 'text-gray-300 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="font-medium">{item.name}</span>
-              </Link>
-            ))}
-            
-            {/* Mobile Wallet Section */}
-            <div className="pt-4 border-t border-white/10">
-              {isConnected ? (
-                <div className="px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-gray-300">
-                        {account?.slice(0, 6)}...{account?.slice(-4)}
-                      </span>
-                    </div>
-                    <Link href="/admin" className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-                      <CogIcon className="w-5 h-5 text-gray-300" />
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={handleConnect}
-                  className="w-full flex items-center justify-center space-x-2 btn-primary"
+        {isMobileMenuOpen && (
+          <div className="md:hidden py-4 border-t border-white/10">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-200"
                 >
-                  <WalletIcon className="w-5 h-5" />
-                  <span>Connect Wallet</span>
-                </button>
-              )}
-            </div>
+                  <Icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+            
+            {/* Mobile Profile */}
+            {isConnected && address && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <ProfileDisplay 
+                  address={address} 
+                  size="medium"
+                  showName={true}
+                  showTags={true}
+                  className="px-4"
+                />
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </nav>
     </header>
   );
