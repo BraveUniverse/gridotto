@@ -191,17 +191,38 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
               try {
                 isLSP7 = await assetContract.methods.supportsInterface(INTERFACE_IDS.LSP7).call();
                 console.log(`Asset ${assetAddress} - LSP7 check: ${isLSP7}`);
-              } catch (err) {
+              } catch (err: any) {
                 console.log(`Asset ${assetAddress} - LSP7 check failed:`, err);
-                // Interface check failed, skip
+                // Check if error message indicates it's an NFT
+                if (err.message && (err.message.includes('GloryMint') || err.message.includes('NFT'))) {
+                  isLSP8 = true;
+                }
               }
               
               try {
                 isLSP8 = await assetContract.methods.supportsInterface(INTERFACE_IDS.LSP8).call();
                 console.log(`Asset ${assetAddress} - LSP8 check: ${isLSP8}`);
-              } catch (err) {
+              } catch (err: any) {
                 console.log(`Asset ${assetAddress} - LSP8 check failed:`, err);
-                // Interface check failed, skip
+                // Check if error message indicates it's an NFT
+                if (err.message && (err.message.includes('GloryMint') || err.message.includes('NFT'))) {
+                  isLSP8 = true;
+                }
+              }
+              
+              // If interface checks fail, try to determine from metadata
+              if (!isLSP7 && !isLSP8 && metadata) {
+                // Check if it's an NFT based on metadata
+                if (metadata.tokenType) {
+                  isLSP7 = metadata.tokenType === 'Token' || metadata.tokenType === 'LSP7';
+                  isLSP8 = metadata.tokenType === 'NFT' || metadata.tokenType === 'LSP8';
+                } else if (metadata.name && (metadata.name.includes('NFT') || metadata.name.includes('#'))) {
+                  // If name contains NFT or # (like GloryMint #5), it's likely an NFT
+                  isLSP8 = true;
+                } else if (metadata.symbol && metadata.decimals !== undefined) {
+                  // If it has decimals, it's likely a token
+                  isLSP7 = true;
+                }
               }
 
               const asset: ReceivedAsset = {
