@@ -50,7 +50,8 @@ export default function DrawDetailPage() {
     purchaseTickets, 
     getUserDrawExecutorReward,
     executeUserDraw,
-    canUserParticipate
+    canUserParticipate,
+    getDrawParticipants
   } = useGridottoContract();
   
   const [draw, setDraw] = useState<DrawDetails | null>(null);
@@ -62,6 +63,8 @@ export default function DrawDetailPage() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [canParticipate, setCanParticipate] = useState(true);
   const [participationReason, setParticipationReason] = useState<string>('');
+  const [participants, setParticipants] = useState<{address: string, tickets: number}[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
 
   useEffect(() => {
     const loadDrawDetails = async () => {
@@ -110,12 +113,34 @@ export default function DrawDetailPage() {
       }
     };
 
+    const loadParticipants = async () => {
+      try {
+        setLoadingParticipants(true);
+        const { participants: addrs, ticketCounts } = await getDrawParticipants(drawId, 0, 50);
+        
+        const participantList = addrs.map((addr: string, index: number) => ({
+          address: addr,
+          tickets: Number(ticketCounts[index])
+        }));
+        
+        setParticipants(participantList);
+      } catch (err) {
+        console.error('Error loading participants:', err);
+      } finally {
+        setLoadingParticipants(false);
+      }
+    };
+
     loadDrawDetails();
+    loadParticipants();
     
     // Refresh every 30 seconds
-    const interval = setInterval(loadDrawDetails, 30000);
+    const interval = setInterval(() => {
+      loadDrawDetails();
+      loadParticipants();
+    }, 30000);
     return () => clearInterval(interval);
-  }, [drawId, account, getAdvancedDrawInfo, getUserDrawExecutorReward, canUserParticipate]);
+  }, [drawId, account, getAdvancedDrawInfo, getUserDrawExecutorReward, canUserParticipate, getDrawParticipants]);
 
   const handleBuyTickets = async () => {
     if (!draw || !account) return;
@@ -365,6 +390,48 @@ export default function DrawDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Participants List */}
+            <div className="glass-card p-6">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <UsersIcon className="w-6 h-6 text-green-400" />
+                Participants ({participants.length})
+              </h2>
+              {loadingParticipants ? (
+                <div className="flex justify-center py-8">
+                  <SparklesIcon className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : participants.length > 0 ? (
+                <div className="space-y-2">
+                  {participants.map((participant, index) => (
+                    <div key={index} className="flex items-center justify-between py-2 px-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">#{index + 1}</span>
+                        </div>
+                        <span className="font-mono text-sm text-white">
+                          {participant.address.slice(0, 6)}...{participant.address.slice(-4)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <TicketIcon className="w-4 h-4 text-gray-400" />
+                        <span className="text-white font-medium">{participant.tickets}</span>
+                        <span className="text-gray-400 text-sm">tickets</span>
+                      </div>
+                    </div>
+                  ))}
+                  {participants.length >= 50 && (
+                    <p className="text-center text-gray-400 text-sm mt-4">
+                      Showing first 50 participants
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-center text-gray-400 py-8">
+                  No participants yet. Be the first!
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Right column - Actions */}

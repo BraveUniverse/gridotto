@@ -2,146 +2,290 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { SparklesIcon, TicketIcon, TrophyIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, TicketIcon, TrophyIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
-import { useUPProvider } from '@/hooks/useUPProvider';
 import Web3 from 'web3';
 
 export const HeroSection = () => {
-  const { isConnected } = useUPProvider();
-  const { getContractInfo, getActiveUserDraws, getUserDrawStats } = useGridottoContract();
-  const [totalPrizePool, setTotalPrizePool] = useState('0');
-  const [loading, setLoading] = useState(true);
+  const { 
+    getCurrentDrawInfo, 
+    getCurrentDrawPrize, 
+    getMonthlyPrize,
+    getTicketPrice,
+    buyTickets,
+    buyMonthlyTickets 
+  } = useGridottoContract();
+  
+  const [weeklyPrize, setWeeklyPrize] = useState('0');
+  const [monthlyPrize, setMonthlyPrize] = useState('0');
+  const [ticketPrice, setTicketPrice] = useState('0');
+  const [drawInfo, setDrawInfo] = useState<any>(null);
+  const [weeklyTickets, setWeeklyTickets] = useState(1);
+  const [monthlyTickets, setMonthlyTickets] = useState(1);
+  const [buying, setBuying] = useState(false);
 
   useEffect(() => {
-    const fetchPrizePool = async () => {
+    const loadData = async () => {
       try {
-        // Get contract balance
-        const contractInfo = await getContractInfo();
+        const [info, weekly, monthly, price] = await Promise.all([
+          getCurrentDrawInfo(),
+          getCurrentDrawPrize(),
+          getMonthlyPrize(),
+          getTicketPrice()
+        ]);
         
-        // Get active draws and sum their prize pools
-        const activeDraws = await getActiveUserDraws();
-        let userDrawPrizePool = BigInt(0);
-        
-        for (const draw of activeDraws) {
-          const stats = await getUserDrawStats(draw.drawId);
-          if (stats) {
-            userDrawPrizePool += BigInt(stats.prizePool);
-          }
-        }
-        
-        // Total prize pool is contract balance + user draw prize pools
-        const contractBalance = contractInfo ? BigInt(contractInfo.totalPrizePool) : BigInt(0);
-        const total = contractBalance + userDrawPrizePool;
-        
-        setTotalPrizePool(Web3.utils.fromWei(total.toString(), 'ether'));
-      } catch (error) {
-        console.error('Error fetching prize pool:', error);
-      } finally {
-        setLoading(false);
+        setDrawInfo(info);
+        setWeeklyPrize(weekly);
+        setMonthlyPrize(monthly);
+        setTicketPrice(price);
+      } catch (err) {
+        console.error('Error loading official draw data:', err);
       }
     };
 
-    fetchPrizePool();
-    
-    // Refresh every minute
-    const interval = setInterval(fetchPrizePool, 60000);
+    loadData();
+    const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
-  }, [getContractInfo, getActiveUserDraws, getUserDrawStats]);
+  }, [getCurrentDrawInfo, getCurrentDrawPrize, getMonthlyPrize, getTicketPrice]);
+
+  const handleBuyWeeklyTickets = async () => {
+    try {
+      setBuying(true);
+      await buyTickets(weeklyTickets);
+      // Refresh data
+      setTimeout(() => window.location.reload(), 3000);
+    } catch (err) {
+      console.error('Error buying weekly tickets:', err);
+    } finally {
+      setBuying(false);
+    }
+  };
+
+  const handleBuyMonthlyTickets = async () => {
+    try {
+      setBuying(true);
+      await buyMonthlyTickets(monthlyTickets);
+      // Refresh data
+      setTimeout(() => window.location.reload(), 3000);
+    } catch (err) {
+      console.error('Error buying monthly tickets:', err);
+    } finally {
+      setBuying(false);
+    }
+  };
+
+  const formatTimeRemaining = (timestamp: string) => {
+    const now = Date.now() / 1000;
+    const diff = Number(timestamp) - now;
+    
+    if (diff <= 0) return 'Starting soon...';
+    
+    const days = Math.floor(diff / 86400);
+    const hours = Math.floor((diff % 86400) / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
+  const ticketPriceInLYX = Web3.utils.fromWei(ticketPrice, 'ether');
+  const weeklyPrizeInLYX = Web3.utils.fromWei(weeklyPrize, 'ether');
+  const monthlyPrizeInLYX = Web3.utils.fromWei(monthlyPrize, 'ether');
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-4 py-20">
+    <section className="relative py-20 overflow-hidden">
       {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-pink-500/20 to-transparent rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-600/20 to-transparent rounded-full blur-3xl animate-pulse delay-1000"></div>
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
-      <div className="container mx-auto relative z-10">
-        <div className="text-center max-w-4xl mx-auto">
-          {/* Main Title */}
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            The Future of
-            <span className="block text-pink-400 mt-2">
-              Decentralized Lottery
+      <div className="container mx-auto px-4 relative z-10">
+        {/* Main Hero */}
+        <div className="text-center mb-16">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600">
+              Gridotto
             </span>
           </h1>
-
-          {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-2xl mx-auto">
-            Play fair, win big, and be part of the revolution on LUKSO blockchain
+          <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+            The first decentralized lottery platform on LUKSO. Create your own draws or join official weekly & monthly lotteries!
           </p>
-
-          {/* Prize Pool Display */}
-          <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 mb-12 max-w-md mx-auto border border-white/10">
-            <p className="text-gray-400 mb-2">Total Prize Pool</p>
-            <p className="text-4xl md:text-5xl font-bold text-pink-400">
-              {loading ? (
-                <span className="animate-pulse">Loading...</span>
-              ) : (
-                `${totalPrizePool} LYX`
-              )}
-            </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/draws" className="btn-primary">
+              <SparklesIcon className="w-5 h-5" />
+              Explore Draws
+            </Link>
+            <Link href="/create-draw" className="btn-secondary">
+              Create Your Draw
+            </Link>
           </div>
+        </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            {isConnected ? (
-              <>
-                <Link
-                  href="/draws"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg text-lg font-semibold hover:from-pink-600 hover:to-purple-700 transition-all transform hover:scale-105"
-                >
-                  <TicketIcon className="w-6 h-6" />
-                  Buy Tickets
-                </Link>
-                <Link
-                  href="/create-draw"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-lg text-lg font-semibold hover:bg-white/20 transition-all border border-white/20"
-                >
-                  <SparklesIcon className="w-6 h-6" />
-                  Create Draw
-                </Link>
-              </>
-            ) : (
+        {/* Official Draws */}
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* Weekly Draw */}
+          <div className="glass-card p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">Weekly Draw</h2>
+              <div className="flex items-center gap-2 text-primary">
+                <ClockIcon className="w-5 h-5" />
+                <span className="text-sm font-medium">
+                  {drawInfo ? formatTimeRemaining(drawInfo.drawTime) : 'Loading...'}
+                </span>
+              </div>
+            </div>
+            
+            <div className="text-center mb-6">
+              <p className="text-sm text-gray-400 mb-2">Current Prize Pool</p>
+              <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
+                {weeklyPrizeInLYX} LYX
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Number of Tickets
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setWeeklyTickets(Math.max(1, weeklyTickets - 1))}
+                    className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold transition-colors"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    value={weeklyTickets}
+                    onChange={(e) => setWeeklyTickets(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white text-center"
+                    min="1"
+                  />
+                  <button
+                    onClick={() => setWeeklyTickets(weeklyTickets + 1)}
+                    className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-lg p-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Ticket Price</span>
+                  <span className="text-white">{ticketPriceInLYX} LYX</span>
+                </div>
+                <div className="flex justify-between text-sm mt-2">
+                  <span className="text-gray-400">Total Cost</span>
+                  <span className="text-white font-bold">
+                    {(Number(ticketPriceInLYX) * weeklyTickets).toFixed(2)} LYX
+                  </span>
+                </div>
+              </div>
+
               <button
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg text-lg font-semibold hover:from-pink-600 hover:to-purple-700 transition-all transform hover:scale-105"
+                onClick={handleBuyWeeklyTickets}
+                disabled={buying}
+                className="w-full btn-primary"
               >
-                Connect Wallet to Start
+                {buying ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <SparklesIcon className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </span>
+                ) : (
+                  <>
+                    <TicketIcon className="w-5 h-5" />
+                    Buy Tickets
+                  </>
+                )}
               </button>
-            )}
+            </div>
           </div>
 
-          {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <SparklesIcon className="w-6 h-6 text-pink-400" />
+          {/* Monthly Draw */}
+          <div className="glass-card p-8 border-2 border-yellow-500/20">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-white">Monthly Draw</h2>
+                <TrophyIcon className="w-6 h-6 text-yellow-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Fair & Transparent</h3>
-              <p className="text-gray-400 text-sm">
-                Powered by smart contracts with verifiable randomness
+              <div className="flex items-center gap-2 text-primary">
+                <ClockIcon className="w-5 h-5" />
+                <span className="text-sm font-medium">
+                  {drawInfo ? formatTimeRemaining(drawInfo.monthlyDrawTime) : 'Loading...'}
+                </span>
+              </div>
+            </div>
+            
+            <div className="text-center mb-6">
+              <p className="text-sm text-gray-400 mb-2">MEGA Prize Pool</p>
+              <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
+                {monthlyPrizeInLYX} LYX
               </p>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <TicketIcon className="w-6 h-6 text-purple-400" />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Number of Tickets
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setMonthlyTickets(Math.max(1, monthlyTickets - 1))}
+                    className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold transition-colors"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    value={monthlyTickets}
+                    onChange={(e) => setMonthlyTickets(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white text-center"
+                    min="1"
+                  />
+                  <button
+                    onClick={() => setMonthlyTickets(monthlyTickets + 1)}
+                    className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Multiple Draws</h3>
-              <p className="text-gray-400 text-sm">
-                Official and community-created draws with various prizes
-              </p>
-            </div>
 
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <TrophyIcon className="w-6 h-6 text-green-400" />
+              <div className="bg-white/5 rounded-lg p-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Ticket Price</span>
+                  <span className="text-white">{ticketPriceInLYX} LYX</span>
+                </div>
+                <div className="flex justify-between text-sm mt-2">
+                  <span className="text-gray-400">Total Cost</span>
+                  <span className="text-white font-bold">
+                    {(Number(ticketPriceInLYX) * monthlyTickets).toFixed(2)} LYX
+                  </span>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Instant Payouts</h3>
-              <p className="text-gray-400 text-sm">
-                Winners receive prizes automatically to their profiles
-              </p>
+
+              <button
+                onClick={handleBuyMonthlyTickets}
+                disabled={buying}
+                className="w-full btn-primary bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500"
+              >
+                {buying ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <SparklesIcon className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </span>
+                ) : (
+                  <>
+                    <TicketIcon className="w-5 h-5" />
+                    Buy Monthly Tickets
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

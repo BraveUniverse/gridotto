@@ -551,6 +551,147 @@ export const useGridottoContract = () => {
     }
   }, [contract, account]);
 
+  // Buy tickets for official weekly draw
+  const buyTickets = useCallback(async (amount: number) => {
+    if (!contract || !account) throw new Error('Contract or account not available');
+    
+    console.log('=== BUY OFFICIAL TICKETS ===');
+    console.log('Amount:', amount);
+    
+    try {
+      const ticketPrice = await contract.methods.getTicketPrice().call();
+      const totalCost = BigInt(ticketPrice) * BigInt(amount);
+      
+      console.log('Ticket price:', ticketPrice);
+      console.log('Total cost:', totalCost.toString());
+      
+      const tx = await contract.methods.buyTickets(amount).send({
+        from: account,
+        value: totalCost.toString()
+      });
+      
+      console.log('Buy tickets transaction successful:', tx);
+      return tx;
+    } catch (err) {
+      console.error('Error buying tickets:', err);
+      throw err;
+    }
+  }, [contract, account]);
+
+  // Buy tickets for monthly draw
+  const buyMonthlyTickets = useCallback(async (amount: number) => {
+    if (!contract || !account) throw new Error('Contract or account not available');
+    
+    console.log('=== BUY MONTHLY TICKETS ===');
+    console.log('Amount:', amount);
+    
+    try {
+      const ticketPrice = await contract.methods.getTicketPrice().call();
+      const totalCost = BigInt(ticketPrice) * BigInt(amount);
+      
+      const tx = await contract.methods.buyMonthlyTickets(amount).send({
+        from: account,
+        value: totalCost.toString()
+      });
+      
+      console.log('Buy monthly tickets transaction successful:', tx);
+      return tx;
+    } catch (err) {
+      console.error('Error buying monthly tickets:', err);
+      throw err;
+    }
+  }, [contract, account]);
+
+  // Get draw participants with pagination
+  const getDrawParticipants = useCallback(async (drawId: number, offset: number = 0, limit: number = 50) => {
+    if (!contract) return { participants: [], ticketCounts: [] };
+    
+    try {
+      const result = await contract.methods.getDrawParticipants(drawId, offset, limit).call();
+      return {
+        participants: result.participants || result[0] || [],
+        ticketCounts: result.ticketCounts || result[1] || []
+      };
+    } catch (err) {
+      console.error('Error fetching draw participants:', err);
+      return { participants: [], ticketCounts: [] };
+    }
+  }, [contract]);
+
+  // Get user participation history
+  const getUserParticipationHistory = useCallback(async (user: string, offset: number = 0, limit: number = 50) => {
+    if (!contract) return { drawIds: [], ticketsBought: [], won: [] };
+    
+    try {
+      const result = await contract.methods.getUserParticipationHistory(user, offset, limit).call();
+      return {
+        drawIds: result.drawIds || result[0] || [],
+        ticketsBought: result.ticketsBought || result[1] || [],
+        won: result.won || result[2] || []
+      };
+    } catch (err) {
+      console.error('Error fetching user participation history:', err);
+      return { drawIds: [], ticketsBought: [], won: [] };
+    }
+  }, [contract]);
+
+  // Get current draw info
+  const getCurrentDrawInfo = useCallback(async () => {
+    if (!contract) return null;
+    
+    try {
+      const info = await contract.methods.getDrawInfo().call();
+      return {
+        currentDraw: info.currentDraw || info[0],
+        currentMonthlyDraw: info.currentMonthlyDraw || info[1],
+        drawTime: info.drawTime || info[2],
+        monthlyDrawTime: info.monthlyDrawTime || info[3]
+      };
+    } catch (err) {
+      console.error('Error fetching current draw info:', err);
+      return null;
+    }
+  }, [contract]);
+
+  // Get current draw prize
+  const getCurrentDrawPrize = useCallback(async () => {
+    if (!contract) return '0';
+    
+    try {
+      const prize = await contract.methods.getCurrentDrawPrize().call();
+      return prize;
+    } catch (err) {
+      console.error('Error fetching current draw prize:', err);
+      return '0';
+    }
+  }, [contract]);
+
+  // Get monthly prize
+  const getMonthlyPrize = useCallback(async () => {
+    if (!contract) return '0';
+    
+    try {
+      const prize = await contract.methods.getMonthlyPrize().call();
+      return prize;
+    } catch (err) {
+      console.error('Error fetching monthly prize:', err);
+      return '0';
+    }
+  }, [contract]);
+
+  // Get ticket price
+  const getTicketPrice = useCallback(async () => {
+    if (!contract) return '10000000000000000'; // Default 0.01 LYX
+    
+    try {
+      const price = await contract.methods.getTicketPrice().call();
+      return price;
+    } catch (err) {
+      console.error('Error fetching ticket price:', err);
+      return '10000000000000000';
+    }
+  }, [contract]);
+
   return {
     contract,
     loading,
@@ -574,6 +715,14 @@ export const useGridottoContract = () => {
     getRecentWinners,
     getAdvancedDrawInfo,
     canUserParticipate,
-    executeUserDraw
+    executeUserDraw,
+    buyTickets,
+    buyMonthlyTickets,
+    getDrawParticipants,
+    getUserParticipationHistory,
+    getCurrentDrawInfo,
+    getCurrentDrawPrize,
+    getMonthlyPrize,
+    getTicketPrice
   };
 }; 

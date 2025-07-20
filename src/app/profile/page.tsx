@@ -1,338 +1,313 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Header } from '@/components/Header';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
-import { useLSP3Profile } from '@/hooks/useLSP3Profile';
-import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
-import { DrawCard } from '@/components/draws/DrawCard';
-import { UserDraw } from '@/types/gridotto';
-import Web3 from 'web3';
 import { 
-  UserIcon,
-  TicketIcon,
+  UserCircleIcon, 
+  TicketIcon, 
   TrophyIcon,
-  ClockIcon,
-  CurrencyDollarIcon,
-  SparklesIcon,
   ChartBarIcon,
-  ArrowPathIcon
+  SparklesIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline';
+import Web3 from 'web3';
+import Link from 'next/link';
 
 interface UserStats {
-  totalTicketsBought: number;
-  totalSpent: string;
   totalWon: string;
-  totalDrawsCreated: number;
-  activeDraws: number;
-  pendingPrizes: string;
+  totalSpent: string;
+  drawsParticipated: number;
+  drawsWon: number;
+  ticketsBought: number;
 }
 
-interface Tab {
-  id: string;
-  name: string;
-  icon: any;
-  count?: number;
+interface ParticipationHistory {
+  drawId: string;
+  ticketsBought: number;
+  won: boolean;
+  prize?: string;
+  drawType?: string;
 }
 
-export default function ProfilePage() {
-  const { isConnected, account } = useUPProvider();
-  const { getUserCreatedDraws, getUserDrawStats, getAllClaimablePrizes, claimAll } = useGridottoContract();
-  const { profileData } = useLSP3Profile(account);
+const ProfilePage = () => {
+  const { account, isConnected } = useUPProvider();
+  const { getUserParticipationHistory, getAdvancedDrawInfo } = useGridottoContract();
   const [userStats, setUserStats] = useState<UserStats>({
-    totalTicketsBought: 0,
-    totalSpent: '0',
-    totalDrawsCreated: 0,
-    activeDraws: 0,
     totalWon: '0',
-    pendingPrizes: '0'
+    totalSpent: '0',
+    drawsParticipated: 0,
+    drawsWon: 0,
+    ticketsBought: 0
   });
-  const [userDraws, setUserDraws] = useState<UserDraw[]>([]);
-  const [activeTab, setActiveTab] = useState('created');
+  const [participationHistory, setParticipationHistory] = useState<ParticipationHistory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [claiming, setClaiming] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const tabs: Tab[] = [
-    { id: 'created', name: 'Created Draws', icon: SparklesIcon, count: userDraws.length },
-    { id: 'stats', name: 'Statistics', icon: ChartBarIcon }
-  ];
-
-  const loadUserData = async () => {
-    if (!account) return;
-
-    try {
-      setLoading(true);
-      
-      // Get user created draws
-      const drawIds = await getUserCreatedDraws(account, 0, 100);
-      const draws: UserDraw[] = [];
-      let activeCount = 0;
-      
-      for (const drawId of drawIds) {
-        const stats = await getUserDrawStats(Number(drawId));
-        if (stats) {
-          const isActive = Number(stats.endTime) > Date.now() / 1000;
-          if (isActive) activeCount++;
-          
-          draws.push({
-            drawId: Number(drawId),
-            creator: stats.creator,
-            endTime: stats.endTime,
-            prizeType: 'LYX',
-            prizeAmount: stats.prizePool,
-            ticketPrice: '1000000000000000000', // 1 LYX default
-            maxTickets: 100,
-            minTickets: 1,
-            isActive,
-            totalTicketsSold: Number(stats.totalTicketsSold),
-            participants: []
-          });
-        }
-      }
-      
-      setUserDraws(draws);
-      
-      // Get claimable prizes
-      const claimable = await getAllClaimablePrizes(account);
-      
-      // Update stats
-      setUserStats({
-        totalTicketsBought: 0, // Would need event tracking
-        totalSpent: '0', // Would need event tracking
-        totalDrawsCreated: draws.length,
-        activeDraws: activeCount,
-        totalWon: '0', // Would need event tracking
-        pendingPrizes: claimable.totalLYX
-      });
-      
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    if (isConnected && account) {
-      loadUserData();
-    }
-  }, [isConnected, account]);
+    const loadUserData = async () => {
+      if (!account) {
+        setLoading(false);
+        return;
+      }
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadUserData();
-    setRefreshing(false);
-  };
+      try {
+        setLoading(true);
+        
+        // Get user participation history
+        const history = await getUserParticipationHistory(account, 0, 100);
+        
+        // Calculate stats and get draw details
+        let totalWon = BigInt(0);
+        let totalSpent = BigInt(0);
+        let drawsWon = 0;
+        let totalTickets = 0;
+        
+        const detailedHistory: ParticipationHistory[] = [];
+        
+        for (let i = 0; i < history.drawIds.length; i++) {
+          const drawId = history.drawIds[i];
+          const tickets = Number(history.ticketsBought[i]);
+          const won = history.won[i];
+          
+          totalTickets += tickets;
+          
+          try {
+            const drawInfo = await getAdvancedDrawInfo(drawId);
+            if (drawInfo) {
+              const ticketCost = BigInt(drawInfo.ticketPrice) * BigInt(tickets);
+              totalSpent += ticketCost;
+              
+              let prize = '0';
+              if (won) {
+                drawsWon++;
+                // Calculate prize based on draw info
+                prize = drawInfo.prizePool;
+                totalWon += BigInt(prize);
+              }
+              
+              detailedHistory.push({
+                drawId: drawId.toString(),
+                ticketsBought: tickets,
+                won,
+                prize: won ? prize : undefined,
+                drawType: drawInfo.drawType
+              });
+            }
+          } catch (err) {
+            console.error(`Error loading draw ${drawId}:`, err);
+          }
+        }
+        
+        setUserStats({
+          totalWon: totalWon.toString(),
+          totalSpent: totalSpent.toString(),
+          drawsParticipated: history.drawIds.length,
+          drawsWon,
+          ticketsBought: totalTickets
+        });
+        
+        setParticipationHistory(detailedHistory);
+      } catch (err) {
+        console.error('Error loading user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleClaimAll = async () => {
-    if (!account) return;
-    
-    try {
-      setClaiming(true);
-      await claimAll();
-      // Refresh data after claiming
-      await loadUserData();
-    } catch (error) {
-      console.error('Error claiming prizes:', error);
-    } finally {
-      setClaiming(false);
-    }
-  };
+    loadUserData();
+  }, [account, getUserParticipationHistory, getAdvancedDrawInfo]);
 
   if (!isConnected) {
     return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-purple-900">
-          <div className="container mx-auto px-4 py-24">
-            <div className="text-center">
-              <UserIcon className="w-24 h-24 text-gray-600 mx-auto mb-4" />
-              <h1 className="text-4xl font-bold mb-4 text-white">Connect Your Wallet</h1>
-              <p className="text-gray-400">Please connect your Universal Profile to view your profile</p>
-            </div>
-          </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <UserCircleIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
+          <p className="text-gray-400">Please connect your wallet to view your profile</p>
         </div>
-      </>
+      </div>
     );
   }
 
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const getDrawTypeLabel = (type: string) => {
+    switch (type) {
+      case '0': return 'Official Weekly';
+      case '1': return 'Official Monthly';
+      case '2': return 'User LYX';
+      case '3': return 'User Token';
+      case '4': return 'User NFT';
+      default: return 'Unknown';
+    }
+  };
+
+  const roi = userStats.totalSpent !== '0' 
+    ? ((Number(Web3.utils.fromWei(userStats.totalWon, 'ether')) / 
+        Number(Web3.utils.fromWei(userStats.totalSpent, 'ether'))) * 100).toFixed(2)
+    : '0';
+
   return (
-    <>
-      <Header />
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-purple-900">
-        <div className="container mx-auto px-4 py-24">
-          {/* Profile Header */}
-          <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 mb-8 border border-white/10">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              {account && (
-                <ProfileDisplay 
-                  address={account} 
-                  size="lg"
-                  showName={false}
-                />
-              )}
-              
-              <div className="flex-1 text-center md:text-left">
-                <h1 className="text-3xl font-bold text-white mb-2">
-                  {profileData?.name || `${account?.slice(0, 6)}...${account?.slice(-4)}`}
-                </h1>
-                {profileData?.description && (
-                  <p className="text-gray-400 mb-4">{profileData.description}</p>
-                )}
-                <p className="text-sm text-gray-500 font-mono">{account}</p>
-                
-                {/* Claim Button */}
-                {userStats.pendingPrizes !== '0' && (
-                  <button
-                    onClick={handleClaimAll}
-                    disabled={claiming}
-                    className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all disabled:opacity-50"
-                  >
-                    <TrophyIcon className="w-5 h-5" />
-                    {claiming ? 'Claiming...' : `Claim ${Web3.utils.fromWei(userStats.pendingPrizes, 'ether')} LYX`}
-                  </button>
-                )}
-              </div>
-              
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all disabled:opacity-50"
-              >
-                <ArrowPathIcon className={`w-5 h-5 text-white ${refreshing ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
+    <div className="min-h-screen py-20">
+      <div className="container mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">My Profile</h1>
+          <p className="text-gray-400 font-mono">{formatAddress(account || '')}</p>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <SparklesIcon className="w-8 h-8 animate-spin text-primary" />
           </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center">
-                  <SparklesIcon className="w-5 h-5 text-pink-400" />
+        ) : (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <TrophyIcon className="w-8 h-8 text-yellow-400" />
+                  <span className="text-sm text-gray-400">Total Won</span>
                 </div>
-                <p className="text-gray-400 text-sm">Draws Created</p>
+                <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
+                  {Web3.utils.fromWei(userStats.totalWon, 'ether')} LYX
+                </p>
+                <p className="text-sm text-green-400 mt-1">
+                  ROI: {roi}%
+                </p>
               </div>
-              <p className="text-2xl font-bold text-white">{userStats.totalDrawsCreated}</p>
+
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <TicketIcon className="w-8 h-8 text-blue-400" />
+                  <span className="text-sm text-gray-400">Tickets Bought</span>
+                </div>
+                <p className="text-2xl font-bold text-white">
+                  {userStats.ticketsBought}
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  {Web3.utils.fromWei(userStats.totalSpent, 'ether')} LYX spent
+                </p>
+              </div>
+
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <ChartBarIcon className="w-8 h-8 text-purple-400" />
+                  <span className="text-sm text-gray-400">Draws Participated</span>
+                </div>
+                <p className="text-2xl font-bold text-white">
+                  {userStats.drawsParticipated}
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  {userStats.drawsWon} won
+                </p>
+              </div>
+
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <SparklesIcon className="w-8 h-8 text-green-400" />
+                  <span className="text-sm text-gray-400">Win Rate</span>
+                </div>
+                <p className="text-2xl font-bold text-white">
+                  {userStats.drawsParticipated > 0 
+                    ? ((userStats.drawsWon / userStats.drawsParticipated) * 100).toFixed(1)
+                    : '0'}%
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Success rate
+                </p>
+              </div>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                  <ClockIcon className="w-5 h-5 text-purple-400" />
-                </div>
-                <p className="text-gray-400 text-sm">Active Draws</p>
-              </div>
-              <p className="text-2xl font-bold text-white">{userStats.activeDraws}</p>
-            </div>
+            {/* Participation History */}
+            <div className="glass-card p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <ClockIcon className="w-6 h-6 text-primary" />
+                Participation History
+              </h2>
 
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                  <TrophyIcon className="w-5 h-5 text-green-400" />
-                </div>
-                <p className="text-gray-400 text-sm">Total Won</p>
-              </div>
-              <p className="text-2xl font-bold text-white">{userStats.totalWon} LYX</p>
-            </div>
-
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                  <CurrencyDollarIcon className="w-5 h-5 text-yellow-400" />
-                </div>
-                <p className="text-gray-400 text-sm">Pending Prizes</p>
-              </div>
-              <p className="text-2xl font-bold text-white">
-                {Web3.utils.fromWei(userStats.pendingPrizes, 'ether')} LYX
-              </p>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="border-b border-white/10 mb-8">
-            <nav className="flex space-x-8">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 pb-4 px-1 border-b-2 transition-all ${
-                    activeTab === tab.id
-                      ? 'border-pink-500 text-white'
-                      : 'border-transparent text-gray-400 hover:text-gray-300'
-                  }`}
-                >
-                  <tab.icon className="w-5 h-5" />
-                  <span>{tab.name}</span>
-                  {tab.count !== undefined && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-white/10 rounded-full">
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Tab Content */}
-          {activeTab === 'created' && (
-            <div>
-              {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-white/5 backdrop-blur-lg rounded-xl p-6 animate-pulse">
-                      <div className="h-6 bg-white/10 rounded mb-4" />
-                      <div className="h-4 bg-white/10 rounded mb-2 w-3/4" />
-                      <div className="h-4 bg-white/10 rounded mb-4 w-1/2" />
-                      <div className="h-10 bg-white/10 rounded" />
-                    </div>
-                  ))}
-                </div>
-              ) : userDraws.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {userDraws.map((draw) => (
-                    <DrawCard key={draw.drawId} draw={draw} />
-                  ))}
+              {participationHistory.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Draw</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Type</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Tickets</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Result</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Prize</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {participationHistory.map((entry, index) => (
+                        <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="py-3 px-4">
+                            <span className="font-mono text-white">#{entry.drawId}</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-sm text-gray-400">
+                              {getDrawTypeLabel(entry.drawType || '')}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-white">{entry.ticketsBought}</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            {entry.won ? (
+                              <span className="flex items-center gap-1 text-green-400">
+                                <CheckCircleIcon className="w-4 h-4" />
+                                Won
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-gray-400">
+                                <XCircleIcon className="w-4 h-4" />
+                                Lost
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {entry.won && entry.prize ? (
+                              <span className="text-yellow-400 font-medium">
+                                {Web3.utils.fromWei(entry.prize, 'ether')} LYX
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Link 
+                              href={`/draws/${entry.drawId}`}
+                              className="text-primary hover:text-primary/80 text-sm font-medium"
+                            >
+                              View Draw
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <SparklesIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">No draws created yet</h3>
-                  <p className="text-gray-400">Create your first draw to see it here!</p>
+                  <TicketIcon className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-400">No participation history yet</p>
+                  <Link href="/draws" className="btn-primary mt-4 inline-flex items-center gap-2">
+                    <SparklesIcon className="w-5 h-5" />
+                    Explore Draws
+                  </Link>
                 </div>
               )}
             </div>
-          )}
-
-          {activeTab === 'stats' && (
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-8 border border-white/10">
-              <h3 className="text-xl font-semibold text-white mb-6">Detailed Statistics</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-3 border-b border-white/10">
-                  <span className="text-gray-400">Total Draws Created</span>
-                  <span className="text-white font-semibold">{userStats.totalDrawsCreated}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 border-b border-white/10">
-                  <span className="text-gray-400">Active Draws</span>
-                  <span className="text-white font-semibold">{userStats.activeDraws}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 border-b border-white/10">
-                  <span className="text-gray-400">Completed Draws</span>
-                  <span className="text-white font-semibold">{userStats.totalDrawsCreated - userStats.activeDraws}</span>
-                </div>
-                <div className="flex justify-between items-center py-3">
-                  <span className="text-gray-400">Pending Prizes</span>
-                  <span className="text-green-400 font-semibold">
-                    {Web3.utils.fromWei(userStats.pendingPrizes, 'ether')} LYX
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
-    </>
+    </div>
   );
-}
+};
+
+export default ProfilePage;
