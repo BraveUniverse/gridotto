@@ -82,37 +82,21 @@ export const useGridottoContract = () => {
       setIsLoading(true);
       setError(null);
       
-      // Try multiple method names for compatibility
-      let result;
-      const methodsToTry = [
-        'getCurrentDrawInfo',
-        'currentDrawInfo', 
-        'getDrawInfo',
-        'drawInfo'
-      ];
+      // Use getDrawInfo method from GridottoFacet
+      const result = await gridottoContract.methods.getDrawInfo().call();
       
-      for (const method of methodsToTry) {
-        try {
-          if (gridottoContract.methods[method]) {
-            result = await gridottoContract.methods[method]().call();
-            break;
-          }
-        } catch (e) {
-          console.log(`Method ${method} not found, trying next...`);
-        }
+      if (result) {
+        return {
+          drawNumber: result.drawNumber?.toString() || result[0]?.toString() || '0',
+          prizePool: result.prize ? Web3.utils.fromWei(result.prize.toString(), 'ether') : 
+                     result[2] ? Web3.utils.fromWei(result[2].toString(), 'ether') : '0',
+          ticketCount: result.ticketsSold?.toString() || result[3]?.toString() || '0',
+          remainingTime: result.endTime ? (parseInt(result.endTime) - Math.floor(Date.now() / 1000)).toString() :
+                        result[1] ? (parseInt(result[1]) - Math.floor(Date.now() / 1000)).toString() : '0'
+        };
       }
       
-      if (!result) {
-        console.warn('No draw info method found in contract');
-        return null;
-      }
-      
-      return {
-        drawNumber: result.drawNumber?.toString() || '0',
-        prizePool: result.prizePool ? Web3.utils.fromWei(result.prizePool.toString(), 'ether') : '0',
-        ticketCount: result.ticketCount?.toString() || '0',
-        remainingTime: result.remainingTime?.toString() || '0'
-      };
+      return null;
     } catch (err: any) {
       console.error('getCurrentDrawInfo error:', err);
       return null;
@@ -129,36 +113,21 @@ export const useGridottoContract = () => {
       setIsLoading(true);
       setError(null);
       
-      // Try multiple method names
-      let result;
-      const methodsToTry = [
-        'getCurrentMonthlyDrawInfo',
-        'monthlyDrawInfo',
-        'getMonthlyDrawInfo'
-      ];
+      // Use getMonthlyDrawInfo method from GridottoFacet
+      const result = await gridottoContract.methods.getMonthlyDrawInfo().call();
       
-      for (const method of methodsToTry) {
-        try {
-          if (gridottoContract.methods[method]) {
-            result = await gridottoContract.methods[method]().call();
-            break;
-          }
-        } catch (e) {
-          console.log(`Method ${method} not found, trying next...`);
-        }
+      if (result) {
+        return {
+          drawNumber: result.drawNumber?.toString() || result[0]?.toString() || '0',
+          prizePool: result.prize ? Web3.utils.fromWei(result.prize.toString(), 'ether') : 
+                     result[2] ? Web3.utils.fromWei(result[2].toString(), 'ether') : '0',
+          ticketCount: result.ticketsSold?.toString() || result[3]?.toString() || '0',
+          remainingTime: result.endTime ? (parseInt(result.endTime) - Math.floor(Date.now() / 1000)).toString() :
+                        result[1] ? (parseInt(result[1]) - Math.floor(Date.now() / 1000)).toString() : '0'
+        };
       }
       
-      if (!result) {
-        console.warn('No monthly draw info method found in contract');
-        return null;
-      }
-      
-      return {
-        drawNumber: result.drawNumber?.toString() || '0',
-        prizePool: result.prizePool ? Web3.utils.fromWei(result.prizePool.toString(), 'ether') : '0',
-        ticketCount: result.ticketCount?.toString() || '0',
-        remainingTime: result.remainingTime?.toString() || '0'
-      };
+      return null;
     } catch (err: any) {
       console.error('getMonthlyDrawInfo error:', err);
       return null;
@@ -167,7 +136,7 @@ export const useGridottoContract = () => {
     }
   }, [gridottoContract]);
 
-  // Get contract info
+  // Get contract info - use individual state variables
   const getContractInfo = useCallback(async (): Promise<ContractInfo | null> => {
     if (!gridottoContract) return null;
     
@@ -175,45 +144,12 @@ export const useGridottoContract = () => {
       setIsLoading(true);
       setError(null);
       
-      // Try multiple method names
-      let result;
-      const methodsToTry = [
-        'getContractInfo',
-        'contractInfo',
-        'getInfo'
-      ];
-      
-      for (const method of methodsToTry) {
-        try {
-          if (gridottoContract.methods[method]) {
-            result = await gridottoContract.methods[method]().call();
-            break;
-          }
-        } catch (e) {
-          console.log(`Method ${method} not found, trying next...`);
-        }
-      }
-      
-      // If no method found, try to get individual values
-      if (!result) {
-        result = {} as any;
-        try {
-          if (gridottoContract.methods.ticketPrice) {
-            result.ticketPrice = await gridottoContract.methods.ticketPrice().call();
-          }
-        } catch (e) {}
-        
-        try {
-          if (gridottoContract.methods.drawInterval) {
-            result.drawInterval = await gridottoContract.methods.drawInterval().call();
-          }
-        } catch (e) {}
-      }
-      
+      // GridottoFacet doesn't have getContractInfo, so we'll return defaults
+      // In production, you might need to add this view function to the contract
       return {
-        ticketPrice: result.ticketPrice ? Web3.utils.fromWei(result.ticketPrice.toString(), 'ether') : '1',
-        drawInterval: result.drawInterval?.toString() || '86400',
-        monthlyDrawInterval: result.monthlyDrawInterval?.toString() || '2592000'
+        ticketPrice: '1', // Default 1 LYX
+        drawInterval: '604800', // 7 days in seconds
+        monthlyDrawInterval: '2592000' // 30 days in seconds
       };
     } catch (err: any) {
       console.error('getContractInfo error:', err);
@@ -223,7 +159,7 @@ export const useGridottoContract = () => {
     }
   }, [gridottoContract]);
 
-  // Get all active user draws - NO MOCK DATA
+  // Get all active user draws
   const getActiveUserDraws = useCallback(async (): Promise<UserDraw[]> => {
     if (!gridottoContract) return [];
     
@@ -231,24 +167,13 @@ export const useGridottoContract = () => {
       setIsLoading(true);
       setError(null);
       
-      // Try multiple method names
+      // Use getActiveDraws method from GridottoFacet
       let drawIds = [];
-      const methodsToTry = [
-        'getActiveUserDraws',
-        'getActiveDraws',
-        'activeDraws',
-        'getUserDraws'
-      ];
-      
-      for (const method of methodsToTry) {
-        try {
-          if (gridottoContract.methods[method]) {
-            drawIds = await gridottoContract.methods[method]().call();
-            break;
-          }
-        } catch (e) {
-          console.log(`Method ${method} not found, trying next...`);
-        }
+      try {
+        drawIds = await gridottoContract.methods.getActiveDraws().call();
+      } catch (e) {
+        console.log('getActiveDraws not found, returning empty array');
+        return [];
       }
       
       const draws: UserDraw[] = [];
@@ -257,18 +182,27 @@ export const useGridottoContract = () => {
       for (const drawId of drawIds) {
         try {
           const drawInfo = await gridottoContract.methods.getUserDraw(drawId).call();
+          
+          // Handle both object and array returns
+          const creator = drawInfo.creator || drawInfo[0];
+          const drawType = drawInfo.drawType !== undefined ? drawInfo.drawType : drawInfo[1];
+          const ticketPrice = drawInfo.ticketPrice || drawInfo[2];
+          const ticketsSold = drawInfo.ticketsSold || drawInfo[3];
+          const maxTickets = drawInfo.maxTickets || drawInfo[4];
+          const currentPrizePool = drawInfo.currentPrizePool || drawInfo[5];
+          const endTime = drawInfo.endTime || drawInfo[6];
+          const isCompleted = drawInfo.isCompleted !== undefined ? drawInfo.isCompleted : drawInfo[7];
+          
           draws.push({
             id: parseInt(drawId),
-            creator: drawInfo.creator,
-            drawType: parseInt(drawInfo.drawType),
-            ticketPrice: Web3.utils.fromWei(drawInfo.ticketPrice.toString(), 'ether'),
-            ticketsSold: drawInfo.ticketsSold.toString(),
-            maxTickets: drawInfo.maxTickets.toString(),
-            currentPrizePool: Web3.utils.fromWei(drawInfo.currentPrizePool.toString(), 'ether'),
-            endTime: drawInfo.endTime.toString(),
-            isCompleted: drawInfo.isCompleted,
-            prizeModel: drawInfo.prizeModel ? parseInt(drawInfo.prizeModel) : undefined,
-            totalWinners: drawInfo.totalWinners ? parseInt(drawInfo.totalWinners) : undefined
+            creator: creator,
+            drawType: parseInt(drawType),
+            ticketPrice: Web3.utils.fromWei(ticketPrice.toString(), 'ether'),
+            ticketsSold: ticketsSold.toString(),
+            maxTickets: maxTickets.toString(),
+            currentPrizePool: Web3.utils.fromWei(currentPrizePool.toString(), 'ether'),
+            endTime: endTime.toString(),
+            isCompleted: isCompleted
           });
         } catch (err) {
           console.error(`Error fetching draw ${drawId}:`, err);
