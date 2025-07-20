@@ -121,32 +121,38 @@ export async function fetchLSP4Metadata(
             
             // Icon'ları işle
             if (lsp4Data.icon && Array.isArray(lsp4Data.icon)) {
-              metadata.icon = lsp4Data.icon.map((img: any) => ({
-                ...img,
-                url: img.url.startsWith('ipfs://') 
-                  ? `${IPFS_GATEWAY}${img.url.slice(7)}` 
-                  : img.url
-              }));
+              metadata.icon = lsp4Data.icon
+                .filter((img: any) => img && img.url) // null/undefined kontrolü
+                .map((img: any) => ({
+                  ...img,
+                  url: img.url.startsWith('ipfs://') 
+                    ? `${IPFS_GATEWAY}${img.url.slice(7)}` 
+                    : img.url
+                }));
             }
             
             // Images'ları işle
             if (lsp4Data.images && Array.isArray(lsp4Data.images)) {
-              metadata.images = lsp4Data.images.map((img: any) => ({
-                ...img,
-                url: img.url.startsWith('ipfs://') 
-                  ? `${IPFS_GATEWAY}${img.url.slice(7)}` 
-                  : img.url
-              }));
+              metadata.images = lsp4Data.images
+                .filter((img: any) => img && img.url) // null/undefined kontrolü
+                .map((img: any) => ({
+                  ...img,
+                  url: img.url.startsWith('ipfs://') 
+                    ? `${IPFS_GATEWAY}${img.url.slice(7)}` 
+                    : img.url
+                }));
             }
             
             // Assets'leri işle
             if (lsp4Data.assets && Array.isArray(lsp4Data.assets)) {
-              metadata.assets = lsp4Data.assets.map((asset: any) => ({
-                ...asset,
-                url: asset.url.startsWith('ipfs://') 
-                  ? `${IPFS_GATEWAY}${asset.url.slice(7)}` 
-                  : asset.url
-              }));
+              metadata.assets = lsp4Data.assets
+                .filter((asset: any) => asset && asset.url) // null/undefined kontrolü
+                .map((asset: any) => ({
+                  ...asset,
+                  url: asset.url.startsWith('ipfs://') 
+                    ? `${IPFS_GATEWAY}${asset.url.slice(7)}` 
+                    : asset.url
+                }));
             }
             
             // Attributes
