@@ -151,7 +151,8 @@ export const ActiveDrawsSection = () => {
     <section className="py-24 px-4 relative">
       <div className="container mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-12">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-12">
+          <div>
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Active <span className="text-[#FF2975]">Draws</span>
             </h2>
