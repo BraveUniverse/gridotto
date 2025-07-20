@@ -94,7 +94,9 @@ export default function NFTTokenSelector({
 
           try {
             // Method 1: Try LSP8MetadataTokenURI with mapping
-            const metadataKey = LSP8_METADATA_KEY_PREFIX + tokenId.slice(2);
+            // TokenId must be padded to 32 bytes
+            const tokenIdHex = tokenId.slice(2).padStart(64, '0'); // Remove 0x and pad to 32 bytes (64 hex chars)
+            const metadataKey = '0x' + LSP8_METADATA_KEY_PREFIX.slice(2) + tokenIdHex;
             console.log(`Fetching metadata for token ${tokenId} with key ${metadataKey}`);
             
             const metadataBytes = await nftContract.methods.getData(metadataKey).call() as string;
