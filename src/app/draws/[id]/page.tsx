@@ -120,6 +120,12 @@ export default function DrawDetailPage() {
   const handleBuyTickets = async () => {
     if (!draw || !account) return;
     
+    console.log('=== BUY TICKETS - STARTING ===');
+    console.log('Draw ID:', drawId);
+    console.log('Ticket Amount:', buyAmount);
+    console.log('Ticket Price (wei):', draw.ticketPrice);
+    console.log('Total Cost (wei):', (BigInt(draw.ticketPrice) * BigInt(buyAmount)).toString());
+    
     try {
       setBuying(true);
       setError(null);
@@ -135,6 +141,11 @@ export default function DrawDetailPage() {
       
     } catch (err: any) {
       console.error('Error buying tickets:', err);
+      console.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        data: err.data
+      });
       setError(err.message || 'Failed to buy tickets');
     } finally {
       setBuying(false);
@@ -143,6 +154,11 @@ export default function DrawDetailPage() {
 
   const handleExecuteDraw = async () => {
     if (!draw || !account) return;
+    
+    console.log('=== EXECUTE DRAW - STARTING ===');
+    console.log('Draw ID:', drawId);
+    console.log('Executor Reward:', draw.executorReward);
+    console.log('Account:', account);
     
     try {
       setExecuting(true);
@@ -158,6 +174,11 @@ export default function DrawDetailPage() {
       
     } catch (err: any) {
       console.error('Error executing draw:', err);
+      console.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        data: err.data
+      });
       setError(err.message || 'Failed to execute draw');
     } finally {
       setExecuting(false);

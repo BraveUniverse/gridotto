@@ -30,21 +30,59 @@ export const useGridottoContract = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (web3) {
+    const initContract = async () => {
+      if (!web3 || !account) {
+        console.log('Web3 or account not available:', { web3: !!web3, account });
+        return;
+      }
+
       try {
+        setLoading(true);
+        
+        console.log('=== INITIALIZING CONTRACT ===');
+        console.log('Contract Address:', CONTRACTS.LUKSO_TESTNET.DIAMOND);
+        console.log('Account:', account);
+        
+        // Combine all ABIs
+        const combinedAbi = [
+          ...gridottoAbi,
+          ...phase3Abi,
+          ...phase4Abi,
+          ...adminAbi,
+          ...uiHelperAbi,
+          ...batchAbi
+        ];
+        
+        console.log('Combined ABI length:', combinedAbi.length);
+        
         const contractInstance = new web3.eth.Contract(
-          combinedAbi,
+          combinedAbi as any,
           CONTRACTS.LUKSO_TESTNET.DIAMOND
         );
+        
+        console.log('Contract instance created:', !!contractInstance);
+        console.log('Available methods:', Object.keys(contractInstance.methods).length);
+        
+        // Log some key methods to verify they exist
+        console.log('Key methods check:', {
+          createAdvancedDraw: !!contractInstance.methods.createAdvancedDraw,
+          purchaseTickets: !!contractInstance.methods.purchaseTickets,
+          executeUserDraw: !!contractInstance.methods.executeUserDraw,
+          getAdvancedDrawInfo: !!contractInstance.methods.getAdvancedDrawInfo
+        });
+        
         setContract(contractInstance);
-        setLoading(false);
+        setError(null);
       } catch (err) {
-        console.error('Error creating contract instance:', err);
-        setError('Failed to create contract instance');
+        console.error('Error initializing contract:', err);
+        setError('Failed to initialize contract');
+      } finally {
         setLoading(false);
       }
-    }
-  }, [web3]);
+    };
+
+    initContract();
+  }, [web3, account]);
 
   // Get active user draws using UI helper
   const getActiveUserDraws = useCallback(async (): Promise<UserDraw[]> => {
@@ -143,8 +181,12 @@ export const useGridottoContract = () => {
   const claimAll = useCallback(async () => {
     if (!contract || !account) throw new Error('Contract or account not available');
     
+    console.log('=== CLAIM ALL PARAMS ===');
+    console.log('Account:', account);
+    
     try {
       const tx = await contract.methods.claimAll().send({ from: account });
+      console.log('Claim all transaction successful:', tx);
       return tx;
     } catch (err) {
       console.error('Error claiming all prizes:', err);
@@ -296,12 +338,22 @@ export const useGridottoContract = () => {
   const purchaseTickets = useCallback(async (drawId: number, ticketCount: number, ticketPrice: string) => {
     if (!contract || !account) throw new Error('Contract or account not available');
     
+    console.log('=== PURCHASE TICKETS PARAMS ===');
+    console.log('Draw ID:', drawId);
+    console.log('Ticket Count:', ticketCount);
+    console.log('Ticket Price (wei):', ticketPrice);
+    
     try {
-      const totalPrice = (BigInt(ticketPrice) * BigInt(ticketCount)).toString();
+      const totalCost = BigInt(ticketPrice) * BigInt(ticketCount);
+      console.log('Total Cost (wei):', totalCost.toString());
+      console.log('Total Cost (LYX):', Web3.utils.fromWei(totalCost.toString(), 'ether'));
+      
       const tx = await contract.methods.purchaseTickets(drawId, ticketCount).send({ 
         from: account,
-        value: totalPrice 
+        value: totalCost.toString()
       });
+      
+      console.log('Purchase tickets transaction successful:', tx);
       return tx;
     } catch (err) {
       console.error('Error purchasing tickets:', err);
@@ -328,6 +380,9 @@ export const useGridottoContract = () => {
     maxTicketsPerUser?: number;
   }) => {
     if (!contract || !account) throw new Error('Contract or account not available');
+    
+    console.log('=== CREATE DRAW PARAMS ===');
+    console.log('Input params:', params);
     
     try {
       // Map drawType to contract enum
@@ -367,11 +422,15 @@ export const useGridottoContract = () => {
         config.prizeToken = params.nftContract;
       }
       
+      console.log('Contract config object:', config);
+      console.log('Sending from account:', account);
+      
       // No need to send value for initial prize anymore
       const tx = await contract.methods.createAdvancedDraw(config).send({ 
         from: account
       });
       
+      console.log('Transaction successful:', tx);
       return tx;
     } catch (err) {
       console.error('Error creating draw:', err);
@@ -456,8 +515,13 @@ export const useGridottoContract = () => {
   const executeUserDraw = useCallback(async (drawId: number) => {
     if (!contract || !account) throw new Error('Contract or account not available');
     
+    console.log('=== EXECUTE USER DRAW PARAMS ===');
+    console.log('Draw ID:', drawId);
+    console.log('Account:', account);
+    
     try {
       const tx = await contract.methods.executeUserDraw(drawId).send({ from: account });
+      console.log('Execute draw transaction successful:', tx);
       return tx;
     } catch (err) {
       console.error('Error executing draw:', err);

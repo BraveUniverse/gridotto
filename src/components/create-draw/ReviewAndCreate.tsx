@@ -29,6 +29,9 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
       return;
     }
 
+    console.log('=== REVIEW AND CREATE - STARTING ===');
+    console.log('Draw Data:', drawData);
+
     try {
       setIsCreating(true);
       setError(null);
@@ -43,41 +46,53 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
         minTokenAmount: drawData.minTokenAmount ? Web3.utils.toWei(drawData.minTokenAmount.toString(), 'ether') : undefined,
       };
 
+      console.log('Base params:', params);
+
       // Optional parameters
       if (drawData.ticketPrice > 0) {
         params.ticketPrice = Web3.utils.toWei(drawData.ticketPrice.toString(), 'ether');
+        console.log('Ticket price set:', params.ticketPrice);
       }
       
       if (drawData.maxTickets > 0) {
         params.maxTickets = drawData.maxTickets;
+        console.log('Max tickets set:', params.maxTickets);
       }
 
       if (drawData.creatorFeePercent && drawData.creatorFeePercent > 0) {
         params.creatorFeePercent = drawData.creatorFeePercent;
+        console.log('Creator fee set:', params.creatorFeePercent);
       }
 
       if (drawData.minParticipants && drawData.minParticipants > 0) {
         params.minParticipants = drawData.minParticipants;
+        console.log('Min participants set:', params.minParticipants);
       }
 
       if (drawData.maxParticipants && drawData.maxParticipants > 0) {
         params.maxParticipants = drawData.maxParticipants;
+        console.log('Max participants set:', params.maxParticipants);
       }
 
       // Add type-specific parameters
       if (drawData.drawType === 'LYX') {
         if (drawData.prizeAmount && drawData.prizeAmount > 0) {
           params.initialPrize = Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether');
+          console.log('Initial prize set:', params.initialPrize);
         }
       } else if (drawData.drawType === 'TOKEN') {
         params.tokenAddress = drawData.tokenAddress;
         if (drawData.prizeAmount && drawData.prizeAmount > 0) {
           params.initialPrize = Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether');
         }
+        console.log('Token draw params:', { tokenAddress: params.tokenAddress, initialPrize: params.initialPrize });
       } else if (drawData.drawType === 'NFT') {
         params.nftContract = drawData.nftContract;
         params.nftTokenIds = drawData.tokenIds;
+        console.log('NFT draw params:', { nftContract: params.nftContract, nftTokenIds: params.nftTokenIds });
       }
+
+      console.log('Final params to send:', params);
 
       await createDraw(params);
       
@@ -85,6 +100,11 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
       router.push('/draws');
     } catch (err: any) {
       console.error('Error creating draw:', err);
+      console.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        data: err.data
+      });
       setError(err.message || 'Failed to create draw');
     } finally {
       setIsCreating(false);
