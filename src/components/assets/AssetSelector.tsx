@@ -128,16 +128,36 @@ export const AssetSelector = ({
 
             let metadata: LSP4Metadata = {};
             if (metadataData?.value) {
-              const url = metadataData.value as string;
+              let url = '';
+              if (typeof metadataData.value === 'string') {
+                url = metadataData.value;
+              } else if (metadataData.value && typeof metadataData.value === 'object') {
+                // Handle VerifiableURI object format
+                url = (metadataData.value as any).url || '';
+              }
               
-              // Fetch metadata from IPFS or URL
-              if (url.startsWith('ipfs://')) {
-                const ipfsUrl = url.replace('ipfs://', 'https://api.universalprofile.cloud/ipfs/');
-                const response = await fetch(ipfsUrl);
-                metadata = await response.json();
-              } else {
-                const response = await fetch(url);
-                metadata = await response.json();
+              if (url) {
+                // Fetch metadata from IPFS or URL
+                if (url.startsWith('ipfs://')) {
+                  const ipfsUrl = url.replace('ipfs://', 'https://api.universalprofile.cloud/ipfs/');
+                  try {
+                    const response = await fetch(ipfsUrl);
+                    if (response.ok) {
+                      metadata = await response.json();
+                    }
+                  } catch (e) {
+                    console.error('Error fetching asset metadata:', e);
+                  }
+                } else if (url.startsWith('http')) {
+                  try {
+                    const response = await fetch(url);
+                    if (response.ok) {
+                      metadata = await response.json();
+                    }
+                  } catch (e) {
+                    console.error('Error fetching asset metadata:', e);
+                  }
+                }
               }
             }
 

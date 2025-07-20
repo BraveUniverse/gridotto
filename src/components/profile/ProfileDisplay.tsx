@@ -80,19 +80,34 @@ export const ProfileDisplay = ({
         const profileData = await erc725.fetchData('LSP3Profile');
 
         if (profileData?.value) {
-          // Decode the VerifiableURI
-          const url = profileData.value as string;
+          // Ensure value is a string
+          let url = '';
+          if (typeof profileData.value === 'string') {
+            url = profileData.value;
+          } else if (profileData.value && typeof profileData.value === 'object') {
+            // Handle VerifiableURI object format
+            url = (profileData.value as any).url || '';
+          }
+          
+          if (!url) {
+            console.log('No profile URL found');
+            return;
+          }
           
           // Fetch metadata from IPFS or URL
           if (url.startsWith('ipfs://')) {
             const ipfsUrl = url.replace('ipfs://', 'https://api.universalprofile.cloud/ipfs/');
             const response = await fetch(ipfsUrl);
-            const metadata = await response.json();
-            setProfile(metadata.LSP3Profile || metadata);
-          } else {
+            if (response.ok) {
+              const metadata = await response.json();
+              setProfile(metadata.LSP3Profile || metadata);
+            }
+          } else if (url.startsWith('http')) {
             const response = await fetch(url);
-            const metadata = await response.json();
-            setProfile(metadata.LSP3Profile || metadata);
+            if (response.ok) {
+              const metadata = await response.json();
+              setProfile(metadata.LSP3Profile || metadata);
+            }
           }
         }
       } catch (err: any) {
