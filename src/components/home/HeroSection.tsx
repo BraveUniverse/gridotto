@@ -2,134 +2,148 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useUPProvider } from '@/hooks/useUPProvider';
+import { SparklesIcon, TicketIcon, TrophyIcon } from '@heroicons/react/24/outline';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
-import { 
-  SparklesIcon, 
-  CurrencyDollarIcon,
-  UsersIcon,
-  TrophyIcon,
-  ArrowRightIcon
-} from '@heroicons/react/24/outline';
+import { useUPProvider } from '@/hooks/useUPProvider';
+import Web3 from 'web3';
 
 export const HeroSection = () => {
   const { isConnected } = useUPProvider();
-  const { getCurrentDrawInfo, getMonthlyDrawInfo } = useGridottoContract();
-  const [weeklyPool, setWeeklyPool] = useState(0);
-  const [monthlyPool, setMonthlyPool] = useState(0);
+  const { getContractInfo, getActiveUserDraws, getUserDrawStats } = useGridottoContract();
+  const [totalPrizePool, setTotalPrizePool] = useState('0');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadPools = async () => {
+    const fetchPrizePool = async () => {
       try {
-        setLoading(true);
-        const [weekly, monthly] = await Promise.all([
-          getCurrentDrawInfo(),
-          getMonthlyDrawInfo()
-        ]);
+        // Get contract balance
+        const contractInfo = await getContractInfo();
         
-        if (weekly) setWeeklyPool(parseFloat(weekly.prizePool));
-        if (monthly) setMonthlyPool(parseFloat(monthly.prizePool));
+        // Get active draws and sum their prize pools
+        const activeDraws = await getActiveUserDraws();
+        let userDrawPrizePool = BigInt(0);
+        
+        for (const draw of activeDraws) {
+          const stats = await getUserDrawStats(draw.drawId);
+          if (stats) {
+            userDrawPrizePool += BigInt(stats.prizePool);
+          }
+        }
+        
+        // Total prize pool is contract balance + user draw prize pools
+        const contractBalance = contractInfo ? BigInt(contractInfo.totalPrizePool) : BigInt(0);
+        const total = contractBalance + userDrawPrizePool;
+        
+        setTotalPrizePool(Web3.utils.fromWei(total.toString(), 'ether'));
       } catch (error) {
-        console.error('Error loading pools:', error);
+        console.error('Error fetching prize pool:', error);
       } finally {
         setLoading(false);
       }
     };
-    
-    if (isConnected) {
-      loadPools();
-      // Refresh every 30 seconds
-      const interval = setInterval(loadPools, 30000);
-      return () => clearInterval(interval);
-    } else {
-      setLoading(false);
-    }
-  }, [isConnected, getCurrentDrawInfo, getMonthlyDrawInfo]);
 
-  const features = [
-    { icon: SparklesIcon, text: 'Multi-Asset Support' },
-    { icon: UsersIcon, text: 'Social Features' },
-    { icon: TrophyIcon, text: 'Fair Distribution' },
-  ];
+    fetchPrizePool();
+    
+    // Refresh every minute
+    const interval = setInterval(fetchPrizePool, 60000);
+    return () => clearInterval(interval);
+  }, [getContractInfo, getActiveUserDraws, getUserDrawStats]);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center pt-16 px-4">
-      {/* Background Elements */}
+    <section className="relative min-h-screen flex items-center justify-center px-4 py-20">
+      {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[rgb(var(--primary))/10] rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[rgb(var(--accent-purple))/10] rounded-full blur-3xl"></div>
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-pink-500/20 to-transparent rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-600/20 to-transparent rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 container mx-auto text-center">
-        {/* Badge */}
-        <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full glass-card mb-6">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          <span className="text-sm text-gray-300">Live on LUKSO Testnet</span>
-        </div>
+      <div className="container mx-auto relative z-10">
+        <div className="text-center max-w-4xl mx-auto">
+          {/* Main Title */}
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+            The Future of
+            <span className="block text-pink-400 mt-2">
+              Decentralized Lottery
+            </span>
+          </h1>
 
-        {/* Title */}
-        <h1 className="text-5xl md:text-7xl font-bold mb-6">
-          <span className="block mb-2">The Future of</span>
-          <span className="block">
-            <span className="text-[#FF2975]">Decentralized</span>{' '}
-            <span className="text-white">Lotteries</span>
-          </span>
-        </h1>
+          {/* Subtitle */}
+          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-2xl mx-auto">
+            Play fair, win big, and be part of the revolution on LUKSO blockchain
+          </p>
 
-        {/* Description */}
-        <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
-          Experience next-generation lottery platform with multi-asset support, 
-          social features, and transparent prize distribution on LUKSO blockchain.
-        </p>
+          {/* Prize Pool Display */}
+          <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 mb-12 max-w-md mx-auto border border-white/10">
+            <p className="text-gray-400 mb-2">Total Prize Pool</p>
+            <p className="text-4xl md:text-5xl font-bold text-pink-400">
+              {loading ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                `${totalPrizePool} LYX`
+              )}
+            </p>
+          </div>
 
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-          <Link href="/draws" className="btn-primary group">
-            <span>Explore Draws</span>
-            <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link href="/create-draw" className="btn-secondary">
-            Create Your Own Draw
-          </Link>
-        </div>
-
-        {/* Live Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mb-12">
-          <div className="glass-card p-6">
-            <h3 className="text-sm text-gray-400 mb-2">Weekly Prize Pool</h3>
-            {loading ? (
-              <div className="h-8 bg-white/10 rounded animate-pulse"></div>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+            {isConnected ? (
+              <>
+                <Link
+                  href="/draws"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg text-lg font-semibold hover:from-pink-600 hover:to-purple-700 transition-all transform hover:scale-105"
+                >
+                  <TicketIcon className="w-6 h-6" />
+                  Buy Tickets
+                </Link>
+                <Link
+                  href="/create-draw"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-lg text-lg font-semibold hover:bg-white/20 transition-all border border-white/20"
+                >
+                  <SparklesIcon className="w-6 h-6" />
+                  Create Draw
+                </Link>
+              </>
             ) : (
-              <p className="text-3xl font-bold text-white">{weeklyPool.toFixed(2)} LYX</p>
+              <button
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg text-lg font-semibold hover:from-pink-600 hover:to-purple-700 transition-all transform hover:scale-105"
+              >
+                Connect Wallet to Start
+              </button>
             )}
           </div>
-          <div className="glass-card p-6">
-            <h3 className="text-sm text-gray-400 mb-2">Monthly Prize Pool</h3>
-            {loading ? (
-              <div className="h-8 bg-white/10 rounded animate-pulse"></div>
-            ) : (
-              <p className="text-3xl font-bold text-white">{monthlyPool.toFixed(2)} LYX</p>
-            )}
-          </div>
-        </div>
 
-        {/* Features */}
-        <div className="flex flex-wrap items-center justify-center gap-6">
-          {features.map((feature, index) => (
-            <div key={index} className="flex items-center space-x-2 text-gray-400">
-              <feature.icon className="w-5 h-5" />
-              <span className="text-sm">{feature.text}</span>
+          {/* Features */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+              <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <SparklesIcon className="w-6 h-6 text-pink-400" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Fair & Transparent</h3>
+              <p className="text-gray-400 text-sm">
+                Powered by smart contracts with verifiable randomness
+              </p>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-        <div className="w-6 h-10 rounded-full border-2 border-white/20 flex items-start justify-center p-2">
-          <div className="w-1 h-3 bg-white/40 rounded-full animate-pulse"></div>
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+              <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <TicketIcon className="w-6 h-6 text-purple-400" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Multiple Draws</h3>
+              <p className="text-gray-400 text-sm">
+                Official and community-created draws with various prizes
+              </p>
+            </div>
+
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <TrophyIcon className="w-6 h-6 text-green-400" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Instant Payouts</h3>
+              <p className="text-gray-400 text-sm">
+                Winners receive prizes automatically to their profiles
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>

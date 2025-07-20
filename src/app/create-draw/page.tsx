@@ -10,6 +10,7 @@ import { Requirements } from '@/components/create-draw/Requirements';
 import { ReviewAndCreate } from '@/components/create-draw/ReviewAndCreate';
 import { StepIndicator } from '@/components/create-draw/StepIndicator';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { DrawData } from '@/types/create-draw';
 
 const steps = [
   { id: 1, name: 'Draw Type', description: 'Select the type of draw' },
@@ -19,44 +20,18 @@ const steps = [
   { id: 5, name: 'Review', description: 'Review and create' }
 ];
 
-export interface DrawData {
-  type: 'LYX' | 'TOKEN' | 'NFT' | null;
-  // Prize config
-  prizeAmount?: number;
-  tokenAddress?: string;
-  tokenSymbol?: string;
-  nftContract?: string;
-  nftTokenIds?: string[];
-  // Settings
-  ticketPrice: number;
-  duration: number;
-  maxTickets: number;
-  isMultiWinner: boolean;
-  winnerCount: number;
-  tiers?: Array<{ position: number; percentage: number }>;
-  // Requirements
-  requireVIP: boolean;
-  vipTier?: number;
-  requireFollowing: boolean;
-  minFollowers?: number;
-  requireToken: boolean;
-  requiredToken?: string;
-  minTokenAmount?: number;
-}
-
 export default function CreateDrawPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [drawData, setDrawData] = useState<DrawData>({
-    type: null,
-    ticketPrice: 0.1,
-    duration: 7, // days
-    maxTickets: 10000,
+    drawType: 'LYX',
+    ticketPrice: 1,
+    duration: 7,
+    maxTickets: 100,
+    requirementType: 0,
+    tokenIds: [],
     isMultiWinner: false,
-    winnerCount: 1,
-    requireVIP: false,
-    requireFollowing: false,
-    requireToken: false
+    winnerCount: 1
   });
 
   const handleNext = () => {
@@ -102,11 +77,11 @@ export default function CreateDrawPage() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return drawData.type !== null;
+        return drawData.drawType !== null;
       case 2:
-        if (drawData.type === 'LYX') return (drawData.prizeAmount || 0) > 0;
-        if (drawData.type === 'TOKEN') return drawData.tokenAddress && (drawData.prizeAmount || 0) > 0;
-        if (drawData.type === 'NFT') return drawData.nftContract && drawData.nftTokenIds && drawData.nftTokenIds.length > 0;
+        if (drawData.drawType === 'LYX') return (drawData.prizeAmount || 0) > 0;
+        if (drawData.drawType === 'TOKEN') return drawData.tokenAddress && (drawData.prizeAmount || 0) > 0;
+        if (drawData.drawType === 'NFT') return drawData.nftContract && drawData.tokenIds && drawData.tokenIds.length > 0;
         return false;
       case 3:
         return drawData.ticketPrice > 0 && drawData.duration > 0 && drawData.maxTickets > 0;

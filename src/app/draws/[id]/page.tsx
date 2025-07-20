@@ -36,6 +36,7 @@ interface DrawDetails {
     tokenAddress?: string;
     minAmount?: string;
   };
+  totalParticipants?: string;
 }
 
 interface PrizeDistribution {
@@ -49,7 +50,7 @@ export default function DrawDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { isConnected, account } = useUPProvider();
-  const { getActiveUserDraws, buyUserDrawTicket, web3, gridottoContract } = useGridottoContract();
+  const { getDrawInfo, getUserDrawStats, purchaseTickets } = useGridottoContract();
   
   const [draw, setDraw] = useState<DrawDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,38 +65,42 @@ export default function DrawDetailPage() {
 
   useEffect(() => {
     const loadDrawDetails = async () => {
-      if (!gridottoContract || !web3) {
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         
         // Fetch draw details
-        const userDraws = await getActiveUserDraws();
-        const drawInfo = userDraws.find(d => d.id === drawId);
+        const drawInfo = await getDrawInfo(drawId);
         
         if (drawInfo) {
-          setDraw(drawInfo);
+          // Get additional stats
+          const stats = await getUserDrawStats(drawId);
+          
+          const drawDetails: DrawDetails = {
+            id: drawInfo.drawId,
+            creator: drawInfo.creator,
+            drawType: drawInfo.prizeType === 'LYX' ? 0 : drawInfo.prizeType === 'LSP7' ? 1 : 2,
+            ticketPrice: drawInfo.ticketPrice,
+            ticketsSold: drawInfo.totalTicketsSold.toString(),
+            maxTickets: drawInfo.maxTickets.toString(),
+            currentPrizePool: drawInfo.prizeAmount,
+            endTime: drawInfo.endTime,
+            isCompleted: !drawInfo.isActive,
+            prizeModel: 0,
+            totalWinners: 1,
+            totalParticipants: stats?.totalParticipants || '0'
+          };
+          
+          setDraw(drawDetails);
           
           // Calculate prize distribution based on prize model
-          if (drawInfo.prizeModel !== undefined && drawInfo.totalWinners) {
+          if (drawDetails.prizeModel !== undefined && drawDetails.totalWinners) {
             const distributions = calculatePrizeDistribution(
-              parseFloat(drawInfo.currentPrizePool),
-              drawInfo.prizeModel,
-              drawInfo.totalWinners
+              parseFloat(Web3.utils.fromWei(drawDetails.currentPrizePool, 'ether')),
+              drawDetails.prizeModel,
+              drawDetails.totalWinners
             );
             setPrizeDistribution(distributions);
           }
-          
-          // Fetch ticket purchase events for this draw
-          // This would require filtering events by drawId
-          // For now, we'll simulate some participants
-          const mockParticipants = Array.from({ length: parseInt(drawInfo.ticketsSold) }, (_, i) => 
-            `0x${Math.random().toString(16).substr(2, 40)}`
-          );
-          setParticipants(mockParticipants);
         }
         
       } catch (err) {
@@ -107,7 +112,7 @@ export default function DrawDetailPage() {
     };
 
     loadDrawDetails();
-  }, [drawId, gridottoContract, web3, getActiveUserDraws]);
+  }, [drawId, getDrawInfo, getUserDrawStats]);
 
   const calculatePrizeDistribution = (prizePool: number, prizeModel: number, totalWinners: number): PrizeDistribution[] => {
     const distributions: PrizeDistribution[] = [];
@@ -157,8 +162,8 @@ export default function DrawDetailPage() {
       setError(null);
       setTxHash(null);
       
-      const tx = await buyUserDrawTicket(drawId, buyAmount, draw.ticketPrice);
-      setTxHash(tx.transactionHash);
+              const tx = await purchaseTickets(drawId, buyAmount, draw.ticketPrice);
+        setTxHash(tx.transactionHash);
       
       // Refresh draw details
       setTimeout(() => {

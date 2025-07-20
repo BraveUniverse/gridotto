@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DrawData } from '@/app/create-draw/page';
+import { DrawData } from '@/types/create-draw';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
 interface PrizeConfigurationProps {
@@ -14,25 +14,25 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
 
   const handleAddNFTTokenId = () => {
     if (nftTokenIdInput.trim()) {
-      const currentIds = drawData.nftTokenIds || [];
-      updateDrawData({ 
-        nftTokenIds: [...currentIds, nftTokenIdInput.trim()] 
+          const currentIds = drawData.tokenIds || [];
+    updateDrawData({ 
+      tokenIds: [...currentIds, nftTokenIdInput.trim()] 
       });
       setNftTokenIdInput('');
     }
   };
 
   const handleRemoveNFTTokenId = (index: number) => {
-    const currentIds = drawData.nftTokenIds || [];
+    const currentIds = drawData.tokenIds || [];
     updateDrawData({ 
-      nftTokenIds: currentIds.filter((_, i) => i !== index) 
+      tokenIds: currentIds.filter((_, i) => i !== index) 
     });
   };
 
   return (
     <div className="space-y-6">
       {/* LYX Prize Configuration */}
-      {drawData.type === 'LYX' && (
+      {drawData.drawType === 'LYX' && (
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -60,7 +60,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
       )}
 
       {/* Token Prize Configuration */}
-      {drawData.type === 'TOKEN' && (
+      {drawData.drawType === 'TOKEN' && (
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -111,7 +111,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
       )}
 
       {/* NFT Prize Configuration */}
-      {drawData.type === 'NFT' && (
+      {drawData.drawType === 'NFT' && (
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -149,9 +149,9 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
               </div>
 
               {/* Token ID List */}
-              {drawData.nftTokenIds && drawData.nftTokenIds.length > 0 && (
+              {drawData.tokenIds && drawData.tokenIds.length > 0 && (
                 <div className="glass-card p-4 space-y-2">
-                  {drawData.nftTokenIds.map((tokenId, index) => (
+                  {drawData.tokenIds.map((tokenId, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
                       <span className="text-sm text-gray-300">Token ID: {tokenId}</span>
                       <button
@@ -163,7 +163,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
                     </div>
                   ))}
                   <p className="text-xs text-gray-400 mt-2">
-                    {drawData.nftTokenIds.length} NFT{drawData.nftTokenIds.length > 1 ? 's' : ''} will be given away
+                    {drawData.tokenIds.length} NFT{drawData.tokenIds.length > 1 ? 's' : ''} will be given away
                   </p>
                 </div>
               )}
@@ -179,9 +179,9 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
           <div>
             <h4 className="text-sm font-medium text-white mb-1">Important Information</h4>
             <p className="text-xs text-gray-400">
-              {drawData.type === 'LYX' && 'The initial prize pool will be funded from your wallet when creating the draw. Make sure you have sufficient LYX balance.'}
-              {drawData.type === 'TOKEN' && 'You must approve the token transfer before creating the draw. The tokens will be transferred from your wallet to the contract.'}
-              {drawData.type === 'NFT' && 'You must own the NFTs and approve the transfer before creating the draw. Each NFT will be given to a different winner.'}
+              {drawData.drawType === 'LYX' && 'The initial prize pool will be funded from your wallet when creating the draw. Make sure you have sufficient LYX balance.'}
+              {drawData.drawType === 'TOKEN' && 'You must approve the token transfer before creating the draw. The tokens will be transferred from your wallet to the contract.'}
+              {drawData.drawType === 'NFT' && 'You must own the NFTs and approve the transfer before creating the draw. Each NFT will be given to a different winner.'}
             </p>
           </div>
         </div>

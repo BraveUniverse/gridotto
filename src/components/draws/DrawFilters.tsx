@@ -1,122 +1,79 @@
 'use client';
 
-import { useState } from 'react';
+import { FunnelIcon } from '@heroicons/react/24/outline';
 
-interface FilterProps {
-  filters: {
-    type: string;
-    status: string;
-    prizeRange: number[];
-    drawType: string;
-  };
-  onFiltersChange: (filters: any) => void;
+interface FilterState {
+  status: 'all' | 'active' | 'completed';
+  type: 'all' | 'lyx' | 'token' | 'nft';
+  sortBy: 'endTime' | 'prizePool' | 'participants';
+  sortOrder: 'asc' | 'desc';
 }
 
-export const DrawFilters = ({ filters, onFiltersChange }: FilterProps) => {
-  const [priceRange, setPriceRange] = useState(filters.prizeRange);
+interface DrawFiltersProps {
+  filters: FilterState;
+  onFilterChange: (filters: FilterState) => void;
+}
 
-  const handleDrawTypeChange = (drawType: string) => {
-    onFiltersChange({ ...filters, drawType });
-  };
-
-  const handleStatusChange = (status: string) => {
-    onFiltersChange({ ...filters, status });
-  };
-
-  const handlePriceRangeChange = (index: number, value: string) => {
-    const newRange = [...priceRange];
-    newRange[index] = parseInt(value) || 0;
-    setPriceRange(newRange);
-    onFiltersChange({ ...filters, prizeRange: newRange });
+export function DrawFilters({ filters, onFilterChange }: DrawFiltersProps) {
+  const handleFilterChange = (key: keyof FilterState, value: any) => {
+    onFilterChange({
+      ...filters,
+      [key]: value
+    });
   };
 
   return (
-    <div className="space-y-6">
-      {/* Draw Type */}
-      <div>
-        <h3 className="text-white font-semibold mb-3">Draw Type</h3>
-        <div className="space-y-2">
-          {[
-            { value: 'all', label: 'All Types' },
-            { value: 'LYX', label: 'LYX Draws' },
-            { value: 'TOKEN', label: 'Token Draws' },
-            { value: 'NFT', label: 'NFT Draws' }
-          ].map((option) => (
-            <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="radio"
-                name="drawType"
-                value={option.value}
-                checked={filters.drawType === option.value}
-                onChange={(e) => handleDrawTypeChange(e.target.value)}
-                className="w-4 h-4 text-[#FF2975] bg-white/10 border-white/20 focus:ring-[#FF2975] focus:ring-2"
-              />
-              <span className="text-gray-300">{option.label}</span>
-            </label>
-          ))}
-        </div>
+    <div className="flex flex-wrap gap-4 mb-6">
+      {/* Status Filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-gray-400 text-sm">Status:</span>
+        <select
+          value={filters.status}
+          onChange={(e) => handleFilterChange('status', e.target.value)}
+          className="bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:border-pink-500"
+        >
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="completed">Completed</option>
+        </select>
       </div>
 
-      {/* Status */}
-      <div>
-        <h3 className="text-white font-semibold mb-3">Status</h3>
-        <div className="space-y-2">
-          {[
-            { value: 'all', label: 'All' },
-            { value: 'active', label: 'Active' },
-            { value: 'completed', label: 'Completed' }
-          ].map((option) => (
-            <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="radio"
-                name="status"
-                value={option.value}
-                checked={filters.status === option.value}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                className="w-4 h-4 text-[#FF2975] bg-white/10 border-white/20 focus:ring-[#FF2975] focus:ring-2"
-              />
-              <span className="text-gray-300">{option.label}</span>
-            </label>
-          ))}
-        </div>
+      {/* Type Filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-gray-400 text-sm">Type:</span>
+        <select
+          value={filters.type}
+          onChange={(e) => handleFilterChange('type', e.target.value)}
+          className="bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:border-pink-500"
+        >
+          <option value="all">All</option>
+          <option value="lyx">LYX</option>
+          <option value="token">Token (LSP7)</option>
+          <option value="nft">NFT (LSP8)</option>
+        </select>
       </div>
 
-      {/* Prize Range */}
-      <div>
-        <h3 className="text-white font-semibold mb-3">Prize Range (LYX)</h3>
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3">
-            <input
-              type="number"
-              value={priceRange[0]}
-              onChange={(e) => handlePriceRangeChange(0, e.target.value)}
-              className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FF2975]"
-              placeholder="Min"
-            />
-            <span className="text-gray-400">to</span>
-            <input
-              type="number"
-              value={priceRange[1]}
-              onChange={(e) => handlePriceRangeChange(1, e.target.value)}
-              className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FF2975]"
-              placeholder="Max"
-            />
-          </div>
-        </div>
+      {/* Sort By */}
+      <div className="flex items-center gap-2">
+        <span className="text-gray-400 text-sm">Sort by:</span>
+        <select
+          value={filters.sortBy}
+          onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+          className="bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:border-pink-500"
+        >
+          <option value="endTime">End Time</option>
+          <option value="prizePool">Prize Pool</option>
+          <option value="participants">Participants</option>
+        </select>
       </div>
 
-      {/* Reset Filters */}
+      {/* Sort Order */}
       <button
-        onClick={() => onFiltersChange({
-          type: 'all',
-          status: 'active',
-          prizeRange: [0, 10000],
-          drawType: 'all'
-        })}
-        className="w-full py-2 text-sm text-gray-400 hover:text-white transition-colors"
+        onClick={() => handleFilterChange('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+        className="bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-white text-sm hover:bg-white/20 transition-all"
       >
-        Reset Filters
+        {filters.sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
       </button>
     </div>
   );
-};
+}

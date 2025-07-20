@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DrawData } from '@/app/create-draw/page';
+import { DrawData } from '@/types/create-draw';
 import { Switch } from '@headlessui/react';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 
@@ -15,7 +15,7 @@ export const DrawSettings = ({ drawData, updateDrawData }: DrawSettingsProps) =>
 
   const handleAddTier = () => {
     const currentTiers = drawData.tiers || [];
-    if (currentTiers.length < drawData.winnerCount) {
+    if (currentTiers.length < (drawData.winnerCount || 1)) {
       updateDrawData({
         tiers: [...currentTiers, { ...newTier }]
       });
@@ -192,7 +192,7 @@ export const DrawSettings = ({ drawData, updateDrawData }: DrawSettingsProps) =>
                   </div>
                 ))}
                 
-                {(drawData.tiers || []).length < drawData.winnerCount && (
+                {(drawData.tiers || []).length < (drawData.winnerCount || 1) && (
                   <button
                     onClick={handleAddTier}
                     className="w-full py-2 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 flex items-center justify-center space-x-2"

@@ -1,14 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { DrawData } from '@/app/create-draw/page';
-import { useGridottoContract } from '@/hooks/useGridottoContract';
+import { useRouter } from 'next/navigation';
 import { useUPProvider } from '@/hooks/useUPProvider';
+import { useGridottoContract } from '@/hooks/useGridottoContract';
+import { DrawData } from '@/types/create-draw';
 import { 
   CheckCircleIcon,
-  ExclamationTriangleIcon,
-  ArrowTopRightOnSquareIcon
+  ExclamationCircleIcon 
 } from '@heroicons/react/24/outline';
+import Web3 from 'web3';
 
 interface ReviewAndCreateProps {
   drawData: DrawData;
@@ -17,9 +18,10 @@ interface ReviewAndCreateProps {
 
 export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) => {
   const { account } = useUPProvider();
-  const { createTokenDraw, createNFTDraw } = useGridottoContract();
+  const { createDraw } = useGridottoContract();
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleCreate = async () => {
     if (!account) {
@@ -27,47 +29,31 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
       return;
     }
 
-    setIsCreating(true);
-    setError(null);
-
     try {
-      // Determine requirement type
-      let requirement = 0; // NONE
-      if (drawData.requireVIP) requirement = 1; // VIP_REQUIRED
-      else if (drawData.requireFollowing) requirement = 2; // FOLLOWING_REQUIRED
-      else if (drawData.requireToken) requirement = 3; // TOKEN_REQUIRED
+      setIsCreating(true);
+      setError(null);
 
-      if (drawData.type === 'TOKEN' && drawData.tokenAddress) {
-        await createTokenDraw({
-          tokenAddress: drawData.tokenAddress,
-          prizeAmount: drawData.prizeAmount?.toString() || '0',
-          ticketPrice: drawData.ticketPrice.toString(),
-          duration: drawData.duration,
+      // Calculate end time
+      const endTime = Math.floor(Date.now() / 1000) + (drawData.duration * 86400); // Convert days to seconds
+
+      // Create draw based on type
+      if (drawData.drawType === 'LYX') {
+        const params = {
+          endTime,
+          ticketPrice: Web3.utils.toWei(drawData.ticketPrice.toString(), 'ether'),
           maxTickets: drawData.maxTickets,
-          requirement,
-          requiredToken: drawData.requiredToken,
-          minTokenAmount: drawData.minTokenAmount?.toString()
-        });
-      } else if (drawData.type === 'NFT' && drawData.nftContract && drawData.nftTokenIds) {
-        await createNFTDraw({
-          nftContract: drawData.nftContract,
-          tokenIds: drawData.nftTokenIds,
-          ticketPrice: drawData.ticketPrice.toString(),
-          duration: drawData.duration,
-          maxTickets: drawData.maxTickets,
-          requirement,
-          requiredToken: drawData.requiredToken,
-          minTokenAmount: drawData.minTokenAmount?.toString()
-        });
-      } else if (drawData.type === 'LYX') {
-        // For LYX draws, we'll use Phase4 advanced draw creation
-        // This is a placeholder - implement when Phase4 ABI is ready
-        setError('LYX draw creation coming soon');
+          minTickets: 1
+        };
+
+        await createDraw(params);
+      } else {
+        // For now, only support LYX draws
+        setError('Token and NFT draws are not yet supported in this version');
         return;
       }
 
-      // Success - call parent onCreate
       onCreate();
+      router.push('/draws');
     } catch (err: any) {
       console.error('Error creating draw:', err);
       setError(err.message || 'Failed to create draw');
@@ -76,153 +62,127 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
     }
   };
 
-  const getRequirementSummary = () => {
-    const requirements = [];
-    if (drawData.requireVIP) {
-      requirements.push(`VIP Pass Tier ${drawData.vipTier || 1}+`);
+  const formatRequirement = () => {
+    switch (drawData.requirementType) {
+      case 0:
+        return 'No requirements';
+      case 1:
+        return `Must hold ${drawData.requiredToken} token`;
+      case 2:
+        return `Must hold at least ${drawData.minTokenAmount} ${drawData.requiredToken}`;
+      default:
+        return 'Unknown';
     }
-    if (drawData.requireFollowing) {
-      requirements.push(`Must follow creator${drawData.minFollowers ? ` (${drawData.minFollowers}+ followers)` : ''}`);
-    }
-    if (drawData.requireToken) {
-      requirements.push(`Hold ${drawData.minTokenAmount || 0} tokens`);
-    }
-    return requirements.length > 0 ? requirements : ['None'];
   };
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Draw Type */}
-        <div className="glass-card p-4">
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Draw Type</h4>
-          <p className="text-lg font-semibold text-white">{drawData.type} Draw</p>
-        </div>
-
-        {/* Prize */}
-        <div className="glass-card p-4">
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Prize</h4>
-          <p className="text-lg font-semibold text-white">
-            {drawData.type === 'LYX' && `${drawData.prizeAmount || 0} LYX`}
-            {drawData.type === 'TOKEN' && `${drawData.prizeAmount || 0} ${drawData.tokenSymbol || 'Tokens'}`}
-            {drawData.type === 'NFT' && `${drawData.nftTokenIds?.length || 0} NFTs`}
-          </p>
-        </div>
-
-        {/* Ticket Price */}
-        <div className="glass-card p-4">
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Ticket Price</h4>
-          <p className="text-lg font-semibold text-white">{drawData.ticketPrice} LYX</p>
-        </div>
-
-        {/* Duration */}
-        <div className="glass-card p-4">
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Duration</h4>
-          <p className="text-lg font-semibold text-white">{drawData.duration} Days</p>
-        </div>
-
-        {/* Max Tickets */}
-        <div className="glass-card p-4">
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Max Tickets</h4>
-          <p className="text-lg font-semibold text-white">{drawData.maxTickets.toLocaleString()}</p>
-        </div>
-
-        {/* Winners */}
-        <div className="glass-card p-4">
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Winners</h4>
-          <p className="text-lg font-semibold text-white">
-            {drawData.isMultiWinner ? `${drawData.winnerCount} Winners` : 'Single Winner'}
-          </p>
-        </div>
-      </div>
-
-      {/* Requirements Summary */}
-      <div className="glass-card p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Participation Requirements</h3>
-        <ul className="space-y-2">
-          {getRequirementSummary().map((req, index) => (
-            <li key={index} className="flex items-center space-x-2">
-              <CheckCircleIcon className="w-5 h-5 text-green-400" />
-              <span className="text-gray-300">{req}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Prize Distribution (if multi-winner) */}
-      {drawData.isMultiWinner && drawData.tiers && (
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Prize Distribution</h3>
-          <div className="space-y-2">
-            {drawData.tiers.map((tier, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                <span className="text-gray-300">Position {tier.position}</span>
-                <span className="text-white font-medium">{tier.percentage}%</span>
+      {/* Summary */}
+      <div className="bg-white/5 rounded-xl p-6 space-y-4">
+        <h3 className="text-xl font-semibold text-white mb-4">Draw Summary</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-gray-400">Draw Type</p>
+            <p className="text-white font-medium">{drawData.drawType} Draw</p>
+          </div>
+          
+          <div>
+            <p className="text-sm text-gray-400">Duration</p>
+            <p className="text-white font-medium">{drawData.duration} days</p>
+          </div>
+          
+          <div>
+            <p className="text-sm text-gray-400">Ticket Price</p>
+            <p className="text-white font-medium">{drawData.ticketPrice} LYX</p>
+          </div>
+          
+          <div>
+            <p className="text-sm text-gray-400">Max Tickets</p>
+            <p className="text-white font-medium">{drawData.maxTickets}</p>
+          </div>
+          
+          {drawData.drawType === 'TOKEN' && (
+            <>
+              <div>
+                <p className="text-sm text-gray-400">Token Address</p>
+                <p className="text-white font-mono text-sm">{drawData.tokenAddress}</p>
               </div>
-            ))}
+              
+              <div>
+                <p className="text-sm text-gray-400">Prize Amount</p>
+                <p className="text-white font-medium">{drawData.prizeAmount} tokens</p>
+              </div>
+            </>
+          )}
+          
+          {drawData.drawType === 'NFT' && (
+            <>
+              <div>
+                <p className="text-sm text-gray-400">NFT Contract</p>
+                <p className="text-white font-mono text-sm">{drawData.nftContract}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-400">Token IDs</p>
+                <p className="text-white font-medium">{drawData.tokenIds.join(', ')}</p>
+              </div>
+            </>
+          )}
+          
+          <div className="md:col-span-2">
+            <p className="text-sm text-gray-400">Requirements</p>
+            <p className="text-white font-medium">{formatRequirement()}</p>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Estimated Cost */}
-      <div className="glass-card p-6 border border-yellow-500/30">
-        <div className="flex items-start space-x-3">
-          <ExclamationTriangleIcon className="w-6 h-6 text-yellow-400 flex-shrink-0" />
+      {/* Important Notice */}
+      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <ExclamationCircleIcon className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-lg font-semibold text-white mb-2">Estimated Costs</h3>
-            <ul className="space-y-1 text-sm text-gray-300">
-              {drawData.type === 'LYX' && (
-                <li>• Initial prize pool: {drawData.prizeAmount || 0} LYX</li>
+            <h4 className="text-yellow-500 font-semibold mb-1">Important</h4>
+            <ul className="text-sm text-gray-300 space-y-1">
+              <li>• The draw will start immediately after creation</li>
+              <li>• You cannot modify or cancel the draw once created</li>
+              <li>• Make sure all details are correct before proceeding</li>
+              {drawData.drawType !== 'LYX' && (
+                <li>• Ensure you have approved the required tokens/NFTs</li>
               )}
-              <li>• Gas fees for creation: ~0.5 LYX</li>
-              <li>• Platform fee: 2% of ticket sales</li>
             </ul>
           </div>
         </div>
       </div>
 
-      {/* Error Message */}
+      {/* Error Display */}
       {error && (
-        <div className="glass-card p-4 border border-red-500/30">
-          <div className="flex items-center space-x-2">
-            <ExclamationTriangleIcon className="w-5 h-5 text-red-400" />
-            <p className="text-red-400">{error}</p>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+          <div className="flex items-center gap-2">
+            <ExclamationCircleIcon className="w-5 h-5 text-red-500" />
+            <p className="text-red-500">{error}</p>
           </div>
         </div>
       )}
 
       {/* Create Button */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-400">
-          By creating this draw, you agree to the platform terms and conditions.
-        </p>
-        <button
-          onClick={handleCreate}
-          disabled={isCreating}
-          className={`px-8 py-3 rounded-lg font-medium transition-all flex items-center space-x-2 ${
-            isCreating
-              ? 'bg-white/5 text-gray-500 cursor-not-allowed'
-              : 'btn-primary'
-          }`}
-        >
-          {isCreating ? (
-            <>
-              <div className="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-              <span>Creating...</span>
-            </>
-          ) : (
-            <>
-              <span>Create Draw</span>
-              <ArrowTopRightOnSquareIcon className="w-5 h-5" />
-            </>
-          )}
-        </button>
-      </div>
+      <button
+        onClick={handleCreate}
+        disabled={isCreating}
+        className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl font-semibold hover:from-pink-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {isCreating ? (
+          <>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            Creating Draw...
+          </>
+        ) : (
+          <>
+            <CheckCircleIcon className="w-5 h-5" />
+            Create Draw
+          </>
+        )}
+      </button>
     </div>
   );
 };

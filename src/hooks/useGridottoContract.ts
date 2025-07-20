@@ -1,413 +1,315 @@
-import { useState, useCallback, useEffect } from 'react';
-import Web3 from 'web3';
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
 import { useUPProvider } from './useUPProvider';
 import { CONTRACTS } from '@/config/contracts';
-import GridottoFacetABI from '@/abis/GridottoFacet.json';
-import Phase3FacetABI from '@/abis/Phase3Facet.json';
-import Phase4FacetABI from '@/abis/Phase4Facet.json';
+import { gridottoAbi } from '@/abi/gridottoAbi';
+import { phase3Abi } from '@/abi/phase3Abi';
+import { phase4Abi } from '@/abi/phase4Abi';
+import { adminAbi } from '@/abi/adminAbi';
+import { uiHelperAbi } from '@/abi/uiHelperAbi';
+import { batchAbi } from '@/abi/batchAbi';
+import Web3 from 'web3';
+import { AbiItem } from 'web3-utils';
+import { UserDraw, DrawInfo, ContractInfo, PlatformStats } from '@/types/gridotto';
 
-export interface DrawInfo {
-  drawNumber: string;
-  prizePool: string;
-  ticketCount: string;
-  remainingTime: string;
-}
-
-export interface ContractInfo {
-  ticketPrice: string;
-  drawInterval: string;
-  monthlyDrawInterval: string;
-}
-
-export interface UserDraw {
-  id: number;
-  creator: string;
-  drawType: number;
-  ticketPrice: string;
-  ticketsSold: string;
-  maxTickets: string;
-  currentPrizePool: string;
-  endTime: string;
-  isCompleted: boolean;
-  tokenAddress?: string;
-  nftContract?: string;
-  nftTokenIds?: string[];
-  prizeModel?: number;
-  totalWinners?: number;
-}
+// Combine all ABIs
+const combinedAbi = [
+  ...gridottoAbi,
+  ...phase3Abi,
+  ...phase4Abi,
+  ...adminAbi,
+  ...uiHelperAbi,
+  ...batchAbi
+] as AbiItem[];
 
 export const useGridottoContract = () => {
-  const { web3, account, isConnected } = useUPProvider();
-  const [isLoading, setIsLoading] = useState(false);
+  const { web3, account } = useUPProvider();
+  const [contract, setContract] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Contract instances
-  const [gridottoContract, setGridottoContract] = useState<any>(null);
-  const [phase3Contract, setPhase3Contract] = useState<any>(null);
-  const [phase4Contract, setPhase4Contract] = useState<any>(null);
 
-  // Initialize contracts
   useEffect(() => {
-    if (web3 && isConnected) {
+    if (web3) {
       try {
-        const gridotto = new web3.eth.Contract(GridottoFacetABI as any, CONTRACTS.DIAMOND_ADDRESS);
-        const phase3 = new web3.eth.Contract(Phase3FacetABI as any, CONTRACTS.DIAMOND_ADDRESS);
-        const phase4 = new web3.eth.Contract(Phase4FacetABI as any, CONTRACTS.DIAMOND_ADDRESS);
-        
-        setGridottoContract(gridotto);
-        setPhase3Contract(phase3);
-        setPhase4Contract(phase4);
+        const contractInstance = new web3.eth.Contract(
+          combinedAbi,
+          CONTRACTS.LUKSO_TESTNET.DIAMOND
+        );
+        setContract(contractInstance);
+        setLoading(false);
       } catch (err) {
-        console.error('Failed to initialize contracts:', err);
-        setError('Failed to connect to contracts');
+        console.error('Error creating contract instance:', err);
+        setError('Failed to create contract instance');
+        setLoading(false);
       }
     }
-  }, [web3, isConnected]);
+  }, [web3]);
 
-  // Safe contract call wrapper
-  const safeCall = async (contractCall: () => Promise<any>, defaultValue: any) => {
-    try {
-      return await contractCall();
-    } catch (err) {
-      console.error('Contract call failed:', err);
-      return defaultValue;
-    }
-  };
-
-  // Get current draw info
-  const getCurrentDrawInfo = useCallback(async (): Promise<DrawInfo | null> => {
-    if (!gridottoContract) return null;
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Use getDrawInfo method from GridottoFacet
-      const result = await gridottoContract.methods.getDrawInfo().call();
-      
-      if (result) {
-        return {
-          drawNumber: result.drawNumber?.toString() || result[0]?.toString() || '0',
-          prizePool: result.prize ? Web3.utils.fromWei(result.prize.toString(), 'ether') : 
-                     result[2] ? Web3.utils.fromWei(result[2].toString(), 'ether') : '0',
-          ticketCount: result.ticketsSold?.toString() || result[3]?.toString() || '0',
-          remainingTime: result.endTime ? (parseInt(result.endTime) - Math.floor(Date.now() / 1000)).toString() :
-                        result[1] ? (parseInt(result[1]) - Math.floor(Date.now() / 1000)).toString() : '0'
-        };
-      }
-      
-      return null;
-    } catch (err: any) {
-      console.error('getCurrentDrawInfo error:', err);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [gridottoContract]);
-
-  // Get monthly draw info
-  const getMonthlyDrawInfo = useCallback(async (): Promise<DrawInfo | null> => {
-    if (!gridottoContract) return null;
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Use getMonthlyDrawInfo method from GridottoFacet
-      const result = await gridottoContract.methods.getMonthlyDrawInfo().call();
-      
-      if (result) {
-        return {
-          drawNumber: result.drawNumber?.toString() || result[0]?.toString() || '0',
-          prizePool: result.prize ? Web3.utils.fromWei(result.prize.toString(), 'ether') : 
-                     result[2] ? Web3.utils.fromWei(result[2].toString(), 'ether') : '0',
-          ticketCount: result.ticketsSold?.toString() || result[3]?.toString() || '0',
-          remainingTime: result.endTime ? (parseInt(result.endTime) - Math.floor(Date.now() / 1000)).toString() :
-                        result[1] ? (parseInt(result[1]) - Math.floor(Date.now() / 1000)).toString() : '0'
-        };
-      }
-      
-      return null;
-    } catch (err: any) {
-      console.error('getMonthlyDrawInfo error:', err);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [gridottoContract]);
-
-  // Get contract info - use individual state variables
-  const getContractInfo = useCallback(async (): Promise<ContractInfo | null> => {
-    if (!gridottoContract) return null;
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // GridottoFacet doesn't have getContractInfo, so we'll return defaults
-      // In production, you might need to add this view function to the contract
-      return {
-        ticketPrice: '1', // Default 1 LYX
-        drawInterval: '604800', // 7 days in seconds
-        monthlyDrawInterval: '2592000' // 30 days in seconds
-      };
-    } catch (err: any) {
-      console.error('getContractInfo error:', err);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [gridottoContract]);
-
-  // Get all active user draws
+  // Get active user draws using UI helper
   const getActiveUserDraws = useCallback(async (): Promise<UserDraw[]> => {
-    if (!gridottoContract) return [];
+    if (!contract) return [];
     
     try {
-      setIsLoading(true);
-      setError(null);
+      const activeDraws = await contract.methods.getActiveUserDraws(20).call();
       
-      // Since there's no getActiveDraws method in the contract,
-      // we'll return an empty array for now
-      // In production, you would need to add this view function to the contract
-      console.log('Note: getActiveDraws method not implemented in contract');
+      return activeDraws.map((draw: any) => ({
+        drawId: draw.drawId,
+        creator: draw.creator,
+        endTime: draw.endTime,
+        prizeType: 'LYX', // Default, will be updated with getUserDrawStats
+        prizeAmount: '0',
+        ticketPrice: '0',
+        maxTickets: 0,
+        minTickets: 0,
+        isActive: true,
+        totalTicketsSold: 0,
+        participants: []
+      }));
+    } catch (err) {
+      console.error('Error fetching active draws:', err);
+      return [];
+    }
+  }, [contract]);
+
+  // Get user created draws
+  const getUserCreatedDraws = useCallback(async (creator: string, offset = 0, limit = 10): Promise<number[]> => {
+    if (!contract) return [];
+    
+    try {
+      const drawIds = await contract.methods.getUserCreatedDraws(creator, offset, limit).call();
+      return drawIds;
+    } catch (err) {
+      console.error('Error fetching user created draws:', err);
+      return [];
+    }
+  }, [contract]);
+
+  // Get draw statistics
+  const getUserDrawStats = useCallback(async (drawId: number): Promise<DrawInfo | null> => {
+    if (!contract) return null;
+    
+    try {
+      const stats = await contract.methods.getUserDrawStats(drawId).call();
       
-      // Alternative: Try to get user created draws if available
+      return {
+        creator: stats.creator,
+        endTime: stats.endTime,
+        prizePool: stats.prizePool,
+        totalParticipants: stats.totalParticipants,
+        totalTicketsSold: stats.totalTicketsSold
+      };
+    } catch (err) {
+      console.error('Error fetching draw stats:', err);
+      return null;
+    }
+  }, [contract]);
+
+  // Get all claimable prizes
+  const getAllClaimablePrizes = useCallback(async (user: string) => {
+    if (!contract) return { totalLYX: '0', hasTokenPrizes: false, hasNFTPrizes: false };
+    
+    try {
+      const result = await contract.methods.getAllClaimablePrizes(user).call();
+      return {
+        totalLYX: result.totalLYX,
+        hasTokenPrizes: result.hasTokenPrizes,
+        hasNFTPrizes: result.hasNFTPrizes
+      };
+    } catch (err) {
+      console.error('Error fetching claimable prizes:', err);
+      return { totalLYX: '0', hasTokenPrizes: false, hasNFTPrizes: false };
+    }
+  }, [contract]);
+
+  // Get official draw info
+  const getOfficialDrawInfo = useCallback(async () => {
+    if (!contract) return null;
+    
+    try {
+      const info = await contract.methods.getOfficialDrawInfo().call();
+      return {
+        currentDrawNumber: info.currentDrawNumber,
+        nextDrawTime: info.nextDrawTime,
+        ticketPrice: info.ticketPrice
+      };
+    } catch (err) {
+      console.error('Error fetching official draw info:', err);
+      return null;
+    }
+  }, [contract]);
+
+  // Claim all prizes
+  const claimAll = useCallback(async () => {
+    if (!contract || !account) throw new Error('Contract or account not available');
+    
+    try {
+      const tx = await contract.methods.claimAll().send({ from: account });
+      return tx;
+    } catch (err) {
+      console.error('Error claiming all prizes:', err);
+      throw err;
+    }
+  }, [contract, account]);
+
+  // Get contract info
+  const getContractInfo = useCallback(async (): Promise<ContractInfo | null> => {
+    if (!contract || !web3) return null;
+    
+    try {
+      const [balance, officialInfo] = await Promise.all([
+        web3.eth.getBalance(CONTRACTS.LUKSO_TESTNET.DIAMOND),
+        getOfficialDrawInfo()
+      ]);
+      
+      return {
+        totalPrizePool: balance.toString(),
+        currentDrawNumber: officialInfo?.currentDrawNumber || 0,
+        nextDrawTime: officialInfo?.nextDrawTime || 0,
+        ticketPrice: officialInfo?.ticketPrice || '1000000000000000000' // 1 LYX default
+      };
+    } catch (err) {
+      console.error('Error fetching contract info:', err);
+      return null;
+    }
+  }, [contract, web3, getOfficialDrawInfo]);
+
+  // Get platform statistics
+  const getPlatformStats = useCallback(async (): Promise<PlatformStats | null> => {
+    if (!contract) return null;
+    
+    try {
+      // Get active draws for stats
+      const activeDraws = await getActiveUserDraws();
+      
+      return {
+        totalDraws: activeDraws.length,
+        activeDraws: activeDraws.length,
+        totalPrizePool: '0', // Will be calculated from individual draws
+        totalParticipants: 0, // Will be calculated from individual draws
+        averageTicketPrice: '1000000000000000000' // 1 LYX default
+      };
+    } catch (err) {
+      console.error('Error fetching platform stats:', err);
+      return null;
+    }
+  }, [contract, getActiveUserDraws]);
+
+  // Legacy functions for compatibility
+  const getUserDraws = useCallback(async (userAddress: string): Promise<UserDraw[]> => {
+    if (!contract) return [];
+    
+    try {
+      const drawIds = await getUserCreatedDraws(userAddress, 0, 100);
       const draws: UserDraw[] = [];
       
-      // You could implement a loop to check recent draw IDs
-      // For example, check the last 20 draw IDs
-      try {
-        // Get nextDrawId if available to know the range
-        const nextDrawId = await gridottoContract.methods.nextDrawId?.().call();
-        if (nextDrawId) {
-          const startId = Math.max(0, parseInt(nextDrawId) - 20);
-          
-          for (let i = startId; i < parseInt(nextDrawId); i++) {
-            try {
-              const drawInfo = await gridottoContract.methods.getUserDraw(i).call();
-              
-              // Check if draw exists and is active
-              if (drawInfo && drawInfo.creator && drawInfo.creator !== '0x0000000000000000000000000000000000000000') {
-                const endTime = drawInfo.endTime || drawInfo[6];
-                const isCompleted = drawInfo.isCompleted !== undefined ? drawInfo.isCompleted : drawInfo[7];
-                
-                // Only add if not completed and not expired
-                if (!isCompleted && parseInt(endTime) > Math.floor(Date.now() / 1000)) {
-                  const creator = drawInfo.creator || drawInfo[0];
-                  const drawType = drawInfo.drawType !== undefined ? drawInfo.drawType : drawInfo[1];
-                  const ticketPrice = drawInfo.ticketPrice || drawInfo[2];
-                  const ticketsSold = drawInfo.ticketsSold || drawInfo[3];
-                  const maxTickets = drawInfo.maxTickets || drawInfo[4];
-                  const currentPrizePool = drawInfo.currentPrizePool || drawInfo[5];
-                  
-                  draws.push({
-                    id: i,
-                    creator: creator,
-                    drawType: parseInt(drawType),
-                    ticketPrice: Web3.utils.fromWei(ticketPrice.toString(), 'ether'),
-                    ticketsSold: ticketsSold.toString(),
-                    maxTickets: maxTickets.toString(),
-                    currentPrizePool: Web3.utils.fromWei(currentPrizePool.toString(), 'ether'),
-                    endTime: endTime.toString(),
-                    isCompleted: isCompleted
-                  });
-                }
-              }
-            } catch (err) {
-              // Draw doesn't exist or error reading it
-              continue;
-            }
-          }
+      for (const drawId of drawIds) {
+        const stats = await getUserDrawStats(Number(drawId));
+        if (stats) {
+          draws.push({
+            drawId: Number(drawId),
+            creator: stats.creator,
+            endTime: stats.endTime,
+            prizeType: 'LYX',
+            prizeAmount: stats.prizePool,
+            ticketPrice: '1000000000000000000', // 1 LYX default
+            maxTickets: 100,
+            minTickets: 1,
+            isActive: Number(stats.endTime) > Date.now() / 1000,
+            totalTicketsSold: Number(stats.totalTicketsSold),
+            participants: []
+          });
         }
-      } catch (err) {
-        console.log('Could not fetch draw range');
       }
       
       return draws;
-    } catch (err: any) {
-      console.error('getActiveUserDraws error:', err);
+    } catch (err) {
+      console.error('Error fetching user draws:', err);
       return [];
-    } finally {
-      setIsLoading(false);
     }
-  }, [gridottoContract]);
+  }, [contract, getUserCreatedDraws, getUserDrawStats]);
 
-  // Buy ticket for platform draw
-  const buyTicket = useCallback(async (profileId: string, amount: number, drawType: number = 0) => {
-    if (!gridottoContract || !account) {
-      throw new Error('Contract not initialized or not connected');
-    }
+  const getDrawInfo = useCallback(async (drawId: number): Promise<UserDraw | null> => {
+    if (!contract) return null;
     
     try {
-      setIsLoading(true);
-      setError(null);
+      const stats = await getUserDrawStats(drawId);
+      if (!stats) return null;
       
-      const contractInfo = await getContractInfo();
-      if (!contractInfo) throw new Error('Failed to get ticket price');
-      
-      const value = Web3.utils.toWei((parseFloat(contractInfo.ticketPrice) * amount).toString(), 'ether');
-      
-      const tx = await gridottoContract.methods
-        .buyTicket(profileId, amount)
-        .send({ from: account, value });
-      
-      return tx;
-    } catch (err: any) {
-      console.error('buyTicket error:', err);
-      setError(err.message || 'Failed to buy ticket');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [gridottoContract, account, getContractInfo]);
-
-  // Buy ticket for user draw
-  const buyUserDrawTicket = useCallback(async (drawId: number, amount: number, ticketPrice: string) => {
-    if (!phase3Contract || !account) {
-      throw new Error('Contract not initialized or not connected');
-    }
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const value = Web3.utils.toWei((parseFloat(ticketPrice) * amount).toString(), 'ether');
-      
-      const tx = await phase3Contract.methods
-        .buyTokenDrawTicket(drawId, amount)
-        .send({ from: account, value });
-      
-      return tx;
-    } catch (err: any) {
-      console.error('buyUserDrawTicket error:', err);
-      setError(err.message || 'Failed to buy ticket');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [phase3Contract, account]);
-
-  // Create token draw
-  const createTokenDraw = useCallback(async (params: {
-    tokenAddress: string;
-    prizeAmount: string;
-    ticketPrice: string;
-    duration: number;
-    maxTickets: number;
-    requirement: number;
-    requiredToken?: string;
-    minTokenAmount?: string;
-  }) => {
-    if (!phase3Contract || !account) {
-      throw new Error('Please connect your wallet to create a draw');
-    }
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const tx = await phase3Contract.methods.createTokenDraw(
-        params.tokenAddress,
-        Web3.utils.toWei(params.prizeAmount, 'ether'),
-        Web3.utils.toWei(params.ticketPrice, 'ether'),
-        params.duration * 86400, // Convert days to seconds
-        params.maxTickets,
-        params.requirement,
-        params.requiredToken || '0x0000000000000000000000000000000000000000',
-        params.minTokenAmount ? Web3.utils.toWei(params.minTokenAmount, 'ether') : '0'
-      ).send({ from: account });
-      
-      return tx;
-    } catch (err: any) {
-      console.error('createTokenDraw error:', err);
-      setError(err.message || 'Failed to create draw');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [phase3Contract, account]);
-
-  // Create NFT draw
-  const createNFTDraw = useCallback(async (params: {
-    nftContract: string;
-    tokenIds: string[];
-    ticketPrice: string;
-    duration: number;
-    maxTickets: number;
-    requirement: number;
-    requiredToken?: string;
-    minTokenAmount?: string;
-  }) => {
-    if (!phase3Contract || !account) {
-      throw new Error('Contract not initialized or not connected');
-    }
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Convert tokenIds to bytes32
-      const tokenIdsBytes32 = params.tokenIds.map(id => 
-        Web3.utils.padLeft(Web3.utils.toHex(id), 64)
-      );
-      
-      const tx = await phase3Contract.methods.createNFTDraw(
-        params.nftContract,
-        tokenIdsBytes32,
-        Web3.utils.toWei(params.ticketPrice, 'ether'),
-        params.duration * 86400, // Convert days to seconds
-        params.maxTickets,
-        params.requirement,
-        params.requiredToken || '0x0000000000000000000000000000000000000000',
-        params.minTokenAmount ? Web3.utils.toWei(params.minTokenAmount, 'ether') : '0'
-      ).send({ from: account });
-      
-      return tx;
-    } catch (err: any) {
-      console.error('createNFTDraw error:', err);
-      setError(err.message || 'Failed to create NFT draw');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [phase3Contract, account]);
-
-  // Get owner
-  const getOwner = useCallback(async (): Promise<string | null> => {
-    if (!gridottoContract) return null;
-    
-    try {
-      const owner = await gridottoContract.methods.owner().call();
-      return owner;
-    } catch (err: any) {
-      console.error('getOwner error:', err);
+      return {
+        drawId,
+        creator: stats.creator,
+        endTime: stats.endTime,
+        prizeType: 'LYX',
+        prizeAmount: stats.prizePool,
+        ticketPrice: '1000000000000000000', // 1 LYX default
+        maxTickets: 100,
+        minTickets: 1,
+        isActive: Number(stats.endTime) > Date.now() / 1000,
+        totalTicketsSold: Number(stats.totalTicketsSold),
+        participants: []
+      };
+    } catch (err) {
+      console.error('Error fetching draw info:', err);
       return null;
     }
-  }, [gridottoContract]);
+  }, [contract, getUserDrawStats]);
+
+  const purchaseTickets = useCallback(async (drawId: number, ticketCount: number, ticketPrice: string) => {
+    if (!contract || !account) throw new Error('Contract or account not available');
+    
+    try {
+      const totalPrice = (BigInt(ticketPrice) * BigInt(ticketCount)).toString();
+      const tx = await contract.methods.purchaseTickets(drawId, ticketCount).send({ 
+        from: account,
+        value: totalPrice 
+      });
+      return tx;
+    } catch (err) {
+      console.error('Error purchasing tickets:', err);
+      throw err;
+    }
+  }, [contract, account]);
+
+  const createDraw = useCallback(async (params: {
+    endTime: number;
+    ticketPrice: string;
+    maxTickets: number;
+    minTickets: number;
+  }) => {
+    if (!contract || !account) throw new Error('Contract or account not available');
+    
+    try {
+      const tx = await contract.methods.createDraw(
+        params.endTime,
+        params.ticketPrice,
+        params.maxTickets,
+        params.minTickets
+      ).send({ from: account });
+      return tx;
+    } catch (err) {
+      console.error('Error creating draw:', err);
+      throw err;
+    }
+  }, [contract, account]);
 
   return {
-    // State
-    isLoading,
+    contract,
+    loading,
     error,
-    
-    // Read functions
-    getCurrentDrawInfo,
-    getMonthlyDrawInfo,
-    getContractInfo,
+    // UI Helper functions
     getActiveUserDraws,
-    getOwner,
-    
-    // Write functions
-    buyTicket,
-    buyUserDrawTicket,
-    createTokenDraw,
-    createNFTDraw,
-    
-    // Contract instances (for advanced usage)
-    gridottoContract,
-    phase3Contract,
-    phase4Contract,
-    web3
+    getUserCreatedDraws,
+    getUserDrawStats,
+    getAllClaimablePrizes,
+    getOfficialDrawInfo,
+    claimAll,
+    // Legacy functions
+    getUserDraws,
+    getDrawInfo,
+    getContractInfo,
+    getPlatformStats,
+    purchaseTickets,
+    createDraw
   };
 }; 

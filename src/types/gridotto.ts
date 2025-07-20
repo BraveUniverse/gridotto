@@ -1,34 +1,36 @@
 export interface UserDraw {
-  id: number;
+  drawId: number;
   creator: string;
-  drawType: number; // 0: LYX, 1: LSP7, 2: LSP8
-  ticketPrice: string;
-  ticketsSold: string;
-  maxTickets: string;
-  currentPrizePool: string;
   endTime: string;
-  isCompleted: boolean;
-  prizeModel?: number;
-  totalWinners?: number;
+  prizeType: 'LYX' | 'LSP7' | 'LSP8';
+  prizeAmount: string;
+  ticketPrice: string;
+  maxTickets: number;
+  minTickets: number;
+  isActive: boolean;
+  totalTicketsSold: number;
+  participants: string[];
 }
 
 export interface DrawInfo {
-  drawNumber: string;
+  creator: string;
+  endTime: string;
   prizePool: string;
-  ticketCount: string;
-  remainingTime: string;
+  totalParticipants: string;
+  totalTicketsSold: string;
 }
 
 export interface ContractInfo {
+  totalPrizePool: string;
+  currentDrawNumber: number;
+  nextDrawTime: number;
   ticketPrice: string;
-  drawInterval: string;
-  monthlyDrawInterval: string;
 }
 
 export interface PlatformStats {
-  totalDraws: string;
-  totalPrizeDistributed: string;
-  totalTicketsSold: string;
-  totalUsers: string;
-  platformRevenue: string;
+  totalDraws: number;
+  activeDraws: number;
+  totalPrizePool: string;
+  totalParticipants: number;
+  averageTicketPrice: string;
 }

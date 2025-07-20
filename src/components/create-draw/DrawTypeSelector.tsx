@@ -5,7 +5,7 @@ import {
   PhotoIcon,
   CircleStackIcon
 } from '@heroicons/react/24/outline';
-import { DrawData } from '@/app/create-draw/page';
+import { DrawData } from '@/types/create-draw';
 
 interface DrawTypeSelectorProps {
   drawData: DrawData;
@@ -46,10 +46,10 @@ export const DrawTypeSelector = ({ drawData, updateDrawData }: DrawTypeSelectorP
         {drawTypes.map((drawType) => (
           <button
             key={drawType.type}
-            onClick={() => updateDrawData({ type: drawType.type })}
+            onClick={() => updateDrawData({ drawType: drawType.type })}
             className={`
               relative group text-left transition-all duration-300
-              ${drawData.type === drawType.type 
+              ${drawData.drawType === drawType.type 
                 ? 'scale-105' 
                 : 'hover:scale-105'
               }
@@ -57,13 +57,13 @@ export const DrawTypeSelector = ({ drawData, updateDrawData }: DrawTypeSelectorP
           >
             <div className={`
               glass-card p-6 h-full
-              ${drawData.type === drawType.type 
+              ${drawData.drawType === drawType.type 
                 ? 'border-2 border-[rgb(var(--primary))]' 
                 : 'border border-white/10'
               }
             `}>
               {/* Selected Indicator */}
-              {drawData.type === drawType.type && (
+              {drawData.drawType === drawType.type && (
                 <div className="absolute -top-3 -right-3 w-8 h-8 bg-[rgb(var(--primary))] rounded-full flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -97,7 +97,7 @@ export const DrawTypeSelector = ({ drawData, updateDrawData }: DrawTypeSelectorP
       </div>
 
       {/* Additional Info */}
-      {drawData.type && (
+      {drawData.drawType && (
         <div className="glass-card p-4 border border-[rgb(var(--primary))/30]">
           <div className="flex items-start space-x-3">
             <div className="w-8 h-8 rounded-lg bg-[rgb(var(--primary))/20] flex items-center justify-center flex-shrink-0">
@@ -108,9 +108,9 @@ export const DrawTypeSelector = ({ drawData, updateDrawData }: DrawTypeSelectorP
             <div>
               <h4 className="text-sm font-medium text-white mb-1">What happens next?</h4>
               <p className="text-xs text-gray-400">
-                {drawData.type === 'LYX' && 'You\'ll set the initial prize pool amount. The pool will grow as participants buy tickets.'}
-                {drawData.type === 'TOKEN' && 'You\'ll need to specify the token contract address and the prize amount.'}
-                {drawData.type === 'NFT' && 'You\'ll need to provide the NFT contract address and select which NFTs to give away.'}
+                {drawData.drawType === 'LYX' && 'You\'ll set the initial prize pool amount. The pool will grow as participants buy tickets.'}
+                {drawData.drawType === 'TOKEN' && 'You\'ll need to specify the token contract address and the prize amount.'}
+                {drawData.drawType === 'NFT' && 'You\'ll need to provide the NFT contract address and select which NFTs to give away.'}
               </p>
             </div>
           </div>

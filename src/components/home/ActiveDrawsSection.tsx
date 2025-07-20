@@ -2,68 +2,116 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { DrawCard } from '@/components/draws/DrawCard';
-import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
-import { useUPProvider } from '@/hooks/useUPProvider';
 import { UserDraw } from '@/types/gridotto';
+import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
+import Web3 from 'web3';
 
-export const ActiveDrawsSection = () => {
-  const { isConnected } = useUPProvider();
-  const { getActiveUserDraws } = useGridottoContract();
-  const [draws, setDraws] = useState<UserDraw[]>([]);
-  const [filter, setFilter] = useState('all');
+export function ActiveDrawsSection() {
+  const [activeDraws, setActiveDraws] = useState<UserDraw[]>([]);
   const [loading, setLoading] = useState(true);
+  const { getActiveUserDraws, getUserDrawStats } = useGridottoContract();
 
   useEffect(() => {
-    const loadDraws = async () => {
-      if (!isConnected) {
-        setLoading(false);
-        return;
-      }
-
+    const fetchActiveDraws = async () => {
       try {
         setLoading(true);
+        const draws = await getActiveUserDraws();
         
-        // Get only real user draws from blockchain
-        const userDraws = await getActiveUserDraws();
-        setDraws(userDraws);
+        // Fetch detailed stats for each draw
+        const detailedDraws = await Promise.all(
+          draws.map(async (draw) => {
+            const stats = await getUserDrawStats(draw.drawId);
+            if (stats) {
+              return {
+                ...draw,
+                prizeAmount: stats.prizePool,
+                totalTicketsSold: Number(stats.totalTicketsSold),
+                ticketPrice: '1000000000000000000' // 1 LYX default
+              };
+            }
+            return draw;
+          })
+        );
+        
+        setActiveDraws(detailedDraws);
       } catch (error) {
-        console.error('Error loading draws:', error);
-        setDraws([]);
+        console.error('Error fetching active draws:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadDraws();
+    fetchActiveDraws();
     
     // Refresh every 30 seconds
-    const interval = setInterval(loadDraws, 30000);
+    const interval = setInterval(fetchActiveDraws, 30000);
     return () => clearInterval(interval);
-  }, [isConnected, getActiveUserDraws]);
+  }, [getActiveUserDraws, getUserDrawStats]);
 
-  // Filter draws
-  const filteredDraws = draws.filter(draw => {
-    if (filter === 'all') return true;
-    if (filter === 'platform') return draw.creator === '0x0000000000000000000000000000000000000000';
-    if (filter === 'nft') return draw.drawType === 2;
-    if (filter === 'token') return draw.drawType === 1;
-    return true;
-  });
+  const formatTimeRemaining = (endTime: string) => {
+    const now = Math.floor(Date.now() / 1000);
+    const end = Number(endTime);
+    const diff = end - now;
+    
+    if (diff <= 0) return 'Ended';
+    
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days} day${days > 1 ? 's' : ''} left`;
+    }
+    
+    return `${hours}h ${minutes}m left`;
+  };
 
-  if (!isConnected) {
+  const formatPrizePool = (amount: string) => {
+    try {
+      return `${Web3.utils.fromWei(amount, 'ether')} LYX`;
+    } catch {
+      return '0 LYX';
+    }
+  };
+
+  if (loading) {
     return (
-      <section className="py-24 px-4 relative">
-        <div className="container mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Active <span className="gradient-text">Draws</span>
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold mb-8 text-center text-pink-400">
+            Active Community Draws
           </h2>
-          <p className="text-gray-400 text-lg mb-8">
-            Connect your wallet to see active draws
-          </p>
-          <div className="glass-card p-12">
-            <p className="text-gray-400">Please connect your Universal Profile to view and participate in draws</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white/5 backdrop-blur-lg rounded-xl p-6 animate-pulse">
+                <div className="h-6 bg-white/10 rounded mb-4" />
+                <div className="h-4 bg-white/10 rounded mb-2 w-3/4" />
+                <div className="h-4 bg-white/10 rounded mb-4 w-1/2" />
+                <div className="h-10 bg-white/10 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (activeDraws.length === 0) {
+    return (
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold mb-8 text-center text-pink-400">
+            Active Community Draws
+          </h2>
+          <div className="text-center py-12">
+            <p className="text-gray-400 mb-4">No active draws at the moment</p>
+            <Link
+              href="/create-draw"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:from-pink-600 hover:to-purple-700 transition-all"
+            >
+              Create a Draw
+            </Link>
           </div>
         </div>
       </section>
@@ -71,80 +119,70 @@ export const ActiveDrawsSection = () => {
   }
 
   return (
-    <section className="py-24 px-4 relative">
-      <div className="container mx-auto">
-        {/* Section Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-12">
-          <div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Active <span className="text-[#FF2975]">Draws</span>
-            </h2>
-            <p className="text-gray-400 text-lg">
-              Participate in live draws and win amazing prizes
-            </p>
-          </div>
-          
-          {/* Filter Buttons */}
-          <div className="flex items-center space-x-2 mt-6 md:mt-0">
-            {['all', 'platform', 'nft', 'token'].map((filterType) => (
-              <button
-                key={filterType}
-                onClick={() => setFilter(filterType)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  filter === filterType
-                    ? 'bg-[rgb(var(--primary))] text-white'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                }`}
-              >
-                {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Draws Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="glass-card h-96 animate-pulse">
-                <div className="p-6">
-                  <div className="h-6 bg-white/10 rounded mb-4"></div>
-                  <div className="h-4 bg-white/10 rounded w-2/3 mb-8"></div>
-                  <div className="h-20 bg-white/10 rounded mb-6"></div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="h-16 bg-white/10 rounded"></div>
-                    <div className="h-16 bg-white/10 rounded"></div>
-                    <div className="h-16 bg-white/10 rounded"></div>
-                  </div>
+    <section className="py-16">
+      <div className="container mx-auto px-4">
+        <h2 className="text-3xl font-bold mb-8 text-center text-pink-400">
+          Active Community Draws
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {activeDraws.slice(0, 6).map((draw) => (
+            <div
+              key={draw.drawId}
+              className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 hover:border-pink-500/50 transition-all"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    Draw #{draw.drawId}
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    {formatTimeRemaining(draw.endTime)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-pink-400">
+                    {formatPrizePool(draw.prizeAmount)}
+                  </p>
+                  <p className="text-xs text-gray-400">Prize Pool</p>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : filteredDraws.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {filteredDraws.slice(0, 6).map((draw) => (
-              <DrawCard key={draw.id} draw={draw} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 glass-card">
-            <p className="text-gray-400 text-lg">No active draws at the moment</p>
-          </div>
-        )}
 
-        {/* View All Button */}
-        {filteredDraws.length > 6 && (
-          <div className="text-center">
-            <Link 
-              href="/draws" 
-              className="inline-flex items-center space-x-2 btn-primary group"
+              <div className="mb-4">
+                <p className="text-sm text-gray-400 mb-1">Created by</p>
+                <ProfileDisplay 
+                  address={draw.creator} 
+                  size="sm"
+                  showName={true}
+                />
+              </div>
+
+              <div className="flex justify-between text-sm text-gray-400 mb-4">
+                <span>{draw.totalTicketsSold} tickets sold</span>
+                <span>{formatPrizePool(draw.ticketPrice)} per ticket</span>
+              </div>
+
+              <Link
+                href={`/draws/${draw.drawId}`}
+                className="block w-full text-center py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:from-pink-600 hover:to-purple-700 transition-all"
+              >
+                View Details
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        {activeDraws.length > 6 && (
+          <div className="text-center mt-8">
+            <Link
+              href="/draws"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
             >
-              <span>View All Draws</span>
-              <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              View All Draws ({activeDraws.length})
             </Link>
           </div>
         )}
       </div>
     </section>
   );
-};
+}

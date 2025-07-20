@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { UserDraw } from '@/types/gridotto';
+import Web3 from 'web3';
 import { 
   ClockIcon, 
   TicketIcon, 
@@ -40,7 +41,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [progress, setProgress] = useState(0);
 
-  const config = drawTypeConfig[draw.drawType] || drawTypeConfig[0];
+  const config = drawTypeConfig[draw.prizeType === 'LYX' ? 0 : draw.prizeType === 'LSP7' ? 1 : 2] || drawTypeConfig[0];
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -73,13 +74,13 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
   }, [draw.endTime]);
 
   useEffect(() => {
-    const ticketsSold = parseInt(draw.ticketsSold);
-    const maxTickets = parseInt(draw.maxTickets);
+    const ticketsSold = draw.totalTicketsSold;
+    const maxTickets = draw.maxTickets;
     
     if (maxTickets > 0) {
       setProgress((ticketsSold / maxTickets) * 100);
     }
-  }, [draw.ticketsSold, draw.maxTickets]);
+  }, [draw.totalTicketsSold, draw.maxTickets]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -88,7 +89,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
   const Icon = config.icon;
 
   return (
-    <Link href={`/draws/${draw.id}`}>
+    <Link href={`/draws/${draw.drawId}`}>
       <div className="glass-card glass-card-hover h-full p-6 group">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
@@ -97,7 +98,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
               <Icon className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-xs text-gray-400">Draw #{draw.id}</span>
+              <span className="text-xs text-gray-400">Draw #{draw.drawId}</span>
               <h3 className="font-semibold text-white">{config.label}</h3>
             </div>
           </div>
@@ -114,7 +115,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
         <div className="mb-4">
           <p className="text-sm text-gray-400 mb-1">Prize Pool</p>
           <p className="text-3xl font-bold text-[#FF2975]">
-            {draw.currentPrizePool} LYX
+            {Web3.utils.fromWei(draw.prizeAmount, 'ether')} LYX
           </p>
         </div>
 
@@ -142,7 +143,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
             <UsersIcon className="w-4 h-4 text-gray-400" />
             <div>
               <p className="text-xs text-gray-400">Participants</p>
-              <p className="font-semibold text-white">{draw.ticketsSold}</p>
+              <p className="font-semibold text-white">{draw.totalTicketsSold}</p>
             </div>
           </div>
         </div>
@@ -151,7 +152,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
         <div className="mb-4">
           <div className="flex justify-between text-xs text-gray-400 mb-1">
             <span>Tickets Sold</span>
-            <span>{draw.ticketsSold} / {draw.maxTickets}</span>
+            <span>{draw.totalTicketsSold} / {draw.maxTickets}</span>
           </div>
           <div className="h-2 bg-white/10 rounded-full overflow-hidden">
             <div 
@@ -162,10 +163,10 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
         </div>
 
         {/* Multi-winner indicator */}
-        {draw.prizeModel !== undefined && draw.totalWinners && draw.totalWinners > 1 && (
+        {false && (
           <div className="flex items-center space-x-2 text-sm">
             <TrophyIcon className="w-4 h-4 text-yellow-400" />
-            <span className="text-yellow-400">{draw.totalWinners} Winners</span>
+            <span className="text-yellow-400">Multiple Winners</span>
           </div>
         )}
 
