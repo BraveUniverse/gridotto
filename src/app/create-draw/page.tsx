@@ -11,6 +11,7 @@ import { ReviewAndCreate } from '@/components/create-draw/ReviewAndCreate';
 import { StepIndicator } from '@/components/create-draw/StepIndicator';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { DrawData } from '@/types';
+import { useUPProvider } from '@/hooks/useUPProvider';
 
 const steps = [
   { id: 1, name: 'Draw Type', description: 'Select the type of draw' },
@@ -22,6 +23,7 @@ const steps = [
 
 export default function CreateDrawPage() {
   const router = useRouter();
+  const { account } = useUPProvider();
   const [currentStep, setCurrentStep] = useState(1);
   const [drawData, setDrawData] = useState<DrawData>({
     drawType: 'LYX',
@@ -30,7 +32,9 @@ export default function CreateDrawPage() {
     maxTickets: 100,
     requirementType: 0,
     tokenIds: [],
-    winnerCount: 1
+    winnerCount: 1,
+    prizeAsset: '', // For token/NFT draws
+    selectedAsset: null // Store selected asset metadata
   });
 
   const handleNext = () => {

@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Web3 from 'web3';
 import Link from 'next/link';
+import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 
 interface UserStats {
   totalWon: string;
@@ -178,9 +179,12 @@ const ProfilePage = () => {
     <div className="min-h-screen py-20">
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">My Profile</h1>
-          <p className="text-gray-400 font-mono">{formatAddress(account || '')}</p>
+        <div className="mb-8 flex items-center gap-4">
+          <ProfileDisplay address={account || ''} size="lg" showName={false} />
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">My Profile</h1>
+            <ProfileDisplay address={account || ''} size="lg" showName={true} showDescription={true} />
+          </div>
         </div>
 
         {loading ? (

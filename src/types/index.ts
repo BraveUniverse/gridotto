@@ -25,4 +25,8 @@ export interface DrawData {
   minParticipants?: number;
   maxParticipants?: number;
   maxTicketsPerUser?: number;
+  
+  // Asset selection
+  prizeAsset?: string;
+  selectedAsset?: any;
 }
