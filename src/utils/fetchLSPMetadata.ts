@@ -7,7 +7,7 @@ export interface LSP4Metadata {
   name?: string;
   symbol?: string;
   description?: string;
-  tokenType?: string;
+  tokenType?: number; // 0: Token, 1: NFT, 2: Collection
   icon?: Array<{
     url: string;
     width?: number;
@@ -81,6 +81,16 @@ export async function fetchLSP4Metadata(
     
     if (tokenSymbolData?.value) {
       metadata.symbol = tokenSymbolData.value as string;
+    }
+    
+    // TokenType'ı çek
+    try {
+      const tokenTypeData = await erc725.getData('LSP4TokenType').catch(() => null);
+      if (tokenTypeData?.value !== undefined) {
+        metadata.tokenType = Number(tokenTypeData.value);
+      }
+    } catch (err) {
+      console.log('Error fetching token type:', err);
     }
     
     // Metadata JSON'ı çek ve işle

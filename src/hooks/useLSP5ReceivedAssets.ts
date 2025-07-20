@@ -162,8 +162,22 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
               // Determine token type from metadata and contract data
               let tokenType: 'LSP7' | 'LSP8' | 'Unknown' = 'Unknown';
               
-              // First, try to determine from metadata
-              if (metadata) {
+              // First, check tokenType from metadata (LUKSO standard)
+              if (metadata && metadata.tokenType !== undefined) {
+                // tokenType 0 = Token (LSP7)
+                // tokenType 1 = NFT (LSP8)
+                // tokenType 2 = Collection (LSP8)
+                if (metadata.tokenType === 0) {
+                  tokenType = 'LSP7';
+                  console.log(`Asset ${assetAddress} identified as LSP7 based on tokenType: ${metadata.tokenType}`);
+                } else if (metadata.tokenType === 1 || metadata.tokenType === 2) {
+                  tokenType = 'LSP8';
+                  console.log(`Asset ${assetAddress} identified as LSP8 based on tokenType: ${metadata.tokenType}`);
+                }
+              }
+              
+              // If no tokenType in metadata, try to determine from name
+              if (tokenType === 'Unknown' && metadata) {
                 if (metadata.name && (metadata.name.includes('#') || metadata.name.includes('NFT'))) {
                   // Names with # (like "GloryMint #5") are typically NFTs
                   tokenType = 'LSP8';
