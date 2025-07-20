@@ -204,6 +204,195 @@ function getRecentActivities(uint256 limit) external view returns (
 ```
 **Açıklama:** Platform genelindeki son aktiviteleri döndürür.
 
+## 9. WRITE FONKSİYONLARI - Çekiliş Oluşturma
+
+### `createSimpleDraw()`
+```solidity
+function createSimpleDraw(
+    uint256 ticketPrice,
+    uint256 duration,
+    uint256 maxTickets
+) external payable returns (uint256 drawId);
+```
+**Açıklama:** Basit LYX çekilişi oluşturur. UI'daki quick create için.
+
+### `createDrawWithRequirements()`
+```solidity
+function createDrawWithRequirements(
+    uint256 ticketPrice,
+    uint256 duration,
+    uint256 maxTickets,
+    uint8 requirementType, // 0: none, 1: token holder, 2: NFT holder, 3: follower
+    address requiredAsset,
+    uint256 minAmount
+) external payable returns (uint256 drawId);
+```
+**Açıklama:** Katılım şartlı çekiliş oluşturur.
+
+### `createMultiWinnerDraw()`
+```solidity
+function createMultiWinnerDraw(
+    uint256 ticketPrice,
+    uint256 duration,
+    uint256 maxTickets,
+    uint256 winnerCount,
+    uint256[] memory prizeDistribution // percentage for each winner
+) external payable returns (uint256 drawId);
+```
+**Açıklama:** Çoklu kazananlı çekiliş oluşturur.
+
+## 10. WRITE FONKSİYONLARI - Bilet Satın Alma
+
+### `buyTickets()`
+```solidity
+function buyTickets(
+    uint256 drawId,
+    uint256 ticketCount
+) external payable;
+```
+**Açıklama:** Platform veya user draw için bilet satın alır. Tek fonksiyon, drawId'ye göre otomatik yönlendirir.
+
+### `buyTicketsWithToken()`
+```solidity
+function buyTicketsWithToken(
+    uint256 drawId,
+    uint256 ticketCount,
+    address tokenAddress
+) external;
+```
+**Açıklama:** Token ile bilet satın alır.
+
+### `buyTicketsForOthers()`
+```solidity
+function buyTicketsForOthers(
+    uint256 drawId,
+    address[] calldata recipients,
+    uint256[] calldata ticketCounts
+) external payable;
+```
+**Açıklama:** Başkaları için bilet satın alır (gift tickets).
+
+## 11. WRITE FONKSİYONLARI - Ödül Yönetimi
+
+### `claimAllPrizes()`
+```solidity
+function claimAllPrizes() external returns (
+    uint256 lyxClaimed,
+    uint256[] memory tokenAmounts,
+    address[] memory tokenAddresses,
+    bytes32[][] memory nftTokenIds,
+    address[] memory nftContracts
+);
+```
+**Açıklama:** Tüm bekleyen ödülleri tek seferde çeker.
+
+### `claimPrize()`
+```solidity
+function claimPrize(uint256 drawId) external;
+```
+**Açıklama:** Belirli bir çekilişten kazanılan ödülü çeker.
+
+### `claimTokenPrizes()`
+```solidity
+function claimTokenPrizes(address tokenAddress) external;
+```
+**Açıklama:** Belirli bir token'ın tüm ödüllerini çeker.
+
+### `claimNFTPrizes()`
+```solidity
+function claimNFTPrizes(address nftContract) external;
+```
+**Açıklama:** Belirli bir NFT koleksiyonunun tüm ödüllerini çeker.
+
+## 12. WRITE FONKSİYONLARI - Çekiliş Yönetimi
+
+### `executeDraw()`
+```solidity
+function executeDraw(uint256 drawId) external;
+```
+**Açıklama:** Süresi dolan çekilişi sonuçlandırır. Hem platform hem user draw'lar için.
+
+### `cancelDraw()`
+```solidity
+function cancelDraw(uint256 drawId) external;
+```
+**Açıklama:** Henüz bilet satılmamış çekilişi iptal eder.
+
+### `extendDrawTime()`
+```solidity
+function extendDrawTime(uint256 drawId, uint256 additionalTime) external;
+```
+**Açıklama:** Çekiliş süresini uzatır (sadece creator).
+
+### `addPrizeToDraw()`
+```solidity
+function addPrizeToDraw(uint256 drawId) external payable;
+```
+**Açıklama:** Mevcut çekilişe ekstra ödül ekler.
+
+## 13. WRITE FONKSİYONLARI - Platform Çekilişleri
+
+### `buyPlatformTickets()`
+```solidity
+function buyPlatformTickets(uint256 ticketCount) external payable;
+```
+**Açıklama:** Platform haftalık çekilişi için bilet alır.
+
+### `buyMonthlyTickets()`
+```solidity
+function buyMonthlyTickets(uint256 ticketCount) external payable;
+```
+**Açıklama:** Aylık çekiliş için bilet alır.
+
+### `executePlatformDraw()`
+```solidity
+function executePlatformDraw() external;
+```
+**Açıklama:** Platform çekilişini sonuçlandırır (herkes çağırabilir, executor reward alır).
+
+### `executeMonthlyDraw()`
+```solidity
+function executeMonthlyDraw() external;
+```
+**Açıklama:** Aylık çekilişi sonuçlandırır.
+
+## 14. WRITE FONKSİYONLARI - Sosyal Özellikler
+
+### `followUser()`
+```solidity
+function followUser(address user) external;
+```
+**Açıklama:** LSP26 ile kullanıcıyı takip eder.
+
+### `unfollowUser()`
+```solidity
+function unfollowUser(address user) external;
+```
+**Açıklama:** Takibi bırakır.
+
+### `tipCreator()`
+```solidity
+function tipCreator(uint256 drawId) external payable;
+```
+**Açıklama:** Çekiliş yaratıcısına bahşiş gönderir.
+
+## 15. Batch İşlemler
+
+### `batchBuyTickets()`
+```solidity
+function batchBuyTickets(
+    uint256[] calldata drawIds,
+    uint256[] calldata ticketCounts
+) external payable;
+```
+**Açıklama:** Birden fazla çekilişe aynı anda bilet alır.
+
+### `batchClaimPrizes()`
+```solidity
+function batchClaimPrizes(uint256[] calldata drawIds) external;
+```
+**Açıklama:** Birden fazla çekilişten ödül çeker.
+
 ## Notlar
 
 1. **Pagination:** Büyük veri setleri için sayfalama desteği eklendi
@@ -228,3 +417,7 @@ Bu fonksiyonlar eklendikten sonra UI'da şunlar mümkün olacak:
 - Lider tabloları
 - Aktivite feed'i
 - Gelişmiş arama ve filtreleme
+- Kolay çekiliş oluşturma
+- Toplu bilet alımı
+- Hızlı ödül çekimi
+- Sosyal etkileşimler
