@@ -61,7 +61,9 @@ export const ProfileDisplay = ({
   };
 
   const colorClass = getColorFromAddress(address);
-  const profileImage = profileData?.profileImage?.[0]?.url;
+  const profileImage = profileData?.profileImage && profileData.profileImage.length > 0 
+    ? profileData.profileImage[0]?.url 
+    : undefined;
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>

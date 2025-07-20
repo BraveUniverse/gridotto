@@ -2,27 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { useUPProvider } from './useUPProvider';
+import ERC725js from '@erc725/erc725.js';
+import LSP5ReceivedAssetsSchema from '@erc725/erc725.js/schemas/LSP5ReceivedAssets.json';
 import Web3 from 'web3';
-import ERC725, { ERC725JSONSchema } from '@erc725/erc725.js';
 
-// LSP5 ReceivedAssets Schema
-const LSP5_SCHEMA: ERC725JSONSchema[] = [
-  {
-    name: 'LSP5ReceivedAssets[]',
-    key: '0x6460ee3c0aac563ccbf76d6e1d07bada78e3a9514e6382b736ed3f478ab7b90b',
-    keyType: 'Array',
-    valueType: 'address',
-    valueContent: 'Address'
-  }
-];
+// LSP7/8 Interface IDs
+const INTERFACE_IDS = {
+  LSP7: '0x5fcaac27',
+  LSP8: '0x3be95908'
+};
 
 export interface ReceivedAsset {
   address: string;
   interfaceId?: string;
   name?: string;
   symbol?: string;
-  tokenType?: 'LSP7' | 'LSP8';
+  tokenType?: 'LSP7' | 'LSP8' | 'Unknown';
   balance?: string;
+  decimals?: number;
   tokenIds?: string[];
   metadata?: any;
 }
@@ -44,84 +41,98 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
       setError(null);
 
       try {
-        // Create ERC725 instance for the profile
-        const erc725 = new ERC725(
-          LSP5_SCHEMA,
+        // ERC725 instance oluştur
+        const erc725 = new ERC725js(
+          LSP5ReceivedAssetsSchema,
           profileAddress,
           web3.currentProvider
         );
 
-        // Fetch received assets
-        const result = await erc725.fetchData('LSP5ReceivedAssets[]');
+        // LSP5ReceivedAssets[] verilerini çek
+        const receivedAssetsData = await erc725.getData('LSP5ReceivedAssets[]');
         
-        if (result && result.value) {
-          const assetAddresses = result.value as string[];
+        if (receivedAssetsData && receivedAssetsData.value) {
+          const assetAddresses = receivedAssetsData.value as string[];
           const assetsData: ReceivedAsset[] = [];
 
-          // Fetch details for each asset
+          // Her asset için detayları çek
           for (const assetAddress of assetAddresses) {
             try {
-              // Check if it's LSP7 or LSP8
+              // Asset contract instance oluştur
               const assetContract = new web3.eth.Contract([
                 {
-                  inputs: [],
+                  inputs: [{ internalType: 'bytes4', name: 'interfaceId', type: 'bytes4' }],
                   name: 'supportsInterface',
-                  outputs: [{ name: '', type: 'bool' }],
+                  outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
                   stateMutability: 'view',
                   type: 'function'
                 },
                 {
                   inputs: [],
                   name: 'name',
-                  outputs: [{ name: '', type: 'string' }],
+                  outputs: [{ internalType: 'string', name: '', type: 'string' }],
                   stateMutability: 'view',
                   type: 'function'
                 },
                 {
                   inputs: [],
                   name: 'symbol',
-                  outputs: [{ name: '', type: 'string' }],
+                  outputs: [{ internalType: 'string', name: '', type: 'string' }],
                   stateMutability: 'view',
                   type: 'function'
                 },
                 {
-                  inputs: [{ name: 'account', type: 'address' }],
+                  inputs: [],
+                  name: 'decimals',
+                  outputs: [{ internalType: 'uint8', name: '', type: 'uint8' }],
+                  stateMutability: 'view',
+                  type: 'function'
+                },
+                {
+                  inputs: [{ internalType: 'address', name: 'account', type: 'address' }],
                   name: 'balanceOf',
-                  outputs: [{ name: '', type: 'uint256' }],
+                  outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
                   stateMutability: 'view',
                   type: 'function'
                 }
               ], assetAddress);
 
-              // Get basic info
-              const [name, symbol] = await Promise.all([
-                assetContract.methods.name().call().catch(() => 'Unknown') as Promise<string>,
-                assetContract.methods.symbol().call().catch(() => 'UNKNOWN') as Promise<string>
+              // Interface kontrolü
+              const [isLSP7, isLSP8] = await Promise.all([
+                assetContract.methods.supportsInterface(INTERFACE_IDS.LSP7).call().catch(() => false),
+                assetContract.methods.supportsInterface(INTERFACE_IDS.LSP8).call().catch(() => false)
               ]);
 
-              // Check if LSP7 (fungible token)
-              const isLSP7 = await assetContract.methods.supportsInterface('0x5fcaac27').call().catch(() => false);
-              // Check if LSP8 (NFT)
-              const isLSP8 = await assetContract.methods.supportsInterface('0x3be95908').call().catch(() => false);
+              // Temel bilgileri çek
+              const [name, symbol] = await Promise.all([
+                assetContract.methods.name().call().catch(() => 'Unknown Asset') as Promise<string>,
+                assetContract.methods.symbol().call().catch(() => 'UNKNOWN') as Promise<string>
+              ]);
 
               const asset: ReceivedAsset = {
                 address: assetAddress,
                 name,
                 symbol,
-                tokenType: isLSP7 ? 'LSP7' : isLSP8 ? 'LSP8' : undefined
+                tokenType: isLSP7 ? 'LSP7' : isLSP8 ? 'LSP8' : 'Unknown'
               };
 
-              // Get balance or token IDs
+              // LSP7 için balance ve decimals bilgisini çek
               if (isLSP7) {
                 try {
-                  const balance = await assetContract.methods.balanceOf(profileAddress).call();
+                  const [balance, decimals] = await Promise.all([
+                    assetContract.methods.balanceOf(profileAddress).call() as Promise<any>,
+                    assetContract.methods.decimals().call().catch(() => 18) as Promise<number>
+                  ]);
                   asset.balance = balance ? balance.toString() : '0';
+                  asset.decimals = Number(decimals);
                 } catch (err) {
                   asset.balance = '0';
+                  asset.decimals = 18;
                 }
-              } else if (isLSP8) {
-                // For LSP8, we'd need to get tokenIds owned by the profile
-                // This would require additional methods specific to LSP8
+              }
+
+              // LSP8 için tokenIds çek (ileride eklenebilir)
+              if (isLSP8) {
                 asset.tokenIds = [];
               }
 

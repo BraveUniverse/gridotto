@@ -2,159 +2,146 @@
 
 import { useState, useEffect } from 'react';
 import { useUPProvider } from './useUPProvider';
-import Web3 from 'web3';
-import ERC725, { ERC725JSONSchema } from '@erc725/erc725.js';
+import ERC725js from '@erc725/erc725.js';
+import LSP3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json';
 
-// LSP3 Profile Metadata Schema
-const LSP3_SCHEMA: ERC725JSONSchema[] = [
-  {
-    name: 'SupportedStandards:LSP3Profile',
-    key: '0xeafec4d89fa9619884b600005ef83ad9559033e6e941db7d7c495acdce616347',
-    keyType: 'Mapping',
-    valueType: 'bytes4',
-    valueContent: '0x5ef83ad9'
-  },
-  {
-    name: 'LSP3Profile',
-    key: '0x5ef83ad9559033e6e941db7d7c495acdce616347d28e90c7ce47cbfcfcad3bc5',
-    keyType: 'Singleton',
-    valueType: 'bytes',
-    valueContent: 'VerifiableURI'
-  }
-];
-
-// IPFS Gateway
+// IPFS Gateway'i
 const IPFS_GATEWAY = 'https://api.universalprofile.cloud/ipfs/';
 
 export interface LSP3ProfileData {
   name?: string;
   description?: string;
-  profileImage?: Array<{
-    url: string;
+  profileImage?: {
+    url?: string;
     width?: number;
     height?: number;
     verification?: {
-      method: string;
-      data: string;
+      method?: string;
+      data?: string;
     };
-  }>;
-  backgroundImage?: Array<{
-    url: string;
-    width?: number;
-    height?: number;
-    verification?: {
-      method: string;
-      data: string;
-    };
-  }>;
+    address?: string;
+    tokenId?: string;
+  }[];
   tags?: string[];
-  links?: Array<{
+  links?: {
     title: string;
     url: string;
-  }>;
+  }[];
 }
 
 export const useLSP3Profile = (address: string | null) => {
-  const { web3 } = useUPProvider();
   const [profileData, setProfileData] = useState<LSP3ProfileData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { web3 } = useUPProvider();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!address || !web3) {
-        setProfileData(null);
-        return;
-      }
+    const fetchProfileData = async () => {
+      if (!address || !web3) return;
 
       setLoading(true);
       setError(null);
 
       try {
-        // Create ERC725 instance
-        const erc725 = new ERC725(
-          LSP3_SCHEMA,
+        // ERC725 instance oluştur
+        const config = {
+          ipfsGateway: IPFS_GATEWAY
+        };
+        
+        const erc725 = new ERC725js(
+          LSP3ProfileSchema,
           address,
           web3.currentProvider,
-          {
-            ipfsGateway: IPFS_GATEWAY
-          }
+          config
         );
-
-        // Fetch LSP3 Profile data
-        const result = await erc725.fetchData('LSP3Profile');
         
-        if (result && result.value) {
-          const profileDataValue = result.value as any;
-          
-          // If it's a VerifiableURI, fetch the JSON
-          if (profileDataValue.url) {
-            let jsonUrl = profileDataValue.url;
+        // Profil verilerini çek
+        const profileData = await erc725.getData('LSP3Profile');
+        
+        if (profileData && profileData.value) {
+          try {
+            // ERC725.js'den gelen veri yapısı:
+            // value: { url: "ipfs://...", verification: {...} }
+            const profileValue = profileData.value as any;
             
-            // Convert IPFS URL to HTTP
-            if (jsonUrl.startsWith('ipfs://')) {
-              jsonUrl = `${IPFS_GATEWAY}${jsonUrl.slice(7)}`;
-            }
-            
-            try {
-              const response = await fetch(jsonUrl);
-              const metadata = await response.json();
+            if (profileValue.url) {
+              // IPFS URL'sini düzelt
+              let jsonUrl = profileValue.url;
+              if (jsonUrl.startsWith('ipfs://')) {
+                jsonUrl = `${IPFS_GATEWAY}${jsonUrl.slice(7)}`;
+              }
+              
+              // JSON içeriğini çek
+              const response = await fetch(jsonUrl, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json'
+                },
+                mode: 'cors',
+                cache: 'no-cache'
+              });
+              
+              if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+              }
+              
+              const responseText = await response.text();
+              
+              const metadata = JSON.parse(responseText);
               
               if (metadata.LSP3Profile) {
-                const profile = metadata.LSP3Profile;
+                // Profil resimlerini işle
+                const processedProfileImages = metadata.LSP3Profile.profileImage?.map((img: any) => {
+                  // Kopya oluştur
+                  const processedImg = { ...img };
+                  
+                  // IPFS URL'lerini düzelt
+                  if (processedImg.url && processedImg.url.startsWith('ipfs://')) {
+                    processedImg.url = `${IPFS_GATEWAY}${processedImg.url.slice(7)}`;
+                  }
+                  
+                  return processedImg;
+                }) || [];
                 
-                // Process profile images
-                if (profile.profileImage) {
-                  profile.profileImage = profile.profileImage.map((img: any) => ({
-                    ...img,
-                    url: img.url.startsWith('ipfs://') 
-                      ? `${IPFS_GATEWAY}${img.url.slice(7)}` 
-                      : img.url
-                  }));
-                }
-                
-                // Process background images
-                if (profile.backgroundImage) {
-                  profile.backgroundImage = profile.backgroundImage.map((img: any) => ({
-                    ...img,
-                    url: img.url.startsWith('ipfs://') 
-                      ? `${IPFS_GATEWAY}${img.url.slice(7)}` 
-                      : img.url
-                  }));
-                }
-                
-                setProfileData(profile);
+                // Profil verilerini ayarla
+                setProfileData({
+                  name: metadata.LSP3Profile.name,
+                  description: metadata.LSP3Profile.description,
+                  profileImage: processedProfileImages,
+                  tags: metadata.LSP3Profile.tags,
+                  links: metadata.LSP3Profile.links
+                });
+              } else {
+                setFallbackProfile(address);
               }
-            } catch (err) {
-              console.error('Error fetching profile metadata:', err);
-              // Set fallback data
-              setProfileData({
-                name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-                description: 'LUKSO Profile'
-              });
+            } else {
+              setFallbackProfile(address);
             }
+          } catch (fetchError: any) {
+            setError(`Metadata getirme hatası: ${fetchError.message}`);
+            setFallbackProfile(address);
           }
         } else {
-          // No profile data, set fallback
-          setProfileData({
-            name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-            description: 'LUKSO Profile'
-          });
+          setFallbackProfile(address);
         }
       } catch (err: any) {
-        console.error('Error fetching LSP3 profile:', err);
-        setError(err.message || 'Failed to fetch profile');
-        // Set fallback data
-        setProfileData({
-          name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-          description: 'LUKSO Profile'
-        });
+        setError(err.message || 'Failed to load profile data');
+        setFallbackProfile(address);
       } finally {
         setLoading(false);
       }
     };
+    
+    // Fallback profil verisi ayarla
+    const setFallbackProfile = (addr: string) => {
+      setProfileData({
+        name: addr.slice(0, 6) + '...' + addr.slice(-4),
+        description: 'LUKSO Profile',
+        profileImage: []
+      });
+    };
 
-    fetchProfile();
+    fetchProfileData();
   }, [address, web3]);
 
   return { profileData, loading, error };
