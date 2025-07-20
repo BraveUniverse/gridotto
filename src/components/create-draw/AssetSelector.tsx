@@ -22,15 +22,24 @@ export default function AssetSelector({
   const [filteredAssets, setFilteredAssets] = useState<ReceivedAsset[]>([]);
 
   useEffect(() => {
-    if (assets) {
+    console.log('AssetSelector - Raw assets:', assets);
+    console.log('AssetSelector - Asset type filter:', assetType);
+    
+    if (assets && assets.length > 0) {
       let filtered = assets;
       
       // Filter by asset type if specified
       if (assetType !== 'all') {
-        filtered = assets.filter(asset => asset.tokenType === assetType);
+        filtered = assets.filter(asset => {
+          console.log(`Asset ${asset.address} type: ${asset.tokenType}, looking for: ${assetType}`);
+          return asset.tokenType === assetType;
+        });
       }
       
+      console.log('AssetSelector - Filtered assets:', filtered);
       setFilteredAssets(filtered);
+    } else {
+      setFilteredAssets([]);
     }
   }, [assets, assetType]);
 
