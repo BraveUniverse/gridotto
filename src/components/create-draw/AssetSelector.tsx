@@ -21,9 +21,14 @@ export default function AssetSelector({
   const { assets, loading, error } = useLSP5ReceivedAssets(address);
   const [filteredAssets, setFilteredAssets] = useState<ReceivedAsset[]>([]);
 
+  console.log('AssetSelector render - address:', address);
+  console.log('AssetSelector render - loading:', loading);
+  console.log('AssetSelector render - error:', error);
+  console.log('AssetSelector render - assets:', assets);
+
   useEffect(() => {
-    console.log('AssetSelector - Raw assets:', assets);
-    console.log('AssetSelector - Asset type filter:', assetType);
+    console.log('AssetSelector useEffect - Raw assets:', assets);
+    console.log('AssetSelector useEffect - Asset type filter:', assetType);
     
     if (assets && assets.length > 0) {
       let filtered = assets;
@@ -36,9 +41,10 @@ export default function AssetSelector({
         });
       }
       
-      console.log('AssetSelector - Filtered assets:', filtered);
+      console.log('AssetSelector useEffect - Filtered assets:', filtered);
       setFilteredAssets(filtered);
     } else {
+      console.log('AssetSelector useEffect - No assets or empty array');
       setFilteredAssets([]);
     }
   }, [assets, assetType]);

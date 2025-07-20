@@ -155,7 +155,9 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
               }
 
               // Fetch LSP4 metadata
+              console.log(`Fetching metadata for asset: ${assetAddress}`);
               const metadata = await fetchLSP4Metadata(assetAddress, web3.currentProvider);
+              console.log(`Metadata for ${assetAddress}:`, metadata);
               
               // Asset contract instance oluştur
               const assetContract = new web3.eth.Contract([
@@ -188,13 +190,17 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
               
               try {
                 isLSP7 = await assetContract.methods.supportsInterface(INTERFACE_IDS.LSP7).call();
+                console.log(`Asset ${assetAddress} - LSP7 check: ${isLSP7}`);
               } catch (err) {
+                console.log(`Asset ${assetAddress} - LSP7 check failed:`, err);
                 // Interface check failed, skip
               }
               
               try {
                 isLSP8 = await assetContract.methods.supportsInterface(INTERFACE_IDS.LSP8).call();
+                console.log(`Asset ${assetAddress} - LSP8 check: ${isLSP8}`);
               } catch (err) {
+                console.log(`Asset ${assetAddress} - LSP8 check failed:`, err);
                 // Interface check failed, skip
               }
 
@@ -205,6 +211,8 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
                 tokenType: isLSP7 ? 'LSP7' : isLSP8 ? 'LSP8' : 'Unknown',
                 metadata
               };
+              
+              console.log(`Asset created:`, asset);
 
               // LSP7 için balance ve decimals bilgisini çek
               if (isLSP7) {
@@ -234,8 +242,11 @@ export const useLSP5ReceivedAssets = (profileAddress: string | null) => {
             }
           }
 
+          console.log('Final assets array:', assetsData);
+          console.log('Setting assets state with:', assetsData);
           setAssets(assetsData);
         } else {
+          console.log('No asset addresses found, setting empty array');
           setAssets([]);
         }
       } catch (err: any) {
