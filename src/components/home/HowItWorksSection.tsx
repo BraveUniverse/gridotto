@@ -47,10 +47,10 @@ export const HowItWorksSection = () => {
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            How It <span className="gradient-text">Works</span>
+            How It <span className="text-[#FF2975]">Works</span>
           </h2>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Get started in minutes with our simple and transparent lottery platform
+          <p className="text-gray-400 text-lg">
+            Get started in minutes with our simple and transparent process
           </p>
         </div>
 

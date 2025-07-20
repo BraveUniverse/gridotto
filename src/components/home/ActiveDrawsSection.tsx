@@ -151,10 +151,9 @@ export const ActiveDrawsSection = () => {
     <section className="py-24 px-4 relative">
       <div className="container mx-auto">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-12">
-          <div>
+        <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Active <span className="gradient-text">Draws</span>
+              Active <span className="text-[#FF2975]">Draws</span>
             </h2>
             <p className="text-gray-400 text-lg">
               Participate in live draws and win amazing prizes

@@ -72,7 +72,10 @@ export const HeroSection = () => {
         {/* Title */}
         <h1 className="text-5xl md:text-7xl font-bold mb-6">
           <span className="block mb-2">The Future of</span>
-          <span className="gradient-text">Decentralized Lotteries</span>
+          <span className="block">
+            <span className="text-[#FF2975]">Decentralized</span>{' '}
+            <span className="text-white">Lotteries</span>
+          </span>
         </h1>
 
         {/* Description */}
@@ -98,20 +101,16 @@ export const HeroSection = () => {
             <h3 className="text-sm text-gray-400 mb-2">Weekly Prize Pool</h3>
             {loading ? (
               <div className="h-8 bg-white/10 rounded animate-pulse"></div>
-            ) : isConnected ? (
-              <p className="text-3xl font-bold gradient-text">{weeklyPool.toFixed(2)} LYX</p>
             ) : (
-              <p className="text-sm text-gray-500">Connect wallet to view</p>
+              <p className="text-3xl font-bold text-white">{weeklyPool.toFixed(2)} LYX</p>
             )}
           </div>
           <div className="glass-card p-6">
             <h3 className="text-sm text-gray-400 mb-2">Monthly Prize Pool</h3>
             {loading ? (
               <div className="h-8 bg-white/10 rounded animate-pulse"></div>
-            ) : isConnected ? (
-              <p className="text-3xl font-bold gradient-text">{monthlyPool.toFixed(2)} LYX</p>
             ) : (
-              <p className="text-sm text-gray-500">Connect wallet to view</p>
+              <p className="text-3xl font-bold text-white">{monthlyPool.toFixed(2)} LYX</p>
             )}
           </div>
         </div>

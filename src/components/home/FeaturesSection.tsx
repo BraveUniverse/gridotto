@@ -73,10 +73,10 @@ export const FeaturesSection = () => {
             <span className="text-sm text-gray-300">Powered by Diamond Contract</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Everything You Need in <span className="gradient-text">One Platform</span>
+            Everything You Need in <span className="text-[#FF2975]">One Platform</span>
           </h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Built with the latest Web3 technology to provide the most advanced lottery experience
+            Built on LUKSO blockchain with advanced features for the next generation of decentralized lotteries
           </p>
         </div>
 
