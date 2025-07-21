@@ -188,10 +188,86 @@ export default function NFTTokenSelector({
               
               try {
                 const tokenMetadataBytes = await nftContract.methods.getDataForTokenId(tokenId, lsp4MetadataKey).call() as string;
+                console.log(`getDataForTokenId returned:`, tokenMetadataBytes);
                 
                 if (tokenMetadataBytes && tokenMetadataBytes !== '0x' && tokenMetadataBytes !== '0x0') {
-                  // Similar decoding logic as above
                   console.log('Found metadata with getDataForTokenId');
+                  
+                  try {
+                    // Decode using ERC725
+                    const decoded = erc725.decodeData([{
+                      keyName: 'LSP4Metadata',
+                      value: tokenMetadataBytes
+                    }]);
+                    console.log('Decoded metadata:', decoded);
+                    
+                    if (decoded && decoded[0] && decoded[0].value) {
+                      const metadataValue = decoded[0].value as any;
+                      console.log('Metadata value:', metadataValue);
+                      
+                      let metadataUrl = '';
+                      
+                      if (metadataValue.url) {
+                        metadataUrl = metadataValue.url;
+                      } else if (typeof metadataValue === 'string') {
+                        metadataUrl = metadataValue;
+                      }
+                      
+                      // Handle IPFS URLs
+                      if (metadataUrl.startsWith('ipfs://')) {
+                        metadataUrl = `https://api.universalprofile.cloud/ipfs/${metadataUrl.slice(7)}`;
+                      }
+                      
+                      console.log(`Fetching metadata from URL: ${metadataUrl}`);
+                      
+                      // Fetch the metadata JSON
+                      if (metadataUrl) {
+                        const response = await fetch(metadataUrl);
+                        console.log('Fetch response status:', response.status);
+                        
+                        if (response.ok) {
+                          const json = await response.json();
+                          console.log('Fetched JSON metadata:', json);
+                          
+                          // Handle both LSP4 and standard NFT metadata formats
+                          if (json.LSP4Metadata) {
+                            // LSP4 format
+                            metadata.name = json.LSP4Metadata.name || metadata.name;
+                            metadata.description = json.LSP4Metadata.description;
+                            
+                            if (json.LSP4Metadata.images && json.LSP4Metadata.images[0]) {
+                              metadata.image = json.LSP4Metadata.images[0].url;
+                              if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                                metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                              }
+                              console.log('Found image URL:', metadata.image);
+                            } else if (json.LSP4Metadata.icon && json.LSP4Metadata.icon[0]) {
+                              metadata.image = json.LSP4Metadata.icon[0].url;
+                              if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                                metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                              }
+                              console.log('Found icon URL:', metadata.image);
+                            }
+                          } else {
+                            // Standard NFT metadata format
+                            metadata.name = json.name || metadata.name;
+                            metadata.description = json.description;
+                            
+                            if (json.image) {
+                              metadata.image = json.image.startsWith('ipfs://') 
+                                ? `https://api.universalprofile.cloud/ipfs/${json.image.slice(7)}`
+                                : json.image;
+                              console.log('Found standard image URL:', metadata.image);
+                            }
+                          }
+                        } else {
+                          console.log('Failed to fetch metadata JSON:', response.statusText);
+                        }
+                      }
+                    }
+                  } catch (decodeErr) {
+                    console.log('Error decoding metadata with ERC725:', decodeErr);
+                  }
                 }
               } catch (err) {
                 console.log('getDataForTokenId failed:', err);
