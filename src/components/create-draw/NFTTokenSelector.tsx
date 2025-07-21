@@ -24,6 +24,22 @@ interface TokenMetadata {
 // keccak256('LSP8MetadataTokenURI') + bytes12(0) + tokenId
 const LSP8_METADATA_KEY_PREFIX = '0x1339e76a390b7b9ec9010000';
 
+// LSP8 token metadata key construction
+// For LSP8, we need to use keccak256 hash for the mapping
+const getLSP8MetadataKey = (tokenId: string, web3Instance: Web3): string => {
+  // LSP8MetadataTokenURI key prefix
+  const keyPrefix = '0x1339e76a390b7b9ec9010000'; // First 12 bytes of keccak256('LSP8MetadataTokenURI')
+  
+  // Ensure tokenId is 32 bytes
+  const tokenIdBytes32 = '0x' + tokenId.slice(2).padStart(64, '0');
+  
+  // Concatenate and hash
+  const concatenated = keyPrefix + tokenIdBytes32.slice(2);
+  const hashedKey = web3Instance.utils.keccak256(concatenated);
+  
+  return hashedKey;
+};
+
 export default function NFTTokenSelector({ 
   asset, 
   selectedTokenIds, 
@@ -93,10 +109,8 @@ export default function NFTTokenSelector({
           };
 
           try {
-            // Method 1: Try LSP8MetadataTokenURI with mapping
-            // TokenId must be padded to 32 bytes
-            const tokenIdHex = tokenId.slice(2).padStart(64, '0'); // Remove 0x and pad to 32 bytes (64 hex chars)
-            const metadataKey = '0x' + LSP8_METADATA_KEY_PREFIX.slice(2) + tokenIdHex;
+            // Method 1: Try LSP8MetadataTokenURI with proper key construction
+            const metadataKey = getLSP8MetadataKey(tokenId, web3Instance);
             console.log(`Fetching metadata for token ${tokenId} with key ${metadataKey}`);
             
             const metadataBytes = await nftContract.methods.getData(metadataKey).call() as string;
