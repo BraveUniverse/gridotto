@@ -235,18 +235,29 @@ export default function NFTTokenSelector({
                             metadata.name = json.LSP4Metadata.name || metadata.name;
                             metadata.description = json.LSP4Metadata.description;
                             
+                            // Handle nested array structure for images
                             if (json.LSP4Metadata.images && json.LSP4Metadata.images[0]) {
-                              metadata.image = json.LSP4Metadata.images[0].url;
-                              if (metadata.image && metadata.image.startsWith('ipfs://')) {
-                                metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                              // Check if it's a nested array
+                              const imageData = Array.isArray(json.LSP4Metadata.images[0]) 
+                                ? json.LSP4Metadata.images[0][0] 
+                                : json.LSP4Metadata.images[0];
+                              
+                              if (imageData && imageData.url) {
+                                metadata.image = imageData.url;
+                                if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                                  metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                                }
+                                console.log('Found image URL:', metadata.image);
                               }
-                              console.log('Found image URL:', metadata.image);
                             } else if (json.LSP4Metadata.icon && json.LSP4Metadata.icon[0]) {
-                              metadata.image = json.LSP4Metadata.icon[0].url;
-                              if (metadata.image && metadata.image.startsWith('ipfs://')) {
-                                metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                              const iconData = json.LSP4Metadata.icon[0];
+                              if (iconData && iconData.url) {
+                                metadata.image = iconData.url;
+                                if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                                  metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                                }
+                                console.log('Found icon URL:', metadata.image);
                               }
-                              console.log('Found icon URL:', metadata.image);
                             }
                           } else {
                             // Standard NFT metadata format
@@ -319,18 +330,29 @@ export default function NFTTokenSelector({
                               metadata.name = json.LSP4Metadata.name || metadata.name;
                               metadata.description = json.LSP4Metadata.description;
                               
+                              // Handle nested array structure for images
                               if (json.LSP4Metadata.images && json.LSP4Metadata.images[0]) {
-                                metadata.image = json.LSP4Metadata.images[0].url;
-                                if (metadata.image && metadata.image.startsWith('ipfs://')) {
-                                  metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                                // Check if it's a nested array
+                                const imageData = Array.isArray(json.LSP4Metadata.images[0]) 
+                                  ? json.LSP4Metadata.images[0][0] 
+                                  : json.LSP4Metadata.images[0];
+                                
+                                if (imageData && imageData.url) {
+                                  metadata.image = imageData.url;
+                                  if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                                    metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                                  }
+                                  console.log('Found image URL from manual decode:', metadata.image);
                                 }
-                                console.log('Found image URL from manual decode:', metadata.image);
                               } else if (json.LSP4Metadata.icon && json.LSP4Metadata.icon[0]) {
-                                metadata.image = json.LSP4Metadata.icon[0].url;
-                                if (metadata.image && metadata.image.startsWith('ipfs://')) {
-                                  metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                                const iconData = json.LSP4Metadata.icon[0];
+                                if (iconData && iconData.url) {
+                                  metadata.image = iconData.url;
+                                  if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                                    metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                                  }
+                                  console.log('Found icon URL from manual decode:', metadata.image);
                                 }
-                                console.log('Found icon URL from manual decode:', metadata.image);
                               }
                             } else {
                               // Standard NFT metadata format
