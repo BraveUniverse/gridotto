@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers/Providers'
 import { Header } from '@/components/layout/Header'
+import DebugPanel from '@/components/DebugPanel';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -60,6 +61,7 @@ export default function RootLayout({
               {children}
             </main>
           </div>
+          {process.env.NODE_ENV === 'development' && <DebugPanel />}
         </Providers>
       </body>
     </html>
