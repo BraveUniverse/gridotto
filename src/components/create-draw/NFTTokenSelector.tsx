@@ -267,6 +267,89 @@ export default function NFTTokenSelector({
                     }
                   } catch (decodeErr) {
                     console.log('Error decoding metadata with ERC725:', decodeErr);
+                    console.log('Error details:', JSON.stringify(decodeErr, null, 2));
+                    
+                    // Try manual decoding as fallback
+                    try {
+                      console.log('Trying manual decode of bytes:', tokenMetadataBytes);
+                      
+                      // Check if it's a VerifiableURI format (starts with 0x00006f357c6a0020)
+                      if (tokenMetadataBytes.startsWith('0x00006f357c6a0020')) {
+                        // Skip the VerifiableURI prefix (first 10 bytes = 20 hex chars after 0x)
+                        const dataWithoutPrefix = '0x' + tokenMetadataBytes.slice(22);
+                        console.log('Data without VerifiableURI prefix:', dataWithoutPrefix);
+                        
+                        // Decode the remaining hex to string
+                        const hexString = dataWithoutPrefix.slice(2); // Remove 0x
+                        let decodedString = '';
+                        for (let i = 0; i < hexString.length; i += 2) {
+                          const hex = hexString.substr(i, 2);
+                          const charCode = parseInt(hex, 16);
+                          if (charCode > 0) { // Skip null bytes
+                            decodedString += String.fromCharCode(charCode);
+                          }
+                        }
+                        
+                        console.log('Manually decoded string:', decodedString);
+                        
+                        // Extract URL from the decoded string
+                        const urlMatch = decodedString.match(/(ipfs:\/\/[^\s]+)/);
+                        if (urlMatch) {
+                          let metadataUrl = urlMatch[1];
+                          console.log('Extracted URL:', metadataUrl);
+                          
+                          // Convert IPFS URL
+                          if (metadataUrl.startsWith('ipfs://')) {
+                            metadataUrl = `https://api.universalprofile.cloud/ipfs/${metadataUrl.slice(7)}`;
+                          }
+                          
+                          console.log(`Fetching metadata from manually extracted URL: ${metadataUrl}`);
+                          
+                          // Fetch the metadata JSON
+                          const response = await fetch(metadataUrl);
+                          console.log('Fetch response status:', response.status);
+                          
+                          if (response.ok) {
+                            const json = await response.json();
+                            console.log('Fetched JSON metadata:', json);
+                            
+                            // Handle both LSP4 and standard NFT metadata formats
+                            if (json.LSP4Metadata) {
+                              // LSP4 format
+                              metadata.name = json.LSP4Metadata.name || metadata.name;
+                              metadata.description = json.LSP4Metadata.description;
+                              
+                              if (json.LSP4Metadata.images && json.LSP4Metadata.images[0]) {
+                                metadata.image = json.LSP4Metadata.images[0].url;
+                                if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                                  metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                                }
+                                console.log('Found image URL from manual decode:', metadata.image);
+                              } else if (json.LSP4Metadata.icon && json.LSP4Metadata.icon[0]) {
+                                metadata.image = json.LSP4Metadata.icon[0].url;
+                                if (metadata.image && metadata.image.startsWith('ipfs://')) {
+                                  metadata.image = `https://api.universalprofile.cloud/ipfs/${metadata.image.slice(7)}`;
+                                }
+                                console.log('Found icon URL from manual decode:', metadata.image);
+                              }
+                            } else {
+                              // Standard NFT metadata format
+                              metadata.name = json.name || metadata.name;
+                              metadata.description = json.description;
+                              
+                              if (json.image) {
+                                metadata.image = json.image.startsWith('ipfs://') 
+                                  ? `https://api.universalprofile.cloud/ipfs/${json.image.slice(7)}`
+                                  : json.image;
+                                console.log('Found standard image URL from manual decode:', metadata.image);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    } catch (manualErr) {
+                      console.log('Manual decode also failed:', manualErr);
+                    }
                   }
                 }
               } catch (err) {
