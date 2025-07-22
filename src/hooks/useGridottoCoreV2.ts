@@ -277,26 +277,11 @@ export function useGridottoCoreV2() {
     if (!contract) return 0;
     
     try {
-      // Note: getNextDrawId might not exist in the Diamond contract
-      // This is a placeholder implementation that needs to be updated
-      // based on the actual contract implementation
-      console.warn('getNextDrawId function may not exist in Diamond contract');
-      
-      // Try to get system stats which might include draw count
-      try {
-        const stats = await contract.methods.getSystemStats().call();
-        if (stats && stats.totalDrawsCreated) {
-          return Number(stats.totalDrawsCreated) + 1;
-        }
-      } catch (statsErr) {
-        console.error('Error fetching system stats:', statsErr);
-      }
-      
-      // Fallback: return a default value
-      return 100; // Arbitrary high number to allow iteration
+      const nextId = await contract.methods.getNextDrawId().call();
+      return Number(nextId);
     } catch (err: any) {
       console.error('Error fetching next draw ID:', err);
-      return 100; // Fallback value
+      return 0;
     }
   };
 
