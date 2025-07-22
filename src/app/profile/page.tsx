@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useEthers } from '@/contexts/EthersContext';
+import Web3 from 'web3';
+import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
 import { useGridottoRefund } from '@/hooks/useGridottoRefund';
 import { useGridottoLeaderboard } from '@/hooks/useGridottoLeaderboard';
@@ -18,7 +19,7 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
-import { ethers } from 'ethers';
+
 import toast from 'react-hot-toast';
 
 interface ProfileStats {
@@ -32,7 +33,7 @@ interface ProfileStats {
 }
 
 const ProfilePage = () => {
-  const { account, isConnected } = useEthers();
+  const { account, isConnected } = useUPProvider();
   const { getUserDrawHistory, getDrawDetails } = useGridottoCoreV2();
   const { canClaimPrize, claimPrize, batchClaimPrizes } = useGridottoRefund();
   const { getTopWinners } = useGridottoLeaderboard();
@@ -113,9 +114,9 @@ const ProfilePage = () => {
 
       setStats({
         totalWins: drawsWon,
-        totalWinnings: ethers.formatEther(totalWon),
+        totalWinnings: Web3.utils.fromWei(totalWon, 'ether'),
         totalTicketsBought: totalTickets,
-        totalSpent: ethers.formatEther(totalSpent),
+        totalSpent: Web3.utils.fromWei(totalSpent, 'ether'),
         drawsParticipated: detailedHistory.length,
         drawsWon,
         claimablePrizes: claimable.length
@@ -304,7 +305,7 @@ const ProfilePage = () => {
                       <div className="text-right">
                         <p className="text-sm text-gray-400">Prize Pool</p>
                         <p className="text-white font-medium">
-                          {ethers.formatEther(draw.prizePool)} LYX
+                          {Web3.utils.fromWei(draw.prizePool, 'ether')} LYX
                         </p>
                       </div>
                       

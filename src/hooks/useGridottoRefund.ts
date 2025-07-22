@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { useEthersProvider } from './useEthersProvider';
+import Web3 from 'web3';
+import { useUPProvider } from './useUPProvider';
 import { coreAbi } from '@/abi'; // Refund functions are in core ABI
 
 const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
@@ -13,57 +13,39 @@ export interface CanClaimResult {
 }
 
 export function useGridottoRefund() {
-  const { signer, provider, isConnected } = useEthersProvider();
-  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const { web3, account, isConnected } = useUPProvider();
+  const [contract, setContract] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (signer) {
-      const refundContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        coreAbi,
-        signer
-      );
-      setContract(refundContract);
-    } else if (provider) {
-      // Read-only contract for non-connected users
-      const refundContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        coreAbi,
-        provider
+    if (web3) {
+      const refundContract = new web3.eth.Contract(
+        coreAbi as any,
+        DIAMOND_ADDRESS
       );
       setContract(refundContract);
     }
-  }, [signer, provider]);
+  }, [web3]);
 
   // Claim prize for a won draw
   const claimPrize = async (drawId: number) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.claimPrize(drawId);
-      const receipt = await tx.wait();
+      const tx = await contract.methods.claimPrize(drawId).send({ from: account });
       
       // Extract claim info from events
-      const event = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'PrizeClaimed';
-        } catch {
-          return false;
-        }
-      });
+      const event = tx.events?.PrizeClaimed;
       
       if (event) {
-        const parsed = contract.interface.parseLog(event);
         return {
-          drawId: parsed?.args.drawId,
-          winner: parsed?.args.winner,
-          amount: parsed?.args.amount
+          drawId: event.returnValues.drawId,
+          winner: event.returnValues.winner,
+          amount: event.returnValues.amount
         };
       }
       
@@ -78,31 +60,22 @@ export function useGridottoRefund() {
 
   // Claim refund for cancelled draw
   const claimRefund = async (drawId: number) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.claimRefund(drawId);
-      const receipt = await tx.wait();
+      const tx = await contract.methods.claimRefund(drawId).send({ from: account });
       
       // Extract refund info from events
-      const event = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'RefundClaimed';
-        } catch {
-          return false;
-        }
-      });
+      const event = tx.events?.RefundClaimed;
       
       if (event) {
-        const parsed = contract.interface.parseLog(event);
         return {
-          drawId: parsed?.args.drawId,
-          user: parsed?.args.user,
-          amount: parsed?.args.amount
+          drawId: event.returnValues.drawId,
+          user: event.returnValues.user,
+          amount: event.returnValues.amount
         };
       }
       
@@ -120,7 +93,7 @@ export function useGridottoRefund() {
     if (!contract) return { canClaim: false, reason: 'Contract not loaded' };
     
     try {
-      const result = await contract.canClaimPrize(drawId, user);
+      const result = await contract.methods.canClaimPrize(drawId, user).call();
       return {
         canClaim: result[0] || result.canClaim || false,
         reason: result[1] || result.reason || ''
@@ -136,7 +109,7 @@ export function useGridottoRefund() {
     if (!contract) return BigInt(0);
     
     try {
-      const amount = await contract.getRefundAmount(drawId, user);
+      const amount = await contract.methods.getRefundAmount(drawId, user).call();
       return amount;
     } catch (err: any) {
       console.error('Error fetching refund amount:', err);
@@ -146,31 +119,23 @@ export function useGridottoRefund() {
 
   // Batch claim multiple prizes
   const batchClaimPrizes = async (drawIds: number[]) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.batchClaimPrizes(drawIds);
-      const receipt = await tx.wait();
+      const tx = await contract.methods.batchClaimPrizes(drawIds).send({ from: account });
       
       // Extract all claim events
-      const claimEvents = receipt.logs.filter((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'PrizeClaimed';
-        } catch {
-          return false;
-        }
-      });
+      const claimEvents = tx.events?.PrizeClaimed || [];
+      const eventsArray = Array.isArray(claimEvents) ? claimEvents : [claimEvents];
       
-      const claims = claimEvents.map((event: any) => {
-        const parsed = contract.interface.parseLog(event);
+      const claims = eventsArray.map((event: any) => {
         return {
-          drawId: parsed?.args.drawId,
-          winner: parsed?.args.winner,
-          amount: parsed?.args.amount
+          drawId: event.returnValues.drawId,
+          winner: event.returnValues.winner,
+          amount: event.returnValues.amount
         };
       });
       
@@ -187,28 +152,32 @@ export function useGridottoRefund() {
   const onPrizeClaimed = (callback: (drawId: number, winner: string, amount: bigint) => void) => {
     if (!contract) return () => {};
     
-    const handler = (drawId: bigint, winner: string, amount: bigint) => {
-      callback(Number(drawId), winner, amount);
+    const handler = (error: any, event: any) => {
+      if (!error && event) {
+        callback(Number(event.returnValues.drawId), event.returnValues.winner, BigInt(event.returnValues.amount));
+      }
     };
     
-    contract.on("PrizeClaimed", handler);
+    contract.events.PrizeClaimed({}, handler);
     
     return () => {
-      contract.off("PrizeClaimed", handler);
+      contract.events.PrizeClaimed().unsubscribe();
     };
   };
 
   const onRefundClaimed = (callback: (drawId: number, user: string, amount: bigint) => void) => {
     if (!contract) return () => {};
     
-    const handler = (drawId: bigint, user: string, amount: bigint) => {
-      callback(Number(drawId), user, amount);
+    const handler = (error: any, event: any) => {
+      if (!error && event) {
+        callback(Number(event.returnValues.drawId), event.returnValues.user, BigInt(event.returnValues.amount));
+      }
     };
     
-    contract.on("RefundClaimed", handler);
+    contract.events.RefundClaimed({}, handler);
     
     return () => {
-      contract.off("RefundClaimed", handler);
+      contract.events.RefundClaimed().unsubscribe();
     };
   };
 

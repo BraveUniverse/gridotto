@@ -1,6 +1,6 @@
 'use client';
 
-import { useEthers } from '@/contexts/EthersContext';
+import { useUPProvider } from '@/hooks/useUPProvider';
 import { useState } from 'react';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import { 
@@ -12,7 +12,7 @@ import {
 import toast from 'react-hot-toast';
 
 export const ConnectButton = () => {
-  const { isConnected, account, connect, disconnect, isCorrectChain, switchToLuksoTestnet } = useEthers();
+  const { isConnected, account, connect, disconnect, isCorrectChain, switchNetwork } = useUPProvider();
   const [connecting, setConnecting] = useState(false);
 
   const handleConnect = async () => {
@@ -23,7 +23,11 @@ export const ConnectButton = () => {
       // Check if on correct chain
       if (!isCorrectChain) {
         toast.error('Please switch to LUKSO Testnet');
-        await switchToLuksoTestnet();
+        try {
+          await switchNetwork(4201);
+        } catch (err) {
+          console.error('Failed to switch network:', err);
+        }
       } else {
         toast.success('Wallet connected successfully');
       }
@@ -49,7 +53,7 @@ export const ConnectButton = () => {
       <div className="flex items-center gap-2">
         {!isCorrectChain && (
           <button
-            onClick={switchToLuksoTestnet}
+            onClick={() => switchNetwork(4201)}
             className="flex items-center gap-1 px-3 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30 transition-all text-sm"
           >
             <ExclamationCircleIcon className="w-4 h-4" />

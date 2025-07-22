@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { useEthersProvider } from './useEthersProvider';
+import { useUPProvider } from './useUPProvider';
 import { executionAbi } from '@/abi';
+import Web3 from 'web3';
+import { CONTRACTS } from '@/config/contracts';
 
-const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
+const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
 export interface DrawWinners {
   winners: string[];
@@ -18,56 +19,34 @@ export interface CanExecuteResult {
 }
 
 export function useGridottoExecutionV2() {
-  const { signer, provider, isConnected } = useEthersProvider();
-  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const { web3, account, isConnected } = useUPProvider();
+  const [contract, setContract] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (signer) {
-      const executionContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        executionAbi,
-        signer
-      );
-      setContract(executionContract);
-    } else if (provider) {
-      // Read-only contract for non-connected users
-      const executionContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        executionAbi,
-        provider
-      );
+    if (web3) {
+      const executionContract = new web3.eth.Contract(executionAbi as any, DIAMOND_ADDRESS);
       setContract(executionContract);
     }
-  }, [signer, provider]);
+  }, [web3]);
 
   // Execute draw
   const executeDraw = async (drawId: number) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.executeDraw(drawId);
-      const receipt = await tx.wait();
+      const tx = await contract.methods.executeDraw(drawId).send({ from: account });
       
       // Extract winner info from events
-      const event = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'DrawExecuted';
-        } catch {
-          return false;
-        }
-      });
-      
+      const event = tx.events?.DrawExecuted;
       if (event) {
-        const parsed = contract.interface.parseLog(event);
         return {
-          executor: parsed?.args.executor,
-          winners: parsed?.args.winners
+          executor: event.returnValues.executor,
+          winners: event.returnValues.winners
         };
       }
       
@@ -85,10 +64,10 @@ export function useGridottoExecutionV2() {
     if (!contract) return null;
     
     try {
-      const result = await contract.getDrawWinners(drawId);
+      const result = await contract.methods.getDrawWinners(drawId).call();
       return {
         winners: result[0] || result.winners || [],
-        amounts: result[1] || result.amounts || []
+        amounts: (result[1] || result.amounts || []).map((a: string) => BigInt(a))
       };
     } catch (err: any) {
       console.error('Error fetching draw winners:', err);
@@ -101,7 +80,7 @@ export function useGridottoExecutionV2() {
     if (!contract) return { canExecute: false, reason: 'Contract not loaded' };
     
     try {
-      const result = await contract.canExecuteDraw(drawId);
+      const result = await contract.methods.canExecuteDraw(drawId).call();
       return {
         canExecute: result[0] || result.canExecute || false,
         reason: result[1] || result.reason || ''
@@ -116,14 +95,20 @@ export function useGridottoExecutionV2() {
   const onDrawExecuted = (callback: (drawId: number, executor: string, winners: string[]) => void) => {
     if (!contract) return () => {};
     
-    const handler = (drawId: bigint, executor: string, winners: string[]) => {
-      callback(Number(drawId), executor, winners);
+    const handler = (error: any, event: any) => {
+      if (!error && event) {
+        callback(
+          Number(event.returnValues.drawId),
+          event.returnValues.executor,
+          event.returnValues.winners
+        );
+      }
     };
     
-    contract.on("DrawExecuted", handler);
+    contract.events.DrawExecuted({}, handler);
     
     return () => {
-      contract.off("DrawExecuted", handler);
+      contract.events.DrawExecuted().unsubscribe();
     };
   };
 

@@ -49,9 +49,11 @@ export const HeroSection = () => {
   }, [getCurrentDrawInfo, getCurrentDrawPrize, getMonthlyPrize, getTicketPrice]);
 
   const handleBuyWeeklyTickets = async () => {
+    if (!drawInfo?.weeklyDrawId) return;
+    
     try {
       setBuying(true);
-      await buyTickets(weeklyTickets);
+      await buyTickets(Number(drawInfo.weeklyDrawId), weeklyTickets);
       // Refresh data
       setTimeout(() => window.location.reload(), 3000);
     } catch (err) {
@@ -62,9 +64,11 @@ export const HeroSection = () => {
   };
 
   const handleBuyMonthlyTickets = async () => {
+    if (!drawInfo?.monthlyDrawId) return;
+    
     try {
       setBuying(true);
-      await buyMonthlyTickets(monthlyTickets);
+      await buyMonthlyTickets(Number(drawInfo.monthlyDrawId), monthlyTickets);
       // Refresh data
       setTimeout(() => window.location.reload(), 3000);
     } catch (err) {

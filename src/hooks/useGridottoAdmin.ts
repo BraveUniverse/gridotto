@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { useEthersProvider } from './useEthersProvider';
+import { useUPProvider } from './useUPProvider';
 import { adminAbi } from '@/abi';
+import Web3 from 'web3';
+import { CONTRACTS } from '@/config/contracts';
 
-const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
+const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
 export interface SystemStats {
   totalDrawsCreated: bigint;
@@ -15,40 +16,28 @@ export interface SystemStats {
 }
 
 export function useGridottoAdmin() {
-  const { signer, provider, isConnected } = useEthersProvider();
-  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const { web3, account, isConnected } = useUPProvider();
+  const [contract, setContract] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (signer) {
-      const adminContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        adminAbi,
-        signer
-      );
-      setContract(adminContract);
-    } else if (provider) {
-      // Read-only contract for non-connected users
-      const adminContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        adminAbi,
-        provider
-      );
+    if (web3) {
+      const adminContract = new web3.eth.Contract(adminAbi as any, DIAMOND_ADDRESS);
       setContract(adminContract);
     }
-  }, [signer, provider]);
+  }, [web3]);
 
   // Pause system
   const pauseSystem = async () => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.pauseSystem();
-      await tx.wait();
+      const tx = await contract.methods.pauseSystem().send({ from: account });
+      return tx;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -59,14 +48,14 @@ export function useGridottoAdmin() {
 
   // Unpause system
   const unpauseSystem = async () => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.unpauseSystem();
-      await tx.wait();
+      const tx = await contract.methods.unpauseSystem().send({ from: account });
+      return tx;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -77,14 +66,14 @@ export function useGridottoAdmin() {
 
   // Withdraw platform fees
   const withdrawPlatformFees = async () => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.withdrawPlatformFees();
-      await tx.wait();
+      const tx = await contract.methods.withdrawPlatformFees().send({ from: account });
+      return tx;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -100,19 +89,19 @@ export function useGridottoAdmin() {
     monthlyPoolPercent: number,
     weeklyMonthlyPercent: number
   ) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.setFeePercentages(
+      const tx = await contract.methods.setFeePercentages(
         defaultPlatformFee,
         executorFeePercent,
         monthlyPoolPercent,
         weeklyMonthlyPercent
-      );
-      await tx.wait();
+      ).send({ from: account });
+      return tx;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -126,12 +115,12 @@ export function useGridottoAdmin() {
     if (!contract) return null;
     
     try {
-      const stats = await contract.getSystemStats();
+      const stats = await contract.methods.getSystemStats().call();
       return {
-        totalDrawsCreated: stats.totalDrawsCreated || stats[0],
-        totalTicketsSold: stats.totalTicketsSold || stats[1],
-        totalPrizesDistributed: stats.totalPrizesDistributed || stats[2],
-        totalExecutions: stats.totalExecutions || stats[3]
+        totalDrawsCreated: BigInt(stats.totalDrawsCreated || stats[0]),
+        totalTicketsSold: BigInt(stats.totalTicketsSold || stats[1]),
+        totalPrizesDistributed: BigInt(stats.totalPrizesDistributed || stats[2]),
+        totalExecutions: BigInt(stats.totalExecutions || stats[3])
       };
     } catch (err: any) {
       console.error('Error fetching system stats:', err);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useEthers } from '@/contexts/EthersContext';
+import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoAdmin } from '@/hooks/useGridottoAdmin';
 import { 
   ShieldCheckIcon, 
@@ -12,11 +12,11 @@ import {
   CheckCircleIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
-import { ethers } from 'ethers';
+import Web3 from 'web3';
 import toast from 'react-hot-toast';
 
 const AdminPage = () => {
-  const { account, isConnected } = useEthers();
+  const { account, isConnected } = useUPProvider();
   const { 
     pauseSystem,
     unpauseSystem,
@@ -74,7 +74,7 @@ const AdminPage = () => {
         setStats({
           totalDrawsCreated: systemStats.totalDrawsCreated.toString(),
           totalTicketsSold: systemStats.totalTicketsSold.toString(),
-          totalPrizesDistributed: ethers.formatEther(systemStats.totalPrizesDistributed),
+          totalPrizesDistributed: Web3.utils.fromWei(systemStats.totalPrizesDistributed.toString(), 'ether'),
           totalExecutions: systemStats.totalExecutions.toString()
         });
       }

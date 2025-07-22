@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { useEthersProvider } from './useEthersProvider';
+import Web3 from 'web3';
+import { useUPProvider } from './useUPProvider';
 import { coreAbi } from '@/abi'; // Platform draws are in core ABI
 
 const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
@@ -23,40 +23,31 @@ export interface MonthlyTickets {
 }
 
 export function useGridottoPlatformDraws() {
-  const { signer, provider, isConnected } = useEthersProvider();
-  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const { web3, account, isConnected } = useUPProvider();
+  const [contract, setContract] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (signer) {
-      const platformContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        coreAbi,
-        signer
-      );
-      setContract(platformContract);
-    } else if (provider) {
-      // Read-only contract for non-connected users
-      const platformContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        coreAbi,
-        provider
+    if (web3) {
+      const platformContract = new web3.eth.Contract(
+        coreAbi as any,
+        DIAMOND_ADDRESS
       );
       setContract(platformContract);
     }
-  }, [signer, provider]);
+  }, [web3]);
 
   // Initialize platform draws (admin only)
   const initializePlatformDraws = async () => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.initializePlatformDraws();
-      await tx.wait();
+      const tx = await contract.methods.initializePlatformDraws().send({ from: account });
+      return tx;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -67,31 +58,22 @@ export function useGridottoPlatformDraws() {
 
   // Execute weekly draw
   const executeWeeklyDraw = async () => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.executeWeeklyDraw();
-      const receipt = await tx.wait();
+      const tx = await contract.methods.executeWeeklyDraw().send({ from: account });
       
       // Extract winner info from events
-      const event = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'DrawExecuted';
-        } catch {
-          return false;
-        }
-      });
+      const event = tx.events?.DrawExecuted;
       
       if (event) {
-        const parsed = contract.interface.parseLog(event);
         return {
-          drawId: parsed?.args.drawId,
-          executor: parsed?.args.executor,
-          winners: parsed?.args.winners
+          drawId: event.returnValues.drawId,
+          executor: event.returnValues.executor,
+          winners: event.returnValues.winners
         };
       }
       
@@ -106,31 +88,22 @@ export function useGridottoPlatformDraws() {
 
   // Execute monthly draw
   const executeMonthlyDraw = async () => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.executeMonthlyDraw();
-      const receipt = await tx.wait();
+      const tx = await contract.methods.executeMonthlyDraw().send({ from: account });
       
       // Extract winner info from events
-      const event = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'DrawExecuted';
-        } catch {
-          return false;
-        }
-      });
+      const event = tx.events?.DrawExecuted;
       
       if (event) {
-        const parsed = contract.interface.parseLog(event);
         return {
-          drawId: parsed?.args.drawId,
-          executor: parsed?.args.executor,
-          winners: parsed?.args.winners
+          drawId: event.returnValues.drawId,
+          executor: event.returnValues.executor,
+          winners: event.returnValues.winners
         };
       }
       
@@ -148,7 +121,7 @@ export function useGridottoPlatformDraws() {
     if (!contract) return null;
     
     try {
-      const info = await contract.getPlatformDrawsInfo();
+      const info = await contract.methods.getPlatformDrawsInfo().call();
       return {
         weeklyDrawId: info.weeklyDrawId || info[0],
         monthlyDrawId: info.monthlyDrawId || info[1],
@@ -167,7 +140,7 @@ export function useGridottoPlatformDraws() {
     if (!contract) return null;
     
     try {
-      const tickets = await contract.getUserMonthlyTickets(user);
+      const tickets = await contract.methods.getUserMonthlyTickets(user).call();
       return {
         fromWeekly: tickets.fromWeekly || tickets[0],
         fromCreating: tickets.fromCreating || tickets[1],

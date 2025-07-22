@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Web3 from 'web3';
 import { useGridottoLeaderboard } from '@/hooks/useGridottoLeaderboard';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import { 
@@ -17,7 +18,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
-import { ethers } from 'ethers';
+
 
 type TabType = 'winners' | 'buyers' | 'creators' | 'executors';
 
@@ -74,7 +75,7 @@ const LeaderboardPage = () => {
         
         if (platformStats) {
           setStats({
-            totalPrizesDistributed: ethers.formatEther(platformStats.totalPrizesDistributed),
+            totalPrizesDistributed: Web3.utils.fromWei(platformStats.totalPrizesDistributed, 'ether'),
             totalTicketsSold: platformStats.totalTicketsSold.toString(),
             totalDrawsCreated: platformStats.totalDrawsCreated.toString(),
             totalExecutions: platformStats.totalExecutions.toString()
@@ -219,7 +220,7 @@ const LeaderboardPage = () => {
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
-                            {ethers.formatEther(entry.totalWinnings)} LYX
+                            {Web3.utils.fromWei(entry.totalWinnings, 'ether')} LYX
                           </p>
                           <p className="text-sm text-gray-400">Total Won</p>
                         </div>
@@ -270,7 +271,7 @@ const LeaderboardPage = () => {
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                            {ethers.formatEther(entry.totalSpent)} LYX
+                            {Web3.utils.fromWei(entry.totalSpent, 'ether')} LYX
                           </p>
                           <p className="text-sm text-gray-400">Total Spent</p>
                         </div>
@@ -321,7 +322,7 @@ const LeaderboardPage = () => {
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                            {ethers.formatEther(entry.totalRevenue)} LYX
+                            {Web3.utils.fromWei(entry.totalRevenue, 'ether')} LYX
                           </p>
                           <p className="text-sm text-gray-400">Total Revenue</p>
                         </div>
@@ -368,7 +369,7 @@ const LeaderboardPage = () => {
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
-                            {ethers.formatEther(entry.totalFeesEarned)} LYX
+                            {Web3.utils.fromWei(entry.totalFeesEarned, 'ether')} LYX
                           </p>
                           <p className="text-sm text-gray-400">Total Earned (5% fees)</p>
                         </div>

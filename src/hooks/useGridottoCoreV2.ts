@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { useEthersProvider } from './useEthersProvider';
+import { useUPProvider } from './useUPProvider';
 import { coreAbi } from '@/abi';
+import Web3 from 'web3';
+import { CONTRACTS } from '@/config/contracts';
 
-const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
+const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
 export enum DrawType {
   USER_LYX = 0,
@@ -34,29 +35,17 @@ export interface DrawDetails {
 }
 
 export function useGridottoCoreV2() {
-  const { signer, provider, isConnected } = useEthersProvider();
-  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const { web3, account, isConnected } = useUPProvider();
+  const [contract, setContract] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (signer) {
-      const coreContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        coreAbi,
-        signer
-      );
-      setContract(coreContract);
-    } else if (provider) {
-      // Read-only contract for non-connected users
-      const coreContract = new ethers.Contract(
-        DIAMOND_ADDRESS,
-        coreAbi,
-        provider
-      );
+    if (web3) {
+      const coreContract = new web3.eth.Contract(coreAbi as any, DIAMOND_ADDRESS);
       setContract(coreContract);
     }
-  }, [signer, provider]);
+  }, [web3]);
 
   // Create LYX Draw
   const createLYXDraw = async (
@@ -67,36 +56,27 @@ export function useGridottoCoreV2() {
     platformFeePercent: number,
     initialPrize: string = "0" // in LYX
   ) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.createLYXDraw(
-        ethers.parseEther(ticketPrice),
+      const tx = await contract.methods.createLYXDraw(
+        Web3.utils.toWei(ticketPrice, 'ether'),
         maxTickets,
         duration,
         minParticipants,
-        platformFeePercent,
-        { value: ethers.parseEther(initialPrize) }
-      );
-      
-      const receipt = await tx.wait();
-      
-      // Extract drawId from events
-      const event = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'DrawCreated';
-        } catch {
-          return false;
-        }
+        platformFeePercent
+      ).send({ 
+        from: account,
+        value: Web3.utils.toWei(initialPrize, 'ether')
       });
       
+      // Extract drawId from events
+      const event = tx.events?.DrawCreated;
       if (event) {
-        const parsed = contract.interface.parseLog(event);
-        return parsed?.args.drawId;
+        return event.returnValues.drawId;
       }
       
       return null;
@@ -118,38 +98,27 @@ export function useGridottoCoreV2() {
     platformFeePercent: number,
     initialPrize: string // in token units
   ) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
       // Note: Token approval should be done before this
-      const tx = await contract.createTokenDraw(
+      const tx = await contract.methods.createTokenDraw(
         tokenAddress,
-        ethers.parseEther(ticketPrice), // Assuming 18 decimals
+        Web3.utils.toWei(ticketPrice, 'ether'), // Assuming 18 decimals
         maxTickets,
         duration,
         minParticipants,
         platformFeePercent,
-        ethers.parseEther(initialPrize)
-      );
-      
-      const receipt = await tx.wait();
+        Web3.utils.toWei(initialPrize, 'ether')
+      ).send({ from: account });
       
       // Extract drawId from events
-      const event = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'DrawCreated';
-        } catch {
-          return false;
-        }
-      });
-      
+      const event = tx.events?.DrawCreated;
       if (event) {
-        const parsed = contract.interface.parseLog(event);
-        return parsed?.args.drawId;
+        return event.returnValues.drawId;
       }
       
       return null;
@@ -171,7 +140,7 @@ export function useGridottoCoreV2() {
     minParticipants: number,
     platformFeePercent: number
   ) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
@@ -179,35 +148,24 @@ export function useGridottoCoreV2() {
       
       // Convert token IDs to bytes32
       const bytes32TokenIds = nftTokenIds.map(id => 
-        ethers.zeroPadValue(ethers.toBeHex(id), 32)
+        Web3.utils.padLeft(Web3.utils.toHex(id), 64)
       );
       
       // Note: NFT authorization should be done before this
-      const tx = await contract.createNFTDraw(
+      const tx = await contract.methods.createNFTDraw(
         nftContract,
         bytes32TokenIds,
-        ethers.parseEther(ticketPrice),
+        Web3.utils.toWei(ticketPrice, 'ether'),
         maxTickets,
         duration,
         minParticipants,
         platformFeePercent
-      );
-      
-      const receipt = await tx.wait();
+      ).send({ from: account });
       
       // Extract drawId from events
-      const event = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'DrawCreated';
-        } catch {
-          return false;
-        }
-      });
-      
+      const event = tx.events?.DrawCreated;
       if (event) {
-        const parsed = contract.interface.parseLog(event);
-        return parsed?.args.drawId;
+        return event.returnValues.drawId;
       }
       
       return null;
@@ -221,27 +179,30 @@ export function useGridottoCoreV2() {
 
   // Buy tickets
   const buyTickets = async (drawId: number, amount: number) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
       // Get draw details to determine payment
-      const details = await contract.getDrawDetails(drawId);
+      const details = await contract.methods.getDrawDetails(drawId).call();
       
-      if (details.drawType === DrawType.USER_LYX || 
-          details.drawType === DrawType.USER_LSP8 ||
-          details.drawType === DrawType.PLATFORM_WEEKLY ||
-          details.drawType === DrawType.PLATFORM_MONTHLY) {
+      if (details.drawType === '0' || 
+          details.drawType === '2' ||
+          details.drawType === '3' ||
+          details.drawType === '4') {
         // LYX payment
-        const totalCost = details.ticketPrice * BigInt(amount);
-        const tx = await contract.buyTickets(drawId, amount, { value: totalCost });
-        await tx.wait();
-      } else if (details.drawType === DrawType.USER_LSP7) {
+        const totalCost = BigInt(details.ticketPrice) * BigInt(amount);
+        const tx = await contract.methods.buyTickets(drawId, amount).send({ 
+          from: account,
+          value: totalCost.toString()
+        });
+        return tx;
+      } else if (details.drawType === '1') {
         // Token payment - approval should be done before
-        const tx = await contract.buyTickets(drawId, amount);
-        await tx.wait();
+        const tx = await contract.methods.buyTickets(drawId, amount).send({ from: account });
+        return tx;
       }
     } catch (err: any) {
       setError(err.message);
@@ -256,23 +217,23 @@ export function useGridottoCoreV2() {
     if (!contract) return null;
     
     try {
-      const details = await contract.getDrawDetails(drawId);
+      const details = await contract.methods.getDrawDetails(drawId).call();
       return {
         creator: details.creator,
         drawType: Number(details.drawType),
         tokenAddress: details.tokenAddress,
-        ticketPrice: details.ticketPrice,
-        maxTickets: details.maxTickets,
-        ticketsSold: details.ticketsSold,
-        prizePool: details.prizePool,
-        startTime: details.startTime,
-        endTime: details.endTime,
-        minParticipants: details.minParticipants,
-        platformFeePercent: details.platformFeePercent,
+        ticketPrice: BigInt(details.ticketPrice),
+        maxTickets: BigInt(details.maxTickets),
+        ticketsSold: BigInt(details.ticketsSold),
+        prizePool: BigInt(details.prizePool),
+        startTime: BigInt(details.startTime),
+        endTime: BigInt(details.endTime),
+        minParticipants: BigInt(details.minParticipants),
+        platformFeePercent: BigInt(details.platformFeePercent),
         isCompleted: details.isCompleted,
         isCancelled: details.isCancelled,
-        participantCount: details.participantCount,
-        monthlyPoolContribution: details.monthlyPoolContribution
+        participantCount: BigInt(details.participantCount),
+        monthlyPoolContribution: BigInt(details.monthlyPoolContribution)
       };
     } catch (err: any) {
       console.error('Error fetching draw details:', err);
@@ -285,8 +246,8 @@ export function useGridottoCoreV2() {
     if (!contract) return [];
     
     try {
-      const history = await contract.getUserDrawHistory(user);
-      return history.map((id: bigint) => Number(id));
+      const history = await contract.methods.getUserDrawHistory(user).call();
+      return history.map((id: string) => Number(id));
     } catch (err: any) {
       console.error('Error fetching user draw history:', err);
       return [];
@@ -295,14 +256,14 @@ export function useGridottoCoreV2() {
 
   // Cancel draw (only creator or admin)
   const cancelDraw = async (drawId: number) => {
-    if (!contract || !signer) throw new Error('Wallet not connected');
+    if (!contract || !account) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.cancelDraw(drawId);
-      await tx.wait();
+      const tx = await contract.methods.cancelDraw(drawId).send({ from: account });
+      return tx;
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -316,7 +277,7 @@ export function useGridottoCoreV2() {
     if (!contract) return 0;
     
     try {
-      const nextId = await contract.getNextDrawId();
+      const nextId = await contract.methods.getNextDrawId().call();
       return Number(nextId);
     } catch (err: any) {
       console.error('Error fetching next draw ID:', err);

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useEthers } from '@/contexts/EthersContext';
+import Web3 from 'web3';
+import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
 import { useGridottoExecutionV2 } from '@/hooks/useGridottoExecutionV2';
 import { useGridottoRefund } from '@/hooks/useGridottoRefund';
@@ -21,7 +22,6 @@ import {
   GiftIcon
 } from '@heroicons/react/24/outline';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
-import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
 import Confetti from 'react-confetti';
 
@@ -50,7 +50,7 @@ const DrawDetailsPage = () => {
   const router = useRouter();
   const drawId = Number(params.id);
   
-  const { account, isConnected } = useEthers();
+  const { account, isConnected } = useUPProvider();
   const { getDrawDetails, buyTickets, cancelDraw } = useGridottoCoreV2();
   const { executeDraw, getDrawWinners, canExecuteDraw } = useGridottoExecutionV2();
   const { claimPrize, canClaimPrize, claimRefund, getRefundAmount } = useGridottoRefund();
@@ -313,8 +313,8 @@ const DrawDetailsPage = () => {
   }
 
   const DrawTypeIcon = getDrawTypeIcon(draw.drawType);
-  const ticketPrice = ethers.formatEther(draw.ticketPrice);
-  const prizePool = ethers.formatEther(draw.currentPrizePool);
+  const ticketPrice = Web3.utils.fromWei(draw.ticketPrice, 'ether');
+  const prizePool = Web3.utils.fromWei(draw.currentPrizePool, 'ether');
   const progress = (Number(draw.ticketsSold) / Number(draw.maxTickets)) * 100;
 
   return (
@@ -463,7 +463,7 @@ const DrawDetailsPage = () => {
               <div>
                 <p className="text-sm text-gray-400">Executor Reward</p>
                 <p className="text-xl font-bold text-yellow-400">
-                  {ethers.formatEther(draw.executorReward)} LYX
+                  {Web3.utils.fromWei(draw.executorReward, 'ether')} LYX
                 </p>
               </div>
               <button
@@ -508,7 +508,7 @@ const DrawDetailsPage = () => {
               <div>
                 <p className="text-sm text-gray-400">Refund Amount</p>
                 <p className="text-xl font-bold text-green-400">
-                  {ethers.formatEther(refundAmount)} LYX
+                  {Web3.utils.fromWei(refundAmount, 'ether')} LYX
                 </p>
               </div>
               <button
@@ -559,7 +559,7 @@ const DrawDetailsPage = () => {
               <span className="text-gray-400">Draw Type</span>
               <span className="text-white">{getDrawTypeLabel(draw.drawType)}</span>
             </div>
-            {draw.tokenAddress && draw.tokenAddress !== ethers.ZeroAddress && (
+                          {draw.tokenAddress && draw.tokenAddress !== '0x0000000000000000000000000000000000000000' && (
               <div className="flex items-center justify-between py-2 border-b border-white/10">
                 <span className="text-gray-400">Token/NFT Address</span>
                 <span className="text-white font-mono text-sm">

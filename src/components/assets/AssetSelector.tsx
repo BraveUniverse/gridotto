@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useEthers } from '@/contexts/EthersContext';
+import { useUPProvider } from '@/hooks/useUPProvider';
 import { useLSP5ReceivedAssets } from '@/hooks/useLSP5ReceivedAssets';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import { 
@@ -11,7 +11,7 @@ import {
   SparklesIcon,
   ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
-import { ethers } from 'ethers';
+
 
 interface Asset {
   address: string;
@@ -36,7 +36,7 @@ export const AssetSelector = ({
   assetType = 'all',
   className = '' 
 }: AssetSelectorProps) => {
-  const { account, provider } = useEthers();
+  const { account, web3 } = useUPProvider();
   const { assets: lsp5Assets, loading: lsp5Loading, error: lsp5Error } = useLSP5ReceivedAssets(account || '');
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
   const [selectedAssetDetails, setSelectedAssetDetails] = useState<Asset | null>(null);
@@ -69,9 +69,24 @@ export const AssetSelector = ({
     }
   }, [lsp5Assets, assetType, selectedAsset]);
 
-  const formatBalance = (balance: string, decimals: number) => {
-    try {
-      return ethers.formatUnits(balance, decimals);
+      const formatBalance = (balance: string, decimals: number) => {
+      try {
+        // For non-18 decimal tokens, we need to handle formatting manually
+        const balanceBigInt = BigInt(balance);
+        const divisor = BigInt(10) ** BigInt(decimals);
+        const wholePart = balanceBigInt / divisor;
+        const fractionalPart = balanceBigInt % divisor;
+      
+      if (fractionalPart === BigInt(0)) {
+        return wholePart.toString();
+      }
+      
+      // Format fractional part with proper padding
+      const fractionalStr = fractionalPart.toString().padStart(Number(decimals), '0');
+      // Remove trailing zeros
+      const trimmedFractional = fractionalStr.replace(/0+$/, '');
+      
+      return trimmedFractional ? `${wholePart}.${trimmedFractional}` : wholePart.toString();
     } catch {
       return '0';
     }

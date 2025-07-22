@@ -6,11 +6,11 @@ import { useGridottoExecutionV2 } from './useGridottoExecutionV2';
 import { useGridottoPlatformDraws } from './useGridottoPlatformDraws';
 import { useGridottoRefund } from './useGridottoRefund';
 import { useGridottoLeaderboard } from './useGridottoLeaderboard';
-import { useEthers } from '@/contexts/EthersContext';
-import { ethers } from 'ethers';
+import { useUPProvider } from './useUPProvider';
+import Web3 from 'web3';
 
 export const useGridottoContract = () => {
-  const { account } = useEthers();
+  const { account } = useUPProvider();
   const core = useGridottoCoreV2();
   const execution = useGridottoExecutionV2();
   const platform = useGridottoPlatformDraws();
@@ -43,7 +43,7 @@ export const useGridottoContract = () => {
     return {
       currentDrawNumber: Number(info.weeklyDrawId),
       nextDrawTime: Number(info.nextMonthlyDraw),
-      ticketPrice: ethers.parseEther("0.1").toString() // Default price
+      ticketPrice: Web3.utils.toWei("0.1", "ether") // Default price
     };
   };
 
@@ -214,7 +214,7 @@ export const useGridottoContract = () => {
     getCurrentDrawInfo: platform.getPlatformDrawsInfo,
     getCurrentDrawPrize: async () => '0',
     getMonthlyPrize: async () => '0',
-    getTicketPrice: async () => ethers.parseEther("0.1").toString(),
+    getTicketPrice: async () => Web3.utils.toWei("0.1", "ether"),
     getExpiredDrawsWaitingExecution: async () => ({ drawIds: [], endTimes: [], participantCounts: [], minParticipants: [] }),
     forceExecuteDraw: execution.executeDraw,
     refundDraw: async (drawId: number) => {},
