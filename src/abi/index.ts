@@ -1,27 +1,35 @@
-import { gridottoAbi } from './gridottoAbi';
-import { phase3Abi } from './phase3Abi';
-import { phase4Abi } from './phase4Abi';
-import { uiHelperAbi } from './uiHelperAbi';
-import { batchAbi } from './batchAbi';
-import { adminAbi } from './adminAbi';
-import { executionAbi } from './executionAbi';
+// Import UI ABIs
+import GridottoCoreFacet from './ui-abis/GridottoCoreFacet.json';
+import GridottoExecutionFacet from './ui-abis/GridottoExecutionFacet.json';
+import GridottoLeaderboardFacet from './ui-abis/GridottoLeaderboardFacet.json';
+import GridottoAdminFacet from './ui-abis/GridottoAdminFacet.json';
 
+// Export individual ABIs
+export const coreAbi = GridottoCoreFacet;
+export const executionAbi = GridottoExecutionFacet;
+export const leaderboardAbi = GridottoLeaderboardFacet;
+export const adminAbi = GridottoAdminFacet;
+
+// Combine all ABIs for Diamond pattern
 export const combinedAbi = [
-  ...gridottoAbi,
-  ...phase3Abi,
-  ...phase4Abi,
-  ...uiHelperAbi,
-  ...batchAbi,
-  ...adminAbi,
-  ...executionAbi
-] as const;
+  ...GridottoCoreFacet,
+  ...GridottoExecutionFacet,
+  ...GridottoLeaderboardFacet,
+  ...GridottoAdminFacet
+];
 
-export {
-  gridottoAbi,
-  phase3Abi,
-  phase4Abi,
-  uiHelperAbi,
-  batchAbi,
-  adminAbi,
-  executionAbi
+// Helper to get specific facet ABI
+export const getFacetAbi = (facetName: 'core' | 'execution' | 'leaderboard' | 'admin') => {
+  switch (facetName) {
+    case 'core':
+      return GridottoCoreFacet;
+    case 'execution':
+      return GridottoExecutionFacet;
+    case 'leaderboard':
+      return GridottoLeaderboardFacet;
+    case 'admin':
+      return GridottoAdminFacet;
+    default:
+      throw new Error(`Unknown facet: ${facetName}`);
+  }
 };

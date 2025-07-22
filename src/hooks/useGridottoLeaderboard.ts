@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUPProvider } from './useUPProvider';
 import { CONTRACTS } from '@/config/contracts';
-import { combinedAbi } from '@/abi';
+import { leaderboardAbi } from '@/abi';
 import Web3 from 'web3';
 
 interface TopWinner {
@@ -59,7 +59,7 @@ export const useGridottoLeaderboard = () => {
         setLoading(true);
         
         const contractInstance = new web3.eth.Contract(
-          combinedAbi as any,
+          leaderboardAbi as any,
           CONTRACTS.LUKSO_TESTNET.DIAMOND
         );
         
