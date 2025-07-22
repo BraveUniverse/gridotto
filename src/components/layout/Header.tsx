@@ -11,6 +11,7 @@ import {
   TrophyIcon,
   UserCircleIcon,
   ShieldCheckIcon,
+  InformationCircleIcon,
   Bars3Icon,
   XMarkIcon,
   ChartBarIcon
@@ -26,6 +27,7 @@ export const Header = () => {
     { name: 'Draws', href: '/draws', icon: SparklesIcon },
     { name: 'Create Draw', href: '/create-draw', icon: PlusCircleIcon },
     { name: 'Leaderboard', href: '/leaderboard', icon: TrophyIcon },
+    { name: 'Docs', href: '/docs', icon: InformationCircleIcon },
     { name: 'Profile', href: '/profile', icon: UserCircleIcon },
     { name: 'Admin', href: '/admin', icon: ShieldCheckIcon }
   ];
