@@ -114,7 +114,7 @@ export function useGridottoLeaderboard() {
     if (!contract) return null;
     
     try {
-      const stats = await contract.methods.getPlatformStatistics().call();
+      const stats = await contract.methods.getPlatformStats().call();
       return stats;
     } catch (err: any) {
       console.error('Error fetching platform statistics:', err);
