@@ -48,12 +48,25 @@ interface DrawDetails {
 const DrawDetailsPage = () => {
   const params = useParams();
   const router = useRouter();
-  const drawId = Number(params.id);
   
-  // Validate drawId
-  if (!params.id || isNaN(drawId) || drawId <= 0) {
-    router.push('/draws');
-    return null;
+  // Parse and validate drawId
+  const rawId = params.id as string;
+  const drawId = parseInt(rawId, 10);
+  
+  // Early return with loading state while redirecting
+  if (!rawId || isNaN(drawId) || drawId <= 0) {
+    useEffect(() => {
+      router.push('/draws');
+    }, [router]);
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-lg">Invalid draw ID. Redirecting...</p>
+        </div>
+      </div>
+    );
   }
   
   const { account, isConnected } = useUPProvider();
@@ -83,6 +96,13 @@ const DrawDetailsPage = () => {
   }, [draw, account]);
 
   const loadDrawDetails = async () => {
+    // Double check drawId validity
+    if (!drawId || isNaN(drawId) || drawId <= 0) {
+      console.error('Invalid drawId in loadDrawDetails:', drawId);
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       

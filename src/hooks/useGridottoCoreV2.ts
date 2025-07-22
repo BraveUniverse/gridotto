@@ -223,6 +223,7 @@ export function useGridottoCoreV2() {
     }
     
     try {
+      console.log('Calling getDrawDetails with drawId:', drawId, 'type:', typeof drawId);
       const details = await contract.methods.getDrawDetails(drawId).call();
       return {
         creator: details.creator,
@@ -302,7 +303,15 @@ export function useGridottoCoreV2() {
       const draws = [];
       const nextDrawId = await getNextDrawId();
       
+      // If nextDrawId is 0, no draws have been created yet
+      if (nextDrawId === 0) {
+        console.log('No draws created yet (nextDrawId is 0)');
+        return [];
+      }
+      
       // Fetch all draws and filter active ones
+      // Note: In Gridotto, when nextDrawId = N, draws exist from ID 1 to N-1
+      // because nextDrawId is incremented BEFORE assigning to the new draw
       for (let i = 1; i < nextDrawId; i++) {
         const details = await getDrawDetails(i);
         if (details && !details.isCompleted && !details.isCancelled) {
