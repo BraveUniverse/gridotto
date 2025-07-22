@@ -315,7 +315,7 @@ export function useGridottoCoreV2() {
       for (let i = 1; i < nextDrawId; i++) {
         const details = await getDrawDetails(i);
         if (details && !details.isCompleted && !details.isCancelled) {
-          draws.push({ id: i, ...details });
+          draws.push({ drawId: i, ...details });
         }
       }
       
