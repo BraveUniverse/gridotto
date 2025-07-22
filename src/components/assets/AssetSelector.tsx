@@ -1,359 +1,197 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { useUPProvider } from '@/hooks/useUPProvider';
-import { CheckIcon } from '@heroicons/react/24/solid';
-
-interface LSP4Metadata {
-  name?: string;
-  symbol?: string;
-  description?: string;
-  icon?: Array<{
-    url: string;
-    width: number;
-    height: number;
-  }>;
-  images?: Array<Array<{
-    url: string;
-    width: number;
-    height: number;
-    verification?: {
-      method: string;
-      data: string;
-    };
-  }>>;
-  assets?: Array<{
-    url: string;
-    fileType: string;
-  }>;
-}
+import { useEthers } from '@/contexts/EthersContext';
+import { useLSP5ReceivedAssets } from '@/hooks/useLSP5ReceivedAssets';
+import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
+import { 
+  CurrencyDollarIcon, 
+  PhotoIcon,
+  CheckCircleIcon,
+  SparklesIcon,
+  ExclamationCircleIcon
+} from '@heroicons/react/24/outline';
+import { ethers } from 'ethers';
 
 interface Asset {
   address: string;
-  interfaceId: string; // LSP7 or LSP8
-  metadata?: LSP4Metadata;
-  balance?: string;
-  tokenIds?: string[];
+  name: string;
+  symbol: string;
+  balance: string;
+  decimals: number;
+  tokenType: 'LSP7' | 'LSP8' | 'Unknown';
+  image?: string;
 }
 
 interface AssetSelectorProps {
-  onSelect: (asset: Asset) => void;
-  selectedAsset?: Asset | null;
-  assetType?: 'all' | 'LSP7' | 'LSP8';
+  selectedAsset: string | null;
+  onSelectAsset: (asset: Asset) => void;
+  assetType?: 'LSP7' | 'LSP8' | 'all';
   className?: string;
 }
 
 export const AssetSelector = ({ 
-  onSelect, 
-  selectedAsset,
+  selectedAsset, 
+  onSelectAsset, 
   assetType = 'all',
   className = '' 
 }: AssetSelectorProps) => {
-  const { web3, account } = useUPProvider();
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { account, provider } = useEthers();
+  const { assets: lsp5Assets, loading: lsp5Loading, error: lsp5Error } = useLSP5ReceivedAssets(account || '');
+  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
+  const [selectedAssetDetails, setSelectedAssetDetails] = useState<Asset | null>(null);
 
   useEffect(() => {
-    const fetchAssets = async () => {
-      if (!web3 || !account) return;
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Import ERC725 dynamically
-        const { ERC725 } = await import('@erc725/erc725.js');
-        
-        // LSP5 ReceivedAssets Schema
-        const LSP5Schema = [
-          {
-            name: 'LSP5ReceivedAssets[]',
-            key: '0x6460ee3c0aac563ccbf76d6e1d07bada78e3a9514e6382b736ed3f478ab7b90b',
-            keyType: 'Array',
-            valueType: 'address',
-            valueContent: 'Address'
-          },
-          {
-            name: 'LSP5ReceivedAssetsMap:<address>',
-            key: '0x812c4334633eb816c80d0000<address>',
-            keyType: 'Mapping',
-            valueType: '(bytes4,bytes8)',
-            valueContent: '(Bytes4,Number)'
-          }
-        ];
-
-        const erc725 = new ERC725(LSP5Schema, account, web3.currentProvider);
-        const receivedAssets = await erc725.fetchData('LSP5ReceivedAssets[]');
-
-        if (!receivedAssets?.value || !Array.isArray(receivedAssets.value)) {
-          setAssets([]);
-          return;
-        }
-
-        // Fetch metadata for each asset
-        const assetPromises = receivedAssets.value.map(async (assetAddress: string) => {
-          try {
-            // Get asset interface and metadata
-            const assetInfo = await erc725.fetchData({
-              keyName: 'LSP5ReceivedAssetsMap:<address>',
-              dynamicKeyParts: assetAddress
-            });
-
-            let interfaceId = 'LSP7'; // Default
-            if (assetInfo?.value) {
-              const [iface] = assetInfo.value as [string, string];
-              interfaceId = iface === '0xb3c4928f' ? 'LSP8' : 'LSP7';
-            }
-
-            // Skip if filtering by type
-            if (assetType !== 'all' && assetType !== interfaceId) {
-              return null;
-            }
-
-            // Fetch LSP4 metadata
-            const LSP4Schema = [
-              {
-                name: 'LSP4Metadata',
-                key: '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e',
-                keyType: 'Singleton',
-                valueType: 'bytes',
-                valueContent: 'VerifiableURI'
-              }
-            ];
-
-            const assetERC725 = new ERC725(LSP4Schema, assetAddress, web3.currentProvider);
-            const metadataData = await assetERC725.fetchData('LSP4Metadata');
-
-            let metadata: LSP4Metadata = {};
-            if (metadataData?.value) {
-              let url = '';
-              if (typeof metadataData.value === 'string') {
-                url = metadataData.value;
-              } else if (metadataData.value && typeof metadataData.value === 'object') {
-                // Handle VerifiableURI object format
-                url = (metadataData.value as any).url || '';
-              }
-              
-              if (url) {
-                // Fetch metadata from IPFS or URL
-                if (url.startsWith('ipfs://')) {
-                  const ipfsUrl = url.replace('ipfs://', 'https://api.universalprofile.cloud/ipfs/');
-                  try {
-                    const response = await fetch(ipfsUrl);
-                    if (response.ok) {
-                      metadata = await response.json();
-                    }
-                  } catch (e) {
-                    console.error('Error fetching asset metadata:', e);
-                  }
-                } else if (url.startsWith('http')) {
-                  try {
-                    const response = await fetch(url);
-                    if (response.ok) {
-                      metadata = await response.json();
-                    }
-                  } catch (e) {
-                    console.error('Error fetching asset metadata:', e);
-                  }
-                }
-              }
-            }
-
-            // Get balance or token IDs
-            let balance = '0';
-            let tokenIds: string[] = [];
-
-            if (interfaceId === 'LSP7') {
-              // Get LSP7 balance
-              const contract = new web3.eth.Contract([
-                {
-                  name: 'balanceOf',
-                  type: 'function',
-                  inputs: [{ name: 'account', type: 'address' }],
-                  outputs: [{ name: '', type: 'uint256' }]
-                }
-              ], assetAddress);
-
-              balance = await contract.methods.balanceOf(account).call();
-            } else {
-              // Get LSP8 token IDs
-              const contract = new web3.eth.Contract([
-                {
-                  name: 'tokenIdsOf',
-                  type: 'function',
-                  inputs: [{ name: 'owner', type: 'address' }],
-                  outputs: [{ name: '', type: 'bytes32[]' }]
-                }
-              ], assetAddress);
-
-              tokenIds = await contract.methods.tokenIdsOf(account).call();
-            }
-
-            return {
-              address: assetAddress,
-              interfaceId,
-              metadata,
-              balance,
-              tokenIds
-            };
-          } catch (err) {
-            console.error(`Error fetching asset ${assetAddress}:`, err);
-            return null;
-          }
-        });
-
-        const fetchedAssets = await Promise.all(assetPromises);
-        setAssets(fetchedAssets.filter(Boolean) as Asset[]);
-      } catch (err: any) {
-        console.error('Error fetching assets:', err);
-        setError('Failed to load assets');
-      } finally {
-        setLoading(false);
+    if (lsp5Assets) {
+      // Convert ReceivedAsset to Asset format
+      const converted: Asset[] = lsp5Assets.map(asset => ({
+        address: asset.address,
+        name: asset.name || 'Unknown Asset',
+        symbol: asset.symbol || 'UNKNOWN',
+        balance: asset.balance || '0',
+        decimals: asset.decimals || 18,
+        tokenType: asset.tokenType as 'LSP7' | 'LSP8' | 'Unknown',
+        image: asset.metadata?.LSP4Metadata?.images?.[0]?.[0]?.url || asset.metadata?.LSP4Metadata?.icon?.[0]?.url
+      }));
+      
+      // Filter assets based on type
+      const filtered = assetType === 'all' 
+        ? converted 
+        : converted.filter(asset => asset.tokenType === assetType);
+      
+      setFilteredAssets(filtered);
+      
+      // Update selected asset details
+      if (selectedAsset) {
+        const selected = filtered.find(a => a.address === selectedAsset);
+        setSelectedAssetDetails(selected || null);
       }
-    };
-
-    fetchAssets();
-  }, [web3, account, assetType]);
-
-  const getImageUrl = (image: any) => {
-    if (!image?.url) return null;
-    if (image.url.startsWith('ipfs://')) {
-      return image.url.replace('ipfs://', 'https://api.universalprofile.cloud/ipfs/');
     }
-    return image.url;
+  }, [lsp5Assets, assetType, selectedAsset]);
+
+  const formatBalance = (balance: string, decimals: number) => {
+    try {
+      return ethers.formatUnits(balance, decimals);
+    } catch {
+      return '0';
+    }
   };
 
-  const formatBalance = (balance: string, decimals: number = 18) => {
-    const value = parseFloat(balance) / Math.pow(10, decimals);
-    return value.toLocaleString(undefined, { maximumFractionDigits: 4 });
-  };
-
-  if (loading) {
+  if (lsp5Loading) {
     return (
-      <div className={`space-y-2 ${className}`}>
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="glass-card p-4 animate-pulse">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white/10 rounded-full" />
-              <div className="flex-1">
-                <div className="h-4 bg-white/10 rounded w-24 mb-2" />
-                <div className="h-3 bg-white/10 rounded w-16" />
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className={`flex items-center justify-center p-8 ${className}`}>
+        <SparklesIcon className="w-6 h-6 animate-spin text-primary" />
+        <span className="ml-2 text-gray-400">Loading assets...</span>
       </div>
     );
   }
 
-  if (error) {
+  if (lsp5Error) {
     return (
-      <div className={`glass-card p-4 text-center text-red-400 ${className}`}>
-        {error}
+      <div className={`p-4 bg-red-500/10 border border-red-500/20 rounded-lg ${className}`}>
+        <div className="flex items-center gap-2 text-red-400">
+          <ExclamationCircleIcon className="w-5 h-5" />
+          <span>Error loading assets: {lsp5Error}</span>
+        </div>
       </div>
     );
   }
 
-  if (assets.length === 0) {
+  if (filteredAssets.length === 0) {
     return (
-      <div className={`glass-card p-8 text-center ${className}`}>
-        <p className="text-gray-400">No assets found</p>
+      <div className={`text-center p-8 ${className}`}>
+        <PhotoIcon className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+        <p className="text-gray-400">
+          No {assetType === 'all' ? 'assets' : assetType + ' tokens'} found in your wallet
+        </p>
         <p className="text-sm text-gray-500 mt-2">
-          {assetType === 'LSP7' ? 'No tokens in your Universal Profile' : 
-           assetType === 'LSP8' ? 'No NFTs in your Universal Profile' :
-           'No assets in your Universal Profile'}
+          Make sure you have {assetType === 'LSP7' ? 'tokens' : assetType === 'LSP8' ? 'NFTs' : 'assets'} in your LUKSO wallet
         </p>
       </div>
     );
   }
 
   return (
-    <div className={`space-y-2 ${className}`}>
-      {assets.map((asset) => {
-        const isSelected = selectedAsset?.address === asset.address;
-        const icon = asset.metadata?.icon?.[0];
-        const iconUrl = icon ? getImageUrl(icon) : null;
-
-        return (
-          <button
-            key={asset.address}
-            onClick={() => onSelect(asset)}
-            className={`glass-card p-4 w-full text-left transition-all ${
-              isSelected 
-                ? 'border-[#FF2975] bg-[#FF2975]/10' 
-                : 'hover:bg-white/5'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                {/* Asset Icon */}
-                <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#FF2975]/20 to-[#FF2975]/10">
-                  {iconUrl ? (
-                    <Image
-                      src={iconUrl}
-                      alt={asset.metadata?.name || 'Asset'}
-                      width={48}
-                      height={48}
-                      className="object-cover"
-                      unoptimized
+    <div className={className}>
+      {selectedAssetDetails ? (
+        <div className="glass-card p-4">
+          <h3 className="text-sm font-medium text-gray-400 mb-3">Selected Asset</h3>
+          <div className="flex items-center gap-4">
+            {selectedAssetDetails.image ? (
+              <img 
+                src={selectedAssetDetails.image} 
+                alt={selectedAssetDetails.name}
+                className="w-12 h-12 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                <CurrencyDollarIcon className="w-6 h-6 text-primary" />
+              </div>
+            )}
+            <div className="flex-1">
+              <p className="font-medium text-white">{selectedAssetDetails.name}</p>
+              <p className="text-sm text-gray-400">
+                Balance: {formatBalance(selectedAssetDetails.balance, selectedAssetDetails.decimals)} {selectedAssetDetails.symbol}
+              </p>
+            </div>
+            <button
+              onClick={() => onSelectAsset({ ...selectedAssetDetails, address: '', balance: '0' })}
+              className="text-sm text-primary hover:text-primary/80 transition-colors"
+            >
+              Change
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <h3 className="text-lg font-medium text-white mb-4">
+            Select {assetType === 'LSP7' ? 'Token' : assetType === 'LSP8' ? 'NFT' : 'Asset'}
+          </h3>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {filteredAssets.map((asset) => (
+              <button
+                key={asset.address}
+                onClick={() => onSelectAsset(asset)}
+                className={`w-full p-4 rounded-lg border transition-all text-left ${
+                  selectedAsset === asset.address
+                    ? 'bg-primary/20 border-primary'
+                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  {asset.image ? (
+                    <img 
+                      src={asset.image} 
+                      alt={asset.name}
+                      className="w-10 h-10 rounded-lg object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[#FF2975] font-bold">
-                      {asset.metadata?.symbol?.[0] || '?'}
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
+                      <CurrencyDollarIcon className="w-5 h-5 text-primary" />
                     </div>
                   )}
-                </div>
-
-                {/* Asset Info */}
-                <div>
-                  <h4 className="font-semibold text-white">
-                    {asset.metadata?.name || 'Unknown Asset'}
-                  </h4>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <span className="text-gray-400">
-                      {asset.metadata?.symbol || asset.address.slice(0, 6) + '...' + asset.address.slice(-4)}
-                    </span>
-                    <span className="text-xs px-2 py-0.5 bg-[#FF2975]/20 text-[#FF2975] rounded-full">
-                      {asset.interfaceId}
-                    </span>
+                  
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-white">{asset.name}</p>
+                      <span className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded">
+                        {asset.tokenType}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-400">
+                      {asset.symbol} • Balance: {formatBalance(asset.balance, asset.decimals)}
+                    </p>
                   </div>
-                </div>
-              </div>
-
-              {/* Balance/Count */}
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
-                  {asset.interfaceId === 'LSP7' ? (
-                    <p className="font-semibold text-white">
-                      {formatBalance(asset.balance || '0')}
-                    </p>
-                  ) : (
-                    <p className="font-semibold text-white">
-                      {asset.tokenIds?.length || 0} NFTs
-                    </p>
+                  
+                  {selectedAsset === asset.address && (
+                    <CheckCircleIcon className="w-5 h-5 text-primary" />
                   )}
                 </div>
-
-                {/* Selected Indicator */}
-                {isSelected && (
-                  <div className="w-6 h-6 bg-[#FF2975] rounded-full flex items-center justify-center">
-                    <CheckIcon className="w-4 h-4 text-white" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Description */}
-            {asset.metadata?.description && (
-              <p className="text-sm text-gray-400 mt-2 line-clamp-2">
-                {asset.metadata.description}
-              </p>
-            )}
-          </button>
-        );
-      })}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

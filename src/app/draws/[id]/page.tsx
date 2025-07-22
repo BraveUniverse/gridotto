@@ -3,23 +3,27 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useUPProvider } from '@/hooks/useUPProvider';
-import { useGridottoContract } from '@/hooks/useGridottoContract';
-import Web3 from 'web3';
+import { useEthers } from '@/contexts/EthersContext';
+import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
+import { useGridottoExecutionV2 } from '@/hooks/useGridottoExecutionV2';
+import { useGridottoRefund } from '@/hooks/useGridottoRefund';
 import { 
-  TicketIcon,
-  ClockIcon,
-  UsersIcon,
+  TicketIcon, 
+  UsersIcon, 
   TrophyIcon,
-  WalletIcon,
-  InformationCircleIcon,
-  ExclamationTriangleIcon,
+  ClockIcon,
+  SparklesIcon,
+  ArrowLeftIcon,
   CheckCircleIcon,
-  PlayIcon,
-  ChartBarIcon,
-  ShoppingCartIcon,
-  SparklesIcon
+  XCircleIcon,
+  CurrencyDollarIcon,
+  BoltIcon,
+  GiftIcon
 } from '@heroicons/react/24/outline';
+import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
+import { ethers } from 'ethers';
+import toast from 'react-hot-toast';
+import Confetti from 'react-confetti';
 
 interface DrawDetails {
   id: number;
@@ -32,563 +36,559 @@ interface DrawDetails {
   endTime: number;
   isActive: boolean;
   isCompleted: boolean;
+  isCancelled: boolean;
   winners: string[];
   participantCount: number;
   minParticipants: number;
   maxParticipants: number;
-  executorReward?: string;
+  executorReward: string;
+  tokenAddress?: string;
 }
 
-export default function DrawDetailPage() {
-  const { id } = useParams();
+const DrawDetailsPage = () => {
+  const params = useParams();
   const router = useRouter();
-  const drawId = parseInt(id as string);
+  const drawId = Number(params.id);
   
-  const { account, isConnected } = useUPProvider();
-  const { 
-    getAdvancedDrawInfo, 
-    purchaseTickets, 
-    getUserDrawExecutorReward,
-    executeUserDraw,
-    canUserParticipate,
-    getDrawParticipants
-  } = useGridottoContract();
+  const { account, isConnected } = useEthers();
+  const { getDrawDetails, buyTickets, cancelDraw } = useGridottoCoreV2();
+  const { executeDraw, getDrawWinners, canExecuteDraw } = useGridottoExecutionV2();
+  const { claimPrize, canClaimPrize, claimRefund, getRefundAmount } = useGridottoRefund();
   
   const [draw, setDraw] = useState<DrawDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [buying, setBuying] = useState(false);
+  const [ticketCount, setTicketCount] = useState(1);
+  const [purchasing, setPurchasing] = useState(false);
   const [executing, setExecuting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [buyAmount, setBuyAmount] = useState(1);
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [canParticipate, setCanParticipate] = useState(true);
-  const [participationReason, setParticipationReason] = useState<string>('');
-  const [participants, setParticipants] = useState<{address: string, tickets: number}[]>([]);
-  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [canExecute, setCanExecute] = useState(false);
+  const [canClaim, setCanClaim] = useState(false);
+  const [refundAmount, setRefundAmount] = useState('0');
 
   useEffect(() => {
-    const loadDrawDetails = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch advanced draw info
-        const drawInfo = await getAdvancedDrawInfo(drawId);
-        
-        if (drawInfo) {
-          // Get executor reward
-          const executorReward = await getUserDrawExecutorReward(drawId);
-          
-          const drawDetails: DrawDetails = {
-            id: drawId,
-            creator: drawInfo.creator,
-            drawType: drawInfo.drawType,
-            ticketPrice: drawInfo.ticketPrice,
-            ticketsSold: drawInfo.totalTickets.toString(),
-            maxTickets: drawInfo.maxParticipants.toString() || '999999',
-            currentPrizePool: drawInfo.prizePool,
-            endTime: Number(drawInfo.endTime),
-            isActive: !drawInfo.isCompleted && Number(drawInfo.endTime) > Date.now() / 1000,
-            isCompleted: drawInfo.isCompleted,
-            winners: drawInfo.winners || [],
-            participantCount: Number(drawInfo.participantCount),
-            minParticipants: Number(drawInfo.minParticipants),
-            maxParticipants: Number(drawInfo.maxParticipants),
-            executorReward
-          };
-          
-          setDraw(drawDetails);
-          
-          // Check if user can participate
-          if (account) {
-            const participation = await canUserParticipate(drawId, account);
-            setCanParticipate(participation.canParticipate);
-            setParticipationReason(participation.reason);
+    loadDrawDetails();
+  }, [drawId]);
+
+  useEffect(() => {
+    if (draw && account) {
+      checkUserStatus();
+    }
+  }, [draw, account]);
+
+  const loadDrawDetails = async () => {
+    try {
+      setLoading(true);
+      
+      const details = await getDrawDetails(drawId);
+      
+      if (details) {
+        // Get winners if draw is completed
+        let winners: string[] = [];
+        if (details.isCompleted) {
+          const winnersData = await getDrawWinners(drawId);
+          if (winnersData) {
+            winners = winnersData.winners;
           }
         }
-      } catch (err) {
-        console.error('Error loading draw details:', err);
-        setError('Failed to load draw details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const loadParticipants = async () => {
-      try {
-        setLoadingParticipants(true);
-        const { participants: addrs, ticketCounts } = await getDrawParticipants(drawId, 0, 50);
         
-        const participantList = addrs.map((addr: string, index: number) => ({
-          address: addr,
-          tickets: Number(ticketCounts[index])
-        }));
+        // Calculate executor reward (5% of platform fee)
+        const platformFee = (details.prizePool * details.platformFeePercent) / BigInt(10000);
+        const executorReward = (platformFee * BigInt(500)) / BigInt(10000); // 5% of platform fee
         
-        setParticipants(participantList);
-      } catch (err) {
-        console.error('Error loading participants:', err);
-      } finally {
-        setLoadingParticipants(false);
+        const drawDetails: DrawDetails = {
+          id: drawId,
+          creator: details.creator,
+          drawType: details.drawType,
+          ticketPrice: details.ticketPrice.toString(),
+          ticketsSold: details.ticketsSold.toString(),
+          maxTickets: details.maxTickets.toString(),
+          currentPrizePool: details.prizePool.toString(),
+          endTime: Number(details.endTime),
+          isActive: !details.isCompleted && !details.isCancelled && Number(details.endTime) > Date.now() / 1000,
+          isCompleted: details.isCompleted,
+          isCancelled: details.isCancelled,
+          winners,
+          participantCount: Number(details.participantCount),
+          minParticipants: Number(details.minParticipants),
+          maxParticipants: Number(details.maxTickets),
+          executorReward: executorReward.toString(),
+          tokenAddress: details.tokenAddress
+        };
+        
+        setDraw(drawDetails);
+        
+        if (winners.includes(account?.toLowerCase() || '')) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 10000);
+        }
       }
-    };
+    } catch (err) {
+      console.error('Error loading draw details:', err);
+      toast.error('Failed to load draw details');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    loadDrawDetails();
-    loadParticipants();
-    
-    // Refresh every 30 seconds
-    const interval = setInterval(() => {
-      loadDrawDetails();
-      loadParticipants();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [drawId, account, getAdvancedDrawInfo, getUserDrawExecutorReward, canUserParticipate, getDrawParticipants]);
+  const checkUserStatus = async () => {
+    if (!draw || !account) return;
+
+    try {
+      // Check if can execute
+      const executableStatus = await canExecuteDraw(drawId);
+      setCanExecute(executableStatus.canExecute);
+
+      // Check if can claim prize
+      if (draw.isCompleted && !draw.isCancelled) {
+        const claimStatus = await canClaimPrize(drawId, account);
+        setCanClaim(claimStatus.canClaim);
+      }
+
+      // Check refund amount if cancelled
+      if (draw.isCancelled) {
+        const amount = await getRefundAmount(drawId, account);
+        setRefundAmount(amount.toString());
+      }
+    } catch (err) {
+      console.error('Error checking user status:', err);
+    }
+  };
 
   const handleBuyTickets = async () => {
-    if (!draw || !account) return;
-    
-    console.log('=== BUY TICKETS - STARTING ===');
-    console.log('Draw ID:', drawId);
-    console.log('Ticket Amount:', buyAmount);
-    console.log('Ticket Price (wei):', draw.ticketPrice);
-    console.log('Total Cost (wei):', (BigInt(draw.ticketPrice) * BigInt(buyAmount)).toString());
-    
+    if (!isConnected) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    setPurchasing(true);
     try {
-      setBuying(true);
-      setError(null);
-      setTxHash(null);
-      
-      const tx = await purchaseTickets(drawId, buyAmount, draw.ticketPrice);
-      setTxHash(tx.transactionHash);
-      
-      // Refresh draw details
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-      
+      await buyTickets(drawId, ticketCount);
+      toast.success(`Successfully purchased ${ticketCount} ticket(s)!`);
+      await loadDrawDetails();
     } catch (err: any) {
-      console.error('Error buying tickets:', err);
-      console.error('Error details:', {
-        message: err.message,
-        code: err.code,
-        data: err.data
-      });
-      setError(err.message || 'Failed to buy tickets');
+      console.error('Error purchasing tickets:', err);
+      toast.error(err.message || 'Failed to purchase tickets');
     } finally {
-      setBuying(false);
+      setPurchasing(false);
     }
   };
 
   const handleExecuteDraw = async () => {
-    if (!draw || !account) return;
-    
-    console.log('=== EXECUTE DRAW - STARTING ===');
-    console.log('Draw ID:', drawId);
-    console.log('Executor Reward:', draw.executorReward);
-    console.log('Account:', account);
-    
+    if (!isConnected) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    setExecuting(true);
     try {
-      setExecuting(true);
-      setError(null);
-      
-      const tx = await executeUserDraw(drawId);
-      setTxHash(tx.transactionHash);
-      
-      // Refresh draw details
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-      
+      const result = await executeDraw(drawId);
+      if (result) {
+        toast.success('Draw executed successfully!');
+        await loadDrawDetails();
+      }
     } catch (err: any) {
       console.error('Error executing draw:', err);
-      console.error('Error details:', {
-        message: err.message,
-        code: err.code,
-        data: err.data
-      });
-      setError(err.message || 'Failed to execute draw');
+      toast.error(err.message || 'Failed to execute draw');
     } finally {
       setExecuting(false);
     }
   };
 
-  const getRemainingTime = (endTime: number) => {
+  const handleClaimPrize = async () => {
+    if (!isConnected) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    setClaiming(true);
+    try {
+      await claimPrize(drawId);
+      toast.success('Prize claimed successfully!');
+      await checkUserStatus();
+    } catch (err: any) {
+      console.error('Error claiming prize:', err);
+      toast.error(err.message || 'Failed to claim prize');
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  const handleClaimRefund = async () => {
+    if (!isConnected) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    setClaiming(true);
+    try {
+      await claimRefund(drawId);
+      toast.success('Refund claimed successfully!');
+      await checkUserStatus();
+    } catch (err: any) {
+      console.error('Error claiming refund:', err);
+      toast.error(err.message || 'Failed to claim refund');
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  const handleCancelDraw = async () => {
+    if (!isConnected || !draw || account?.toLowerCase() !== draw.creator.toLowerCase()) {
+      return;
+    }
+
+    if (!confirm('Are you sure you want to cancel this draw? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await cancelDraw(drawId);
+      toast.success('Draw cancelled successfully');
+      await loadDrawDetails();
+    } catch (err: any) {
+      console.error('Error cancelling draw:', err);
+      toast.error(err.message || 'Failed to cancel draw');
+    }
+  };
+
+  const getDrawTypeLabel = (type: number) => {
+    switch (type) {
+      case 0: return 'LYX Prize';
+      case 1: return 'Token Prize';
+      case 2: return 'NFT Prize';
+      case 3: return 'Weekly Platform Draw';
+      case 4: return 'Monthly Platform Draw';
+      default: return 'Unknown';
+    }
+  };
+
+  const getDrawTypeIcon = (type: number) => {
+    switch (type) {
+      case 0: return CurrencyDollarIcon;
+      case 1: return CurrencyDollarIcon;
+      case 2: return GiftIcon;
+      case 3: return ClockIcon;
+      case 4: return TrophyIcon;
+      default: return SparklesIcon;
+    }
+  };
+
+  const formatTimeLeft = (endTime: number) => {
     const now = Date.now() / 1000;
-    const diff = endTime - now;
+    const timeLeft = endTime - now;
     
-    if (diff <= 0) return 'Ended';
+    if (timeLeft <= 0) return 'Ended';
     
-    const days = Math.floor(diff / 86400);
-    const hours = Math.floor((diff % 86400) / 3600);
-    const minutes = Math.floor((diff % 3600) / 60);
+    const days = Math.floor(timeLeft / 86400);
+    const hours = Math.floor((timeLeft % 86400) / 3600);
+    const minutes = Math.floor((timeLeft % 3600) / 60);
     
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
   };
 
-  const getDrawTypeLabel = (type: number) => {
-    switch (type) {
-      case 2: return 'LYX Prize';
-      case 3: return 'Token Prize';
-      case 4: return 'NFT Prize';
-      default: return 'Unknown';
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <SparklesIcon className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!draw) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Draw not found</h1>
-          <Link href="/draws" className="text-primary hover:underline">
-            Back to draws
+          <XCircleIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Draw Not Found</h2>
+          <p className="text-gray-400 mb-4">This draw doesn't exist or has been removed.</p>
+          <Link href="/draws" className="btn-primary">
+            Back to Draws
           </Link>
         </div>
       </div>
     );
   }
 
-  const ticketPriceInLYX = parseFloat(Web3.utils.fromWei(draw.ticketPrice, 'ether'));
-  const prizePoolInLYX = parseFloat(Web3.utils.fromWei(draw.currentPrizePool, 'ether'));
-  const totalCost = ticketPriceInLYX * buyAmount;
-  const soldPercentage = draw.maxTickets === '999999' ? 0 : (parseInt(draw.ticketsSold) / parseInt(draw.maxTickets)) * 100;
-  const remainingTickets = draw.maxTickets === '999999' ? 999999 : parseInt(draw.maxTickets) - parseInt(draw.ticketsSold);
-  const canExecute = !draw.isActive && !draw.isCompleted && draw.participantCount >= draw.minParticipants;
+  const DrawTypeIcon = getDrawTypeIcon(draw.drawType);
+  const ticketPrice = ethers.formatEther(draw.ticketPrice);
+  const prizePool = ethers.formatEther(draw.currentPrizePool);
+  const progress = (Number(draw.ticketsSold) / Number(draw.maxTickets)) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        {/* Back button */}
-        <Link href="/draws" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
-          <span>←</span>
-          <span>Back to draws</span>
+    <div className="min-h-screen py-20">
+      {showConfetti && <Confetti />}
+      
+      <div className="container mx-auto px-4">
+        {/* Back Button */}
+        <Link 
+          href="/draws" 
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+          Back to Draws
         </Link>
 
-        {/* Main content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left column - Draw details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Header */}
-            <div className="glass-card p-6">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">Draw #{draw.id}</h1>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="px-3 py-1 bg-primary/20 text-primary rounded-full">
-                      {getDrawTypeLabel(draw.drawType)}
-                    </span>
-                    {draw.isCompleted ? (
-                      <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full">
-                        Completed
-                      </span>
-                    ) : draw.isActive ? (
-                      <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full">
-                        Ready to Execute
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-400">Prize Pool</p>
-                  <p className="text-3xl font-bold text-primary">{prizePoolInLYX.toFixed(2)} LYX</p>
-                </div>
+        {/* Draw Header */}
+        <div className="glass-card p-8 mb-8">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary/20 rounded-lg">
+                <DrawTypeIcon className="w-8 h-8 text-primary" />
               </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white/5 rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-gray-400 mb-1">
-                    <TicketIcon className="w-4 h-4" />
-                    <span className="text-sm">Tickets Sold</span>
-                  </div>
-                  <p className="text-xl font-bold text-white">{draw.ticketsSold}</p>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-gray-400 mb-1">
-                    <UsersIcon className="w-4 h-4" />
-                    <span className="text-sm">Participants</span>
-                  </div>
-                  <p className="text-xl font-bold text-white">{draw.participantCount}</p>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-gray-400 mb-1">
-                    <ClockIcon className="w-4 h-4" />
-                    <span className="text-sm">Time Left</span>
-                  </div>
-                  <p className="text-xl font-bold text-white">{getRemainingTime(draw.endTime)}</p>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-gray-400 mb-1">
-                    <WalletIcon className="w-4 h-4" />
-                    <span className="text-sm">Creator</span>
-                  </div>
-                  <p className="text-sm font-mono text-white">
-                    {draw.creator.slice(0, 6)}...{draw.creator.slice(-4)}
-                  </p>
-                </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-1">
+                  Draw #{draw.id}
+                </h1>
+                <p className="text-gray-400">{getDrawTypeLabel(draw.drawType)}</p>
               </div>
             </div>
-
-            {/* Winners (if completed) */}
-            {draw.isCompleted && draw.winners.length > 0 && (
-              <div className="glass-card p-6">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                  <TrophyIcon className="w-6 h-6 text-yellow-400" />
-                  Winners
-                </h2>
-                <div className="space-y-2">
-                  {draw.winners.map((winner, index) => (
-                    <div key={index} className="flex items-center justify-between py-2 px-4 bg-white/5 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <span className="text-yellow-400">#{index + 1}</span>
-                        <span className="font-mono text-white">
-                          {winner.slice(0, 6)}...{winner.slice(-4)}
-                        </span>
-                      </div>
-                      <span className="text-primary font-bold">
-                        {(prizePoolInLYX / draw.winners.length).toFixed(2)} LYX
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Requirements */}
-            {draw.minParticipants > 0 && (
-              <div className="glass-card p-6">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                  <InformationCircleIcon className="w-6 h-6 text-blue-400" />
-                  Requirements
-                </h2>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-gray-400">Minimum Participants</span>
-                    <span className="text-white font-medium">
-                      {draw.participantCount} / {draw.minParticipants}
-                    </span>
-                  </div>
-                  {draw.participantCount < draw.minParticipants && (
-                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                      <p className="text-yellow-400 text-sm flex items-center gap-2">
-                        <ExclamationTriangleIcon className="w-4 h-4" />
-                        Need {draw.minParticipants - draw.participantCount} more participants to execute
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Participants List */}
-            <div className="glass-card p-6">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <UsersIcon className="w-6 h-6 text-green-400" />
-                Participants ({participants.length})
-              </h2>
-              {loadingParticipants ? (
-                <div className="flex justify-center py-8">
-                  <SparklesIcon className="w-6 h-6 animate-spin text-primary" />
-                </div>
-              ) : participants.length > 0 ? (
-                <div className="space-y-2">
-                  {participants.map((participant, index) => (
-                    <div key={index} className="flex items-center justify-between py-2 px-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center">
-                          <span className="text-xs font-bold text-primary">#{index + 1}</span>
-                        </div>
-                        <span className="font-mono text-sm text-white">
-                          {participant.address.slice(0, 6)}...{participant.address.slice(-4)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TicketIcon className="w-4 h-4 text-gray-400" />
-                        <span className="text-white font-medium">{participant.tickets}</span>
-                        <span className="text-gray-400 text-sm">tickets</span>
-                      </div>
-                    </div>
-                  ))}
-                  {participants.length >= 50 && (
-                    <p className="text-center text-gray-400 text-sm mt-4">
-                      Showing first 50 participants
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-center text-gray-400 py-8">
-                  No participants yet. Be the first!
-                </p>
-              )}
+            
+            {/* Status Badge */}
+            <div className={`px-4 py-2 rounded-lg font-medium ${
+              draw.isCancelled 
+                ? 'bg-red-500/20 text-red-400'
+                : draw.isCompleted 
+                  ? 'bg-green-500/20 text-green-400' 
+                  : draw.isActive 
+                    ? 'bg-primary/20 text-primary' 
+                    : 'bg-gray-500/20 text-gray-400'
+            }`}>
+              {draw.isCancelled ? 'Cancelled' : draw.isCompleted ? 'Completed' : draw.isActive ? 'Active' : 'Ended'}
             </div>
           </div>
 
-          {/* Right column - Actions */}
-          <div className="lg:col-span-1">
-            <div className="glass-card p-6 sticky top-24">
-              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <ShoppingCartIcon className="w-6 h-6 text-primary" />
-                Actions
-              </h2>
+          {/* Prize Pool */}
+          <div className="text-center mb-6">
+            <p className="text-gray-400 mb-2">Current Prize Pool</p>
+            <p className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600">
+              {prizePool} LYX
+            </p>
+          </div>
 
-              {/* Buy tickets section */}
-              {draw.isActive && (
-                <>
-                  <div className="space-y-4 mb-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        Number of Tickets
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => setBuyAmount(Math.max(1, buyAmount - 1))}
-                          className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold transition-colors"
-                          disabled={buyAmount <= 1}
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={buyAmount}
-                          onChange={(e) => setBuyAmount(Math.max(1, Math.min(remainingTickets, parseInt(e.target.value) || 1)))}
-                          className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white text-center"
-                          min="1"
-                          max={remainingTickets}
-                        />
-                        <button
-                          onClick={() => setBuyAmount(Math.min(remainingTickets, buyAmount + 1))}
-                          className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold transition-colors"
-                          disabled={buyAmount >= remainingTickets}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
+          {/* Progress Bar */}
+          <div className="mb-6">
+            <div className="flex justify-between text-sm text-gray-400 mb-2">
+              <span>{draw.ticketsSold} / {draw.maxTickets} tickets sold</span>
+              <span>{progress.toFixed(1)}%</span>
+            </div>
+            <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-primary to-purple-600 transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
 
-                    <div className="space-y-2 py-4 border-t border-white/10">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Price per ticket</span>
-                        <span className="text-white">{ticketPriceInLYX} LYX</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Quantity</span>
-                        <span className="text-white">×{buyAmount}</span>
-                      </div>
-                      <div className="flex justify-between pt-2 border-t border-white/10">
-                        <span className="text-white font-medium">Total Cost</span>
-                        <span className="text-xl font-bold text-primary">{totalCost.toFixed(2)} LYX</span>
-                      </div>
-                    </div>
-                  </div>
+          {/* Draw Info Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <p className="text-gray-400 text-sm">Ticket Price</p>
+              <p className="text-xl font-bold text-white">{ticketPrice} LYX</p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-400 text-sm">Participants</p>
+              <p className="text-xl font-bold text-white">{draw.participantCount}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-400 text-sm">Time Left</p>
+              <p className="text-xl font-bold text-white">{formatTimeLeft(draw.endTime)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-400 text-sm">Min Participants</p>
+              <p className="text-xl font-bold text-white">{draw.minParticipants}</p>
+            </div>
+          </div>
+        </div>
 
-                  {canParticipate ? (
-                    <button
-                      onClick={handleBuyTickets}
-                      disabled={buying || !isConnected}
-                      className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                                              {buying ? (
-                          <span className="flex items-center justify-center gap-2">
-                           <SparklesIcon className="w-4 h-4 animate-spin" />
-                           Processing...
-                          </span>
-                      ) : isConnected ? (
-                        'Buy Tickets'
-                      ) : (
-                        'Connect Wallet to Buy'
-                      )}
-                    </button>
-                  ) : (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                      <p className="text-red-400 text-sm">{participationReason}</p>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Execute draw section */}
-              {canExecute && (
+        {/* Action Section */}
+        {draw.isActive && !draw.isCompleted && !draw.isCancelled && (
+          <div className="glass-card p-6 mb-8">
+            <h2 className="text-xl font-bold text-white mb-4">Buy Tickets</h2>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={handleExecuteDraw}
-                  disabled={executing || !isConnected}
-                  className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
+                  className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
                 >
-                                      {executing ? (
-                      <>
-                       <SparklesIcon className="w-4 h-4 animate-spin" />
-                       <span>Executing...</span>
-                      </>
-                  ) : (
-                    <>
-                                             <PlayIcon className="w-4 h-4" />
-                      <span>
-                        Execute Draw
-                        {draw.executorReward && Number(draw.executorReward) > 0 && (
-                          <span className="ml-1 text-xs opacity-80">
-                            & Earn {Web3.utils.fromWei(draw.executorReward, 'ether')} LYX
-                          </span>
-                        )}
-                      </span>
-                    </>
-                  )}
+                  -
                 </button>
-              )}
-
-              {/* Status messages */}
-              {draw.isCompleted && (
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <p className="text-green-400 text-sm flex items-center gap-2">
-                    <CheckCircleIcon className="w-4 h-4" />
-                    Draw completed successfully
-                  </p>
-                </div>
-              )}
-
-              {!draw.isActive && !draw.isCompleted && draw.participantCount < draw.minParticipants && (
-                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                  <p className="text-yellow-400 text-sm">
-                    Minimum {draw.minParticipants} participants required
-                  </p>
-                </div>
-              )}
-
-              {/* Error and success messages */}
-              {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg mt-4">
-                  <p className="text-red-400 text-sm">{error}</p>
-                </div>
-              )}
-
-              {txHash && (
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg mt-4">
-                  <p className="text-green-400 text-sm">
-                    Transaction submitted!
-                  </p>
-                  <a
-                    href={`https://explorer.execution.testnet.lukso.network/tx/${txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline text-xs"
-                  >
-                    View on explorer →
-                  </a>
-                </div>
-              )}
+                <input
+                  type="number"
+                  value={ticketCount}
+                  onChange={(e) => setTicketCount(Math.max(1, Math.min(100, Number(e.target.value))))}
+                  className="w-20 text-center bg-white/10 rounded-lg px-2 py-2 text-white"
+                  min="1"
+                  max="100"
+                />
+                <button
+                  onClick={() => setTicketCount(Math.min(100, ticketCount + 1))}
+                  className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                >
+                  +
+                </button>
+              </div>
+              
+              <div className="flex-1">
+                <p className="text-sm text-gray-400">Total Cost</p>
+                <p className="text-xl font-bold text-white">
+                  {(Number(ticketPrice) * ticketCount).toFixed(4)} LYX
+                </p>
+              </div>
+              
+              <button
+                onClick={handleBuyTickets}
+                disabled={purchasing || !isConnected}
+                className="btn-primary px-8"
+              >
+                {purchasing ? 'Purchasing...' : 'Buy Tickets'}
+              </button>
             </div>
           </div>
+        )}
+
+        {/* Execute Draw Section */}
+        {canExecute && !draw.isCompleted && (
+          <div className="glass-card p-6 mb-8">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <BoltIcon className="w-6 h-6 text-yellow-400" />
+              Execute Draw
+            </h2>
+            <p className="text-gray-400 mb-4">
+              This draw has ended and is ready to be executed. Execute it to select winners and earn a reward!
+            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Executor Reward</p>
+                <p className="text-xl font-bold text-yellow-400">
+                  {ethers.formatEther(draw.executorReward)} LYX
+                </p>
+              </div>
+              <button
+                onClick={handleExecuteDraw}
+                disabled={executing}
+                className="btn-primary px-8"
+              >
+                {executing ? 'Executing...' : 'Execute Draw'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Claim Prize Section */}
+        {canClaim && draw.isCompleted && (
+          <div className="glass-card p-6 mb-8">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <TrophyIcon className="w-6 h-6 text-yellow-400" />
+              Congratulations! You Won!
+            </h2>
+            <p className="text-gray-400 mb-4">
+              You have won this draw! Claim your prize now.
+            </p>
+            <button
+              onClick={handleClaimPrize}
+              disabled={claiming}
+              className="btn-primary px-8"
+            >
+              {claiming ? 'Claiming...' : 'Claim Prize'}
+            </button>
+          </div>
+        )}
+
+        {/* Refund Section */}
+        {draw.isCancelled && refundAmount !== '0' && (
+          <div className="glass-card p-6 mb-8">
+            <h2 className="text-xl font-bold text-white mb-4">Claim Refund</h2>
+            <p className="text-gray-400 mb-4">
+              This draw was cancelled. You can claim a refund for your tickets.
+            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Refund Amount</p>
+                <p className="text-xl font-bold text-green-400">
+                  {ethers.formatEther(refundAmount)} LYX
+                </p>
+              </div>
+              <button
+                onClick={handleClaimRefund}
+                disabled={claiming}
+                className="btn-primary px-8"
+              >
+                {claiming ? 'Claiming...' : 'Claim Refund'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Winners Section */}
+        {draw.isCompleted && draw.winners.length > 0 && (
+          <div className="glass-card p-6 mb-8">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <TrophyIcon className="w-6 h-6 text-yellow-400" />
+              Winners
+            </h2>
+            <div className="space-y-3">
+              {draw.winners.map((winner, index) => (
+                <div key={winner} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                    </span>
+                    <ProfileDisplay address={winner} size="sm" showName={true} />
+                  </div>
+                  {winner.toLowerCase() === account?.toLowerCase() && (
+                    <span className="text-sm text-green-400 font-medium">You!</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Draw Details */}
+        <div className="glass-card p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Draw Details</h2>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between py-2 border-b border-white/10">
+              <span className="text-gray-400">Creator</span>
+              <ProfileDisplay address={draw.creator} size="sm" showName={true} />
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-white/10">
+              <span className="text-gray-400">Draw Type</span>
+              <span className="text-white">{getDrawTypeLabel(draw.drawType)}</span>
+            </div>
+            {draw.tokenAddress && draw.tokenAddress !== ethers.ZeroAddress && (
+              <div className="flex items-center justify-between py-2 border-b border-white/10">
+                <span className="text-gray-400">Token/NFT Address</span>
+                <span className="text-white font-mono text-sm">
+                  {draw.tokenAddress.slice(0, 6)}...{draw.tokenAddress.slice(-4)}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between py-2 border-b border-white/10">
+              <span className="text-gray-400">End Time</span>
+              <span className="text-white">
+                {new Date(draw.endTime * 1000).toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Cancel Draw Button (only for creator) */}
+          {draw.isActive && !draw.isCompleted && !draw.isCancelled && 
+           account?.toLowerCase() === draw.creator.toLowerCase() && (
+            <button
+              onClick={handleCancelDraw}
+              className="mt-6 w-full py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg font-medium transition-colors"
+            >
+              Cancel Draw
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default DrawDetailsPage;

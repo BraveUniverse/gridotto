@@ -17,6 +17,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
+import { ethers } from 'ethers';
 
 type TabType = 'winners' | 'buyers' | 'creators' | 'executors';
 
@@ -33,7 +34,7 @@ const LeaderboardPage = () => {
     getTopTicketBuyers, 
     getTopDrawCreators, 
     getTopExecutors,
-    getPlatformStats,
+    getPlatformStatistics,
     loading: contractLoading 
   } = useGridottoLeaderboard();
   
@@ -63,7 +64,7 @@ const LeaderboardPage = () => {
           getTopTicketBuyers(20),
           getTopDrawCreators(20),
           getTopExecutors(20),
-          getPlatformStats()
+          getPlatformStatistics()
         ]);
         
         setWinners(winnersData);
@@ -72,7 +73,12 @@ const LeaderboardPage = () => {
         setExecutors(executorsData);
         
         if (platformStats) {
-          setStats(platformStats);
+          setStats({
+            totalPrizesDistributed: ethers.formatEther(platformStats.totalPrizesDistributed),
+            totalTicketsSold: platformStats.totalTicketsSold.toString(),
+            totalDrawsCreated: platformStats.totalDrawsCreated.toString(),
+            totalExecutions: platformStats.totalExecutions.toString()
+          });
         }
       } catch (err) {
         console.error('Error loading leaderboard:', err);
@@ -82,7 +88,7 @@ const LeaderboardPage = () => {
     };
 
     loadLeaderboardData();
-  }, [contractLoading, getTopWinners, getTopTicketBuyers, getTopDrawCreators, getTopExecutors, getPlatformStats]);
+  }, [contractLoading, getTopWinners, getTopTicketBuyers, getTopDrawCreators, getTopExecutors, getPlatformStatistics]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -95,7 +101,8 @@ const LeaderboardPage = () => {
     return `#${rank}`;
   };
 
-  const getTimeAgo = (date: Date) => {
+  const getTimeAgo = (timestamp: bigint) => {
+    const date = new Date(Number(timestamp) * 1000);
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
     if (seconds < 60) return `${seconds}s ago`;
     const minutes = Math.floor(seconds / 60);
@@ -104,6 +111,11 @@ const LeaderboardPage = () => {
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
     return `${days}d ago`;
+  };
+
+  const getSuccessRate = (successful: bigint, total: bigint) => {
+    if (total === BigInt(0)) return 0;
+    return Number((successful * BigInt(100)) / total);
   };
 
   return (
@@ -180,23 +192,23 @@ const LeaderboardPage = () => {
                 </h2>
                 <div className="space-y-2">
                   {winners.length > 0 ? (
-                    winners.map((entry) => (
+                    winners.map((entry, index) => (
                       <div
-                        key={entry.address}
+                        key={entry.player}
                         className={`flex items-center justify-between p-4 rounded-lg transition-all hover:bg-white/10 ${
-                          entry.rank <= 3 ? 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10' : 'bg-white/5'
+                          index < 3 ? 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10' : 'bg-white/5'
                         }`}
                       >
                         <div className="flex items-center gap-4">
                           <div className="text-2xl font-bold">
-                            {getRankIcon(entry.rank)}
+                            {getRankIcon(index + 1)}
                           </div>
                           <div>
-                            <ProfileDisplay address={entry.address} size="md" showName={true} />
+                            <ProfileDisplay address={entry.player} size="md" showName={true} />
                             <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                               <span className="flex items-center gap-1">
                                 <CheckCircleIcon className="w-4 h-4" />
-                                {entry.totalWins} wins
+                                {entry.totalWins.toString()} wins
                               </span>
                               <span className="flex items-center gap-1">
                                 <ClockIcon className="w-4 h-4" />
@@ -207,7 +219,7 @@ const LeaderboardPage = () => {
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
-                            {entry.totalWinnings} LYX
+                            {ethers.formatEther(entry.totalWinnings)} LYX
                           </p>
                           <p className="text-sm text-gray-400">Total Won</p>
                         </div>
@@ -231,19 +243,19 @@ const LeaderboardPage = () => {
                 </h2>
                 <div className="space-y-2">
                   {buyers.length > 0 ? (
-                    buyers.map((entry) => (
+                    buyers.map((entry, index) => (
                       <div
-                        key={entry.address}
+                        key={entry.player}
                         className={`flex items-center justify-between p-4 rounded-lg transition-all hover:bg-white/10 ${
-                          entry.rank <= 3 ? 'bg-gradient-to-r from-blue-500/10 to-cyan-500/10' : 'bg-white/5'
+                          index < 3 ? 'bg-gradient-to-r from-blue-500/10 to-cyan-500/10' : 'bg-white/5'
                         }`}
                       >
                         <div className="flex items-center gap-4">
                           <div className="text-2xl font-bold">
-                            {getRankIcon(entry.rank)}
+                            {getRankIcon(index + 1)}
                           </div>
                           <div>
-                            <ProfileDisplay address={entry.address} size="md" showName={true} />
+                            <ProfileDisplay address={entry.player} size="md" showName={true} />
                             <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                               <span className="flex items-center gap-1">
                                 <TicketIcon className="w-4 h-4" />
@@ -258,7 +270,7 @@ const LeaderboardPage = () => {
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                            {entry.totalSpent} LYX
+                            {ethers.formatEther(entry.totalSpent)} LYX
                           </p>
                           <p className="text-sm text-gray-400">Total Spent</p>
                         </div>
@@ -282,34 +294,34 @@ const LeaderboardPage = () => {
                 </h2>
                 <div className="space-y-2">
                   {creators.length > 0 ? (
-                    creators.map((entry) => (
+                    creators.map((entry, index) => (
                       <div
-                        key={entry.address}
+                        key={entry.creator}
                         className={`flex items-center justify-between p-4 rounded-lg transition-all hover:bg-white/10 ${
-                          entry.rank <= 3 ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10' : 'bg-white/5'
+                          index < 3 ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10' : 'bg-white/5'
                         }`}
                       >
                         <div className="flex items-center gap-4">
                           <div className="text-2xl font-bold">
-                            {getRankIcon(entry.rank)}
+                            {getRankIcon(index + 1)}
                           </div>
                           <div>
-                            <ProfileDisplay address={entry.address} size="md" showName={true} />
+                            <ProfileDisplay address={entry.creator} size="md" showName={true} />
                             <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                               <span className="flex items-center gap-1">
                                 <GiftIcon className="w-4 h-4" />
-                                {entry.drawsCreated} draws
+                                {entry.drawsCreated.toString()} draws
                               </span>
                               <span className="flex items-center gap-1">
                                 <StarIcon className="w-4 h-4 text-yellow-400" />
-                                {entry.successRate} success
+                                {getSuccessRate(entry.successfulDraws, entry.drawsCreated)}% success
                               </span>
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                            {entry.totalRevenue} LYX
+                            {ethers.formatEther(entry.totalRevenue)} LYX
                           </p>
                           <p className="text-sm text-gray-400">Total Revenue</p>
                         </div>
@@ -333,30 +345,30 @@ const LeaderboardPage = () => {
                 </h2>
                 <div className="space-y-2">
                   {executors.length > 0 ? (
-                    executors.map((entry) => (
+                    executors.map((entry, index) => (
                       <div
-                        key={entry.address}
+                        key={entry.executor}
                         className={`flex items-center justify-between p-4 rounded-lg transition-all hover:bg-white/10 ${
-                          entry.rank <= 3 ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10' : 'bg-white/5'
+                          index < 3 ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10' : 'bg-white/5'
                         }`}
                       >
                         <div className="flex items-center gap-4">
                           <div className="text-2xl font-bold">
-                            {getRankIcon(entry.rank)}
+                            {getRankIcon(index + 1)}
                           </div>
                           <div>
-                            <ProfileDisplay address={entry.address} size="md" showName={true} />
+                            <ProfileDisplay address={entry.executor} size="md" showName={true} />
                             <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                               <span className="flex items-center gap-1">
                                 <BoltIcon className="w-4 h-4" />
-                                {entry.executionCount} executions
+                                {entry.executionCount.toString()} executions
                               </span>
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
-                            {entry.totalFeesEarned} LYX
+                            {ethers.formatEther(entry.totalFeesEarned)} LYX
                           </p>
                           <p className="text-sm text-gray-400">Total Earned (5% fees)</p>
                         </div>

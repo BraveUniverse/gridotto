@@ -1,56 +1,60 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useGridottoContract } from '@/hooks/useGridottoContract';
-import { useUPProvider } from '@/hooks/useUPProvider';
+import { useEthers } from '@/contexts/EthersContext';
+import { useGridottoAdmin } from '@/hooks/useGridottoAdmin';
 import { 
   ShieldCheckIcon, 
-  BanknotesIcon, 
-  UsersIcon,
   ChartBarIcon,
-  ExclamationTriangleIcon,
-  ArrowDownTrayIcon,
+  CurrencyDollarIcon,
   CogIcon,
-  CheckCircleIcon
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
-import Web3 from 'web3';
+import { ethers } from 'ethers';
+import toast from 'react-hot-toast';
 
 const AdminPage = () => {
-  const { account } = useUPProvider();
-  const { contract } = useGridottoContract();
+  const { account, isConnected } = useEthers();
+  const { 
+    pauseSystem,
+    unpauseSystem,
+    withdrawPlatformFees,
+    setFeePercentages,
+    getSystemStats,
+    checkIsAdmin,
+    loading: contractLoading
+  } = useGridottoAdmin();
+
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    totalBalance: '0',
-    weeklyPrize: '0',
-    monthlyPrize: '0',
-    totalUsers: 0,
-    totalDraws: 0,
-    pendingWithdrawals: '0'
+    totalDrawsCreated: '0',
+    totalTicketsSold: '0',
+    totalPrizesDistributed: '0',
+    totalExecutions: '0'
   });
-  const [adminActions, setAdminActions] = useState({
-    withdrawAmount: '',
-    newTicketPrice: '',
-    emergencyPause: false
+  const [isPaused, setIsPaused] = useState(false);
+  const [fees, setFees] = useState({
+    defaultPlatformFee: 500, // 5%
+    executorFeePercent: 500, // 5%
+    monthlyPoolPercent: 200, // 2%
+    weeklyMonthlyPercent: 2000 // 20%
   });
-  const [processing, setProcessing] = useState(false);
-  const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
-      if (!contract || !account) {
+      if (!account || contractLoading) {
         setLoading(false);
         return;
       }
 
       try {
-        // Check if user is admin
-        const adminRole = await contract.methods.DEFAULT_ADMIN_ROLE().call();
-        const hasRole = await contract.methods.hasRole(adminRole, account).call();
-        setIsAdmin(hasRole);
+        const adminStatus = await checkIsAdmin(account);
+        setIsAdmin(adminStatus);
 
-        if (hasRole) {
-          // Load admin stats
+        if (adminStatus) {
           await loadAdminStats();
         }
       } catch (err) {
@@ -61,108 +65,80 @@ const AdminPage = () => {
     };
 
     checkAdminStatus();
-  }, [contract, account]);
+  }, [account, contractLoading]);
 
   const loadAdminStats = async () => {
-    if (!contract) return;
-
     try {
-      const [
-        balance,
-        weeklyPrize,
-        monthlyPrize,
-        ticketPrice
-      ] = await Promise.all([
-        contract.methods.getContractBalance().call(),
-        contract.methods.getCurrentDrawPrize().call(),
-        contract.methods.getMonthlyPrize().call(),
-        contract.methods.getTicketPrice().call()
-      ]);
-
-      setStats({
-        totalBalance: balance,
-        weeklyPrize,
-        monthlyPrize,
-        totalUsers: 0, // This would need a specific method
-        totalDraws: 0, // This would need a specific method
-        pendingWithdrawals: '0'
-      });
-
-      setAdminActions(prev => ({
-        ...prev,
-        newTicketPrice: Web3.utils.fromWei(ticketPrice, 'ether')
-      }));
+      const systemStats = await getSystemStats();
+      if (systemStats) {
+        setStats({
+          totalDrawsCreated: systemStats.totalDrawsCreated.toString(),
+          totalTicketsSold: systemStats.totalTicketsSold.toString(),
+          totalPrizesDistributed: ethers.formatEther(systemStats.totalPrizesDistributed),
+          totalExecutions: systemStats.totalExecutions.toString()
+        });
+      }
     } catch (err) {
       console.error('Error loading admin stats:', err);
     }
   };
 
-  const handleWithdraw = async () => {
-    if (!contract || !account || !adminActions.withdrawAmount) return;
-
-    setProcessing(true);
-    setMessage(null);
-
+  const handlePauseToggle = async () => {
     try {
-      const amount = Web3.utils.toWei(adminActions.withdrawAmount, 'ether');
-      await contract.methods.adminWithdraw(amount).send({ from: account });
-      
-      setMessage({ type: 'success', text: 'Withdrawal successful!' });
-      setAdminActions(prev => ({ ...prev, withdrawAmount: '' }));
-      await loadAdminStats();
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Withdrawal failed' });
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleUpdateTicketPrice = async () => {
-    if (!contract || !account || !adminActions.newTicketPrice) return;
-
-    setProcessing(true);
-    setMessage(null);
-
-    try {
-      const price = Web3.utils.toWei(adminActions.newTicketPrice, 'ether');
-      await contract.methods.setTicketPrice(price).send({ from: account });
-      
-      setMessage({ type: 'success', text: 'Ticket price updated!' });
-      await loadAdminStats();
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Update failed' });
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleEmergencyPause = async () => {
-    if (!contract || !account) return;
-
-    setProcessing(true);
-    setMessage(null);
-
-    try {
-      if (adminActions.emergencyPause) {
-        await contract.methods.unpause().send({ from: account });
-        setMessage({ type: 'success', text: 'Contract unpaused!' });
+      if (isPaused) {
+        await unpauseSystem();
+        setIsPaused(false);
+        toast.success('System unpaused successfully');
       } else {
-        await contract.methods.pause().send({ from: account });
-        setMessage({ type: 'success', text: 'Contract paused!' });
+        await pauseSystem();
+        setIsPaused(true);
+        toast.success('System paused successfully');
       }
-      
-      setAdminActions(prev => ({ ...prev, emergencyPause: !prev.emergencyPause }));
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Operation failed' });
-    } finally {
-      setProcessing(false);
+      toast.error(err.message || 'Failed to toggle pause state');
     }
   };
 
-  if (loading) {
+  const handleWithdrawFees = async () => {
+    try {
+      await withdrawPlatformFees();
+      toast.success('Platform fees withdrawn successfully');
+      await loadAdminStats();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to withdraw fees');
+    }
+  };
+
+  const handleUpdateFees = async () => {
+    try {
+      await setFeePercentages(
+        fees.defaultPlatformFee,
+        fees.executorFeePercent,
+        fees.monthlyPoolPercent,
+        fees.weeklyMonthlyPercent
+      );
+      toast.success('Fee percentages updated successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update fees');
+    }
+  };
+
+  if (!isConnected) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <ShieldCheckIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Admin Access Required</h2>
+          <p className="text-gray-400">Please connect your wallet to access the admin panel.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || contractLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <ArrowPathIcon className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -170,10 +146,10 @@ const AdminPage = () => {
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="glass-card p-8 max-w-md text-center">
-          <ShieldCheckIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-          <p className="text-gray-400">You do not have admin privileges.</p>
+        <div className="text-center">
+          <ExclamationTriangleIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
+          <p className="text-gray-400">You do not have admin privileges to access this page.</p>
         </div>
       </div>
     );
@@ -182,144 +158,155 @@ const AdminPage = () => {
   return (
     <div className="min-h-screen py-20">
       <div className="container mx-auto px-4">
-        <div className="flex items-center gap-3 mb-8">
-          <ShieldCheckIcon className="w-8 h-8 text-primary" />
-          <h1 className="text-4xl font-bold text-white">Admin Dashboard</h1>
+        {/* Header */}
+        <div className="mb-12">
+          <h1 className="text-5xl font-bold text-white mb-4 flex items-center gap-3">
+            <ShieldCheckIcon className="w-12 h-12 text-primary" />
+            Admin Dashboard
+          </h1>
+          <p className="text-xl text-gray-400">Manage the Gridotto platform</p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <BanknotesIcon className="w-8 h-8 text-green-400" />
-              <span className="text-sm text-gray-400">Contract Balance</span>
-            </div>
-            <p className="text-2xl font-bold text-white">
-              {Web3.utils.fromWei(stats.totalBalance, 'ether')} LYX
-            </p>
-          </div>
-
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <ChartBarIcon className="w-8 h-8 text-blue-400" />
-              <span className="text-sm text-gray-400">Weekly Prize</span>
-            </div>
-            <p className="text-2xl font-bold text-white">
-              {Web3.utils.fromWei(stats.weeklyPrize, 'ether')} LYX
-            </p>
-          </div>
-
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <ChartBarIcon className="w-8 h-8 text-purple-400" />
-              <span className="text-sm text-gray-400">Monthly Prize</span>
-            </div>
-            <p className="text-2xl font-bold text-white">
-              {Web3.utils.fromWei(stats.monthlyPrize, 'ether')} LYX
-            </p>
-          </div>
-        </div>
-
-        {/* Admin Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Withdraw Funds */}
-          <div className="glass-card p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <ArrowDownTrayIcon className="w-6 h-6 text-green-400" />
-              Withdraw Funds
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Amount (LYX)
-                </label>
-                <input
-                  type="number"
-                  value={adminActions.withdrawAmount}
-                  onChange={(e) => setAdminActions(prev => ({ ...prev, withdrawAmount: e.target.value }))}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white"
-                  placeholder="0.0"
-                  step="0.01"
-                />
+        {/* System Status */}
+        <div className="glass-card p-6 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            <CogIcon className="w-6 h-6" />
+            System Status
+          </h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 mb-2">Current Status</p>
+              <div className="flex items-center gap-2">
+                {isPaused ? (
+                  <>
+                    <ExclamationTriangleIcon className="w-5 h-5 text-yellow-400" />
+                    <span className="text-yellow-400 font-medium">System Paused</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="w-5 h-5 text-green-400" />
+                    <span className="text-green-400 font-medium">System Active</span>
+                  </>
+                )}
               </div>
-              <button
-                onClick={handleWithdraw}
-                disabled={processing || !adminActions.withdrawAmount}
-                className="w-full btn-primary"
-              >
-                {processing ? 'Processing...' : 'Withdraw'}
-              </button>
             </div>
-          </div>
-
-          {/* Update Settings */}
-          <div className="glass-card p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <CogIcon className="w-6 h-6 text-blue-400" />
-              Update Settings
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Ticket Price (LYX)
-                </label>
-                <input
-                  type="number"
-                  value={adminActions.newTicketPrice}
-                  onChange={(e) => setAdminActions(prev => ({ ...prev, newTicketPrice: e.target.value }))}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white"
-                  placeholder="0.01"
-                  step="0.01"
-                />
-              </div>
-              <button
-                onClick={handleUpdateTicketPrice}
-                disabled={processing || !adminActions.newTicketPrice}
-                className="w-full btn-primary"
-              >
-                {processing ? 'Processing...' : 'Update Price'}
-              </button>
-            </div>
-          </div>
-
-          {/* Emergency Controls */}
-          <div className="glass-card p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <ExclamationTriangleIcon className="w-6 h-6 text-red-400" />
-              Emergency Controls
-            </h2>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-400">
-                Pause or unpause all contract operations in case of emergency.
-              </p>
-              <button
-                onClick={handleEmergencyPause}
-                disabled={processing}
-                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                  adminActions.emergencyPause
-                    ? 'bg-green-500 hover:bg-green-600 text-white'
-                    : 'bg-red-500 hover:bg-red-600 text-white'
-                }`}
-              >
-                {processing ? 'Processing...' : adminActions.emergencyPause ? 'Unpause Contract' : 'Pause Contract'}
-              </button>
-            </div>
+            <button
+              onClick={handlePauseToggle}
+              className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                isPaused
+                  ? 'bg-green-500 hover:bg-green-600 text-white'
+                  : 'bg-red-500 hover:bg-red-600 text-white'
+              }`}
+            >
+              {isPaused ? 'Unpause System' : 'Pause System'}
+            </button>
           </div>
         </div>
 
-        {/* Messages */}
-        {message && (
-          <div className={`fixed bottom-4 right-4 p-4 rounded-lg flex items-center gap-2 ${
-            message.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          }`}>
-            {message.type === 'success' ? (
-              <CheckCircleIcon className="w-5 h-5 text-white" />
-            ) : (
-              <ExclamationTriangleIcon className="w-5 h-5 text-white" />
-            )}
-            <span className="text-white">{message.text}</span>
+        {/* Platform Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="glass-card p-6">
+            <ChartBarIcon className="w-8 h-8 text-blue-400 mb-2" />
+            <p className="text-gray-400 text-sm">Total Draws</p>
+            <p className="text-2xl font-bold text-white">{stats.totalDrawsCreated}</p>
           </div>
-        )}
+          <div className="glass-card p-6">
+            <ChartBarIcon className="w-8 h-8 text-green-400 mb-2" />
+            <p className="text-gray-400 text-sm">Tickets Sold</p>
+            <p className="text-2xl font-bold text-white">{stats.totalTicketsSold}</p>
+          </div>
+          <div className="glass-card p-6">
+            <CurrencyDollarIcon className="w-8 h-8 text-yellow-400 mb-2" />
+            <p className="text-gray-400 text-sm">Prizes Distributed</p>
+            <p className="text-2xl font-bold text-white">{stats.totalPrizesDistributed} LYX</p>
+          </div>
+          <div className="glass-card p-6">
+            <ChartBarIcon className="w-8 h-8 text-purple-400 mb-2" />
+            <p className="text-gray-400 text-sm">Total Executions</p>
+            <p className="text-2xl font-bold text-white">{stats.totalExecutions}</p>
+          </div>
+        </div>
+
+        {/* Fee Management */}
+        <div className="glass-card p-6 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            <CurrencyDollarIcon className="w-6 h-6" />
+            Fee Management
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-gray-400 mb-2">Default Platform Fee (%)</label>
+              <input
+                type="number"
+                value={fees.defaultPlatformFee / 100}
+                onChange={(e) => setFees({ ...fees, defaultPlatformFee: Number(e.target.value) * 100 })}
+                className="w-full px-4 py-2 bg-white/10 rounded-lg text-white"
+                min="0"
+                max="20"
+                step="0.1"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 mb-2">Executor Fee (%)</label>
+              <input
+                type="number"
+                value={fees.executorFeePercent / 100}
+                onChange={(e) => setFees({ ...fees, executorFeePercent: Number(e.target.value) * 100 })}
+                className="w-full px-4 py-2 bg-white/10 rounded-lg text-white"
+                min="0"
+                max="10"
+                step="0.1"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 mb-2">Monthly Pool (%)</label>
+              <input
+                type="number"
+                value={fees.monthlyPoolPercent / 100}
+                onChange={(e) => setFees({ ...fees, monthlyPoolPercent: Number(e.target.value) * 100 })}
+                className="w-full px-4 py-2 bg-white/10 rounded-lg text-white"
+                min="0"
+                max="5"
+                step="0.1"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 mb-2">Weekly to Monthly (%)</label>
+              <input
+                type="number"
+                value={fees.weeklyMonthlyPercent / 100}
+                onChange={(e) => setFees({ ...fees, weeklyMonthlyPercent: Number(e.target.value) * 100 })}
+                className="w-full px-4 py-2 bg-white/10 rounded-lg text-white"
+                min="0"
+                max="30"
+                step="0.1"
+              />
+            </div>
+          </div>
+          <button
+            onClick={handleUpdateFees}
+            className="mt-6 px-6 py-3 bg-primary hover:bg-primary/80 text-white rounded-lg font-medium transition-all"
+          >
+            Update Fee Percentages
+          </button>
+        </div>
+
+        {/* Withdraw Fees */}
+        <div className="glass-card p-6">
+          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            <CurrencyDollarIcon className="w-6 h-6" />
+            Platform Fees
+          </h2>
+          <p className="text-gray-400 mb-4">
+            Withdraw accumulated platform fees to the admin wallet.
+          </p>
+          <button
+            onClick={handleWithdrawFees}
+            className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-all"
+          >
+            Withdraw Platform Fees
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useUPProvider } from '@/hooks/useUPProvider';
+import { useEthers } from '@/contexts/EthersContext';
 import { useState } from 'react';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import { 
@@ -9,20 +9,35 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 export const ConnectButton = () => {
-  const { isConnected, account, contextAccount, refreshConnection } = useUPProvider();
+  const { isConnected, account, connect, disconnect, isCorrectChain, switchToLuksoTestnet } = useEthers();
   const [connecting, setConnecting] = useState(false);
 
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      await refreshConnection();
-    } catch (error) {
+      await connect();
+      
+      // Check if on correct chain
+      if (!isCorrectChain) {
+        toast.error('Please switch to LUKSO Testnet');
+        await switchToLuksoTestnet();
+      } else {
+        toast.success('Wallet connected successfully');
+      }
+    } catch (error: any) {
       console.error('Failed to connect:', error);
+      toast.error(error.message || 'Failed to connect wallet');
     } finally {
       setConnecting(false);
     }
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+    toast.success('Wallet disconnected');
   };
 
   const formatAddress = (address: string) => {
@@ -31,8 +46,26 @@ export const ConnectButton = () => {
 
   if (isConnected && account) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg">
-        <ProfileDisplay address={account} size="sm" showName={true} />
+      <div className="flex items-center gap-2">
+        {!isCorrectChain && (
+          <button
+            onClick={switchToLuksoTestnet}
+            className="flex items-center gap-1 px-3 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30 transition-all text-sm"
+          >
+            <ExclamationCircleIcon className="w-4 h-4" />
+            Wrong Network
+          </button>
+        )}
+        <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg">
+          <ProfileDisplay address={account} size="sm" showName={true} />
+          <button
+            onClick={handleDisconnect}
+            className="ml-2 text-gray-400 hover:text-white transition-colors"
+            title="Disconnect"
+          >
+            <ArrowRightOnRectangleIcon className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     );
   }
