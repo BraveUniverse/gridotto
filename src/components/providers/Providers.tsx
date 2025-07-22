@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { UPProvider } from '@/providers/UPProvider';
+import { UPContextProvider } from '@/contexts/UPContext';
 import { Toaster } from 'react-hot-toast';
 
 interface ProvidersProps {
@@ -10,7 +10,7 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <UPProvider>
+    <UPContextProvider>
       {children}
       <Toaster 
         position="top-right"
@@ -35,6 +35,6 @@ export function Providers({ children }: ProvidersProps) {
           },
         }}
       />
-    </UPProvider>
+    </UPContextProvider>
   );
 }
