@@ -223,7 +223,6 @@ export function useGridottoCoreV2() {
     }
     
     try {
-      console.log('Calling getDrawDetails with drawId:', drawId, 'type:', typeof drawId);
       const details = await contract.methods.getDrawDetails(drawId).call();
       return {
         creator: details.creator,
@@ -309,15 +308,23 @@ export function useGridottoCoreV2() {
         return [];
       }
       
-      // Fetch all draws and filter active ones
-      // Note: In Gridotto, when nextDrawId = N, draws exist from ID 1 to N-1
-      // because nextDrawId is incremented BEFORE assigning to the new draw
-      for (let i = 1; i < nextDrawId; i++) {
-        const details = await getDrawDetails(i);
-        if (details && !details.isCompleted && !details.isCancelled) {
-          draws.push({ drawId: i, ...details });
-        }
+      // Limit to last 20 draws to avoid too many requests
+      const startId = Math.max(1, nextDrawId - 20);
+      
+      // Batch fetch draw details
+      const promises = [];
+      for (let i = startId; i < nextDrawId; i++) {
+        promises.push(getDrawDetails(i));
       }
+      
+      const results = await Promise.all(promises);
+      
+      // Filter active draws
+      results.forEach((details, index) => {
+        if (details && !details.isCompleted && !details.isCancelled) {
+          draws.push({ drawId: startId + index, ...details });
+        }
+      });
       
       return draws;
     } catch (err: any) {

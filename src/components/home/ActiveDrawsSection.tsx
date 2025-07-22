@@ -44,8 +44,8 @@ export function ActiveDrawsSection() {
 
     fetchActiveDraws();
     
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchActiveDraws, 30000);
+    // Refresh every 2 minutes instead of 30 seconds
+    const interval = setInterval(fetchActiveDraws, 120000);
     return () => clearInterval(interval);
   }, [getActiveUserDraws, getUserDrawStats]);
 

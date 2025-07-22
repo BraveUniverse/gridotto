@@ -44,7 +44,8 @@ export const HeroSection = () => {
     };
 
     loadData();
-    const interval = setInterval(loadData, 30000);
+    // Update every 2 minutes instead of 30 seconds
+    const interval = setInterval(loadData, 120000);
     return () => clearInterval(interval);
   }, [getCurrentDrawInfo, getCurrentDrawPrize, getMonthlyPrize, getTicketPrice]);
 
@@ -54,8 +55,14 @@ export const HeroSection = () => {
     try {
       setBuying(true);
       await buyTickets(Number(drawInfo.weeklyDrawId), weeklyTickets);
-      // Refresh data
-      setTimeout(() => window.location.reload(), 3000);
+      // Refresh data without reload
+      const loadData = async () => {
+        const info = await getCurrentDrawInfo();
+        setDrawInfo(info);
+        const price = await getCurrentDrawPrize();
+        setWeeklyPrize(price);
+      };
+      setTimeout(loadData, 1000);
     } catch (err) {
       console.error('Error buying weekly tickets:', err);
     } finally {
@@ -69,8 +76,14 @@ export const HeroSection = () => {
     try {
       setBuying(true);
       await buyMonthlyTickets(Number(drawInfo.monthlyDrawId), monthlyTickets);
-      // Refresh data
-      setTimeout(() => window.location.reload(), 3000);
+      // Refresh data without reload
+      const loadData = async () => {
+        const info = await getCurrentDrawInfo();
+        setDrawInfo(info);
+        const monthlyPrize = await getMonthlyPrize();
+        setMonthlyPrize(monthlyPrize);
+      };
+      setTimeout(loadData, 1000);
     } catch (err) {
       console.error('Error buying monthly tickets:', err);
     } finally {
