@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUPProvider } from './useUPProvider';
-import { coreAbi } from '@/abi';
+import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 import { CONTRACTS } from '@/config/contracts';
 
@@ -42,7 +42,7 @@ export function useGridottoCoreV2() {
 
   useEffect(() => {
     if (web3) {
-      const coreContract = new web3.eth.Contract(coreAbi as any, DIAMOND_ADDRESS);
+      const coreContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
       setContract(coreContract);
     }
   }, [web3]);

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { useUPProvider } from './useUPProvider';
-import { coreAbi } from '@/abi'; // Platform draws are in core ABI
+import { diamondAbi } from '@/abi';
 
 const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
 
@@ -31,7 +31,7 @@ export function useGridottoPlatformDraws() {
   useEffect(() => {
     if (web3) {
       const platformContract = new web3.eth.Contract(
-        coreAbi as any,
+        diamondAbi as any,
         DIAMOND_ADDRESS
       );
       setContract(platformContract);

@@ -7,7 +7,7 @@ import type { Contract } from 'web3-eth-contract';
 import type { EthExecutionAPI, SupportedProviders } from 'web3';
 import { ERC725 } from '@erc725/erc725.js';
 import LSP3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json';
-import { combinedAbi } from '@/abi';
+import { diamondAbi } from '@/abi';
 
 // Use the Diamond contract address from our project
 const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
@@ -170,7 +170,7 @@ export const UPContextProvider = ({ children }: { children: ReactNode }) => {
       console.log('Initializing contract...');
       
       // Initialize the diamond contract
-      const diamondContract = new web3.eth.Contract(combinedAbi as any, DIAMOND_ADDRESS);
+      const diamondContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
       
       if (!diamondContract) {
         console.error('Failed to create contract instance');
@@ -222,7 +222,7 @@ export const UPContextProvider = ({ children }: { children: ReactNode }) => {
       
       if (web3) {
         try {
-          const diamondContract = new web3.eth.Contract(combinedAbi as any, DIAMOND_ADDRESS);
+          const diamondContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
           if (diamondContract) {
             setContract(diamondContract);
             console.log('Contract updated after chain change');

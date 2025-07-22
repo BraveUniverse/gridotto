@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { useUPProvider } from './useUPProvider';
-import { leaderboardAbi } from '@/abi';
+import { diamondAbi } from '@/abi';
 
 const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
 
@@ -50,7 +50,7 @@ export function useGridottoLeaderboard() {
   useEffect(() => {
     if (web3) {
       const leaderboardContract = new web3.eth.Contract(
-        leaderboardAbi as any,
+        diamondAbi as any,
         DIAMOND_ADDRESS
       );
       setContract(leaderboardContract);
