@@ -216,6 +216,12 @@ export function useGridottoCoreV2() {
   const getDrawDetails = async (drawId: number): Promise<DrawDetails | null> => {
     if (!contract) return null;
     
+    // Validate drawId
+    if (!drawId || isNaN(drawId) || drawId <= 0) {
+      console.error('Invalid drawId provided to getDrawDetails:', drawId);
+      return null;
+    }
+    
     try {
       const details = await contract.methods.getDrawDetails(drawId).call();
       return {
@@ -247,7 +253,10 @@ export function useGridottoCoreV2() {
     
     try {
       const history = await contract.methods.getUserDrawHistory(user).call();
-      return history.map((id: string) => Number(id));
+      // Filter out invalid draw IDs
+      return history
+        .map((id: string) => Number(id))
+        .filter((id: number) => !isNaN(id) && id > 0);
     } catch (err: any) {
       console.error('Error fetching user draw history:', err);
       return [];

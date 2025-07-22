@@ -76,6 +76,12 @@ const ProfilePage = () => {
       const claimable: number[] = [];
 
       for (const drawId of history) {
+        // Skip invalid draw IDs
+        if (!drawId || drawId <= 0) {
+          console.warn('Skipping invalid drawId in history:', drawId);
+          continue;
+        }
+        
         const details = await getDrawDetails(drawId);
         if (details) {
           // Calculate spent amount (this is approximate as we don't have exact ticket count per user)

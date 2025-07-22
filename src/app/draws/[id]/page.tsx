@@ -50,6 +50,12 @@ const DrawDetailsPage = () => {
   const router = useRouter();
   const drawId = Number(params.id);
   
+  // Validate drawId
+  if (!params.id || isNaN(drawId) || drawId <= 0) {
+    router.push('/draws');
+    return null;
+  }
+  
   const { account, isConnected } = useUPProvider();
   const { getDrawDetails, buyTickets, cancelDraw } = useGridottoCoreV2();
   const { executeDraw, getDrawWinners, canExecuteDraw } = useGridottoExecutionV2();
