@@ -25,11 +25,14 @@ import {
   DollarSign,
   Percent,
   Award,
-  Gem
+  Gem,
+  Rocket,
+  Crown
 } from 'lucide-react';
 
 const sections = [
   { id: 'intro', title: 'Introduction', icon: BookOpen },
+  { id: 'how-to-earn', title: 'How to Earn', icon: DollarSign },
   { id: 'how-it-works', title: 'How It Works', icon: Sparkles },
   { id: 'draw-types', title: 'Draw Types', icon: Gift },
   { id: 'earning', title: 'Fee Structure', icon: Coins },
@@ -89,7 +92,7 @@ export default function DocsPage() {
             </h1>
             <p className="text-xl md:text-2xl text-text-secondary max-w-3xl mx-auto">
               The next-generation lottery platform on LUKSO blockchain. 
-              Fair, transparent, and rewarding for everyone.
+              Multiple ways to earn, transparent draws, and VIP benefits!
             </p>
           </motion.div>
         </div>
@@ -125,6 +128,9 @@ export default function DocsPage() {
             <section id="intro">
               <IntroSection />
             </section>
+            <section id="how-to-earn">
+              <HowToEarnSection />
+            </section>
             <section id="how-it-works">
               <HowItWorksSection />
             </section>
@@ -159,7 +165,7 @@ function IntroSection() {
         <div className="prose prose-invert max-w-none text-text-secondary">
           <p className="text-lg">
             Gridotto is a decentralized lottery platform built on the LUKSO blockchain using the Diamond Standard (EIP-2535). 
-            It offers both official draws and user-created draws with various prize types.
+            It offers multiple ways to earn money through participating in draws, creating draws, or executing draws!
           </p>
         </div>
       </div>
@@ -167,57 +173,187 @@ function IntroSection() {
       <div className="grid md:grid-cols-3 gap-6">
         <motion.div
           whileHover={{ scale: 1.05 }}
-          className="glass-card p-6"
+          className="glass-card p-6 border border-accent-blue/30 hover:border-accent-blue/50"
         >
-          <Users className="w-12 h-12 text-accent-blue mb-4" />
-          <h3 className="text-xl font-semibold mb-2 text-text-primary">Community Driven</h3>
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent-blue/20 to-accent-blue/10 flex items-center justify-center mb-4">
+            <Trophy className="w-6 h-6 text-accent-blue" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2 text-text-primary">Win Big Prizes</h3>
           <p className="text-text-tertiary">
-            Users can create and manage their own draws with custom prizes
+            Participate in draws for a chance to win LYX, tokens, or valuable NFTs
           </p>
         </motion.div>
 
         <motion.div
           whileHover={{ scale: 1.05 }}
-          className="glass-card p-6"
+          className="glass-card p-6 border border-accent-green/30 hover:border-accent-green/50"
         >
-          <Shield className="w-12 h-12 text-accent-green mb-4" />
-          <h3 className="text-xl font-semibold mb-2 text-text-primary">100% Secure</h3>
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent-green/20 to-accent-green/10 flex items-center justify-center mb-4">
+            <Rocket className="w-6 h-6 text-accent-green" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2 text-text-primary">Create & Earn</h3>
           <p className="text-text-tertiary">
-            Built with audited smart contracts on LUKSO blockchain
+            Create your own draws and earn from participation fees
           </p>
         </motion.div>
 
         <motion.div
           whileHover={{ scale: 1.05 }}
-          className="glass-card p-6"
+          className="glass-card p-6 border border-accent-purple/30 hover:border-accent-purple/50"
         >
-          <Sparkles className="w-12 h-12 text-accent-purple mb-4" />
-          <h3 className="text-xl font-semibold mb-2 text-text-primary">Multiple Winners</h3>
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent-purple/20 to-accent-purple/10 flex items-center justify-center mb-4">
+            <Zap className="w-6 h-6 text-accent-purple" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2 text-text-primary">Execute & Earn</h3>
           <p className="text-text-tertiary">
-            Draws can be configured to have multiple winners
+            Execute draws and earn 5% of the prize pool as reward
           </p>
         </motion.div>
       </div>
 
-      <div className="glass-card p-8">
+      <div className="glass-card p-8 bg-gradient-to-br from-primary/5 to-accent-purple/5 border border-primary/20">
         <h3 className="text-2xl font-bold mb-4 text-text-primary">Why Choose Gridotto?</h3>
         <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <CheckCircle className="w-6 h-6 text-accent-green flex-shrink-0 mt-0.5" />
+            <div className="w-6 h-6 rounded-full bg-accent-green/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <CheckCircle className="w-4 h-4 text-accent-green" />
+            </div>
             <p className="text-text-secondary">
-              <strong className="text-text-primary">Transparent:</strong> All draws are executed on-chain with verifiable randomness
+              <strong className="text-text-primary">Multiple Earning Opportunities:</strong> Win prizes, create draws, or execute draws to earn
             </p>
           </div>
           <div className="flex items-start gap-3">
-            <CheckCircle className="w-6 h-6 text-accent-green flex-shrink-0 mt-0.5" />
+            <div className="w-6 h-6 rounded-full bg-accent-green/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <CheckCircle className="w-4 h-4 text-accent-green" />
+            </div>
             <p className="text-text-secondary">
-              <strong className="text-text-primary">Flexible:</strong> Create draws with LYX, LSP7 tokens, or LSP8 NFTs
+              <strong className="text-text-primary">Transparent & Fair:</strong> All draws use blockchain oracle for true randomness
             </p>
           </div>
           <div className="flex items-start gap-3">
-            <CheckCircle className="w-6 h-6 text-accent-green flex-shrink-0 mt-0.5" />
+            <div className="w-6 h-6 rounded-full bg-accent-green/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <CheckCircle className="w-4 h-4 text-accent-green" />
+            </div>
             <p className="text-text-secondary">
-              <strong className="text-text-primary">VIP Benefits:</strong> Get discounts and bonuses with VIP Pass NFTs
+              <strong className="text-text-primary">VIP Benefits:</strong> Get up to 80% discount with VIP Pass NFTs
+            </p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function HowToEarnSection() {
+  const earningMethods = [
+    {
+      title: "🍀 Get Lucky - Win Draws",
+      description: "The most exciting way to earn big!",
+      details: [
+        "Buy tickets for official weekly/monthly draws",
+        "Participate in user-created draws",
+        "Win LYX, LSP7 tokens, or rare LSP8 NFTs",
+        "Some NFTs can be worth thousands!"
+      ],
+      potential: "1 LYX → 1000+ LYX",
+      color: "accent-amber",
+      icon: Trophy
+    },
+    {
+      title: "🎯 Be Smart - Create Draws",
+      description: "Earn from your own lottery business!",
+      details: [
+        "Create draws with your NFTs or tokens",
+        "Set your own ticket prices",
+        "Earn from participation fees",
+        "Build a following for regular draws"
+      ],
+      potential: "Passive Income Stream",
+      color: "accent-blue",
+      icon: Crown
+    },
+    {
+      title: "⚡ Be Fast - Execute Draws",
+      description: "Earn guaranteed rewards!",
+      details: [
+        "Monitor draws ready for execution",
+        "Call the execute function first",
+        "Earn 5% of the prize pool instantly",
+        "No risk, guaranteed profit"
+      ],
+      potential: "5% of Prize Pool",
+      color: "accent-green",
+      icon: Zap
+    }
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="space-y-8"
+    >
+      <div>
+        <h2 className="text-3xl font-bold text-text-primary mb-4">
+          💰 How to Earn Money on Gridotto
+        </h2>
+        <p className="text-lg text-text-secondary mb-8">
+          Three different ways to make money - choose your strategy or do all three!
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        {earningMethods.map((method, index) => {
+          const Icon = method.icon;
+          return (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`glass-card p-8 border border-${method.color}/30 hover:border-${method.color}/50 transition-all`}
+            >
+              <div className="flex items-start gap-6">
+                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br from-${method.color}/20 to-${method.color}/10 flex items-center justify-center flex-shrink-0`}>
+                  <Icon className={`w-8 h-8 text-${method.color}`} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-text-primary mb-2">{method.title}</h3>
+                  <p className={`text-lg text-${method.color} mb-4`}>{method.description}</p>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-semibold text-text-primary mb-2">How it works:</h4>
+                      <ul className="space-y-1">
+                        {method.details.map((detail, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className={`text-${method.color} mt-1`}>•</span>
+                            <span className="text-text-secondary text-sm">{detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <div className={`bg-gradient-to-br from-${method.color}/20 to-${method.color}/10 rounded-xl p-4 text-center`}>
+                        <p className="text-sm text-text-tertiary mb-1">Earning Potential</p>
+                        <p className={`text-xl font-bold text-${method.color}`}>{method.potential}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <div className="glass-card p-6 bg-gradient-to-r from-accent-amber/10 to-accent-purple/10 border border-accent-amber/30">
+        <div className="flex items-start gap-3">
+          <Lightbulb className="w-6 h-6 text-accent-amber flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-text-primary mb-1">Pro Tip: Combine All Three!</h4>
+            <p className="text-text-secondary">
+              Buy tickets when you feel lucky, create draws with your spare NFTs, and always be ready to execute draws for guaranteed profits. 
+              The most successful Gridotto users do all three!
             </p>
           </div>
         </div>
@@ -280,11 +416,11 @@ function HowItWorksSection() {
             >
               <div className="flex gap-6">
                 <div className="flex-shrink-0">
-                  <div className={`w-16 h-16 rounded-full bg-${step.color}/20 flex items-center justify-center`}>
+                  <div className={`w-16 h-16 rounded-full bg-gradient-to-br from-${step.color}/30 to-${step.color}/10 flex items-center justify-center`}>
                     <Icon className={`w-8 h-8 text-${step.color}`} />
                   </div>
                   {index < steps.length - 1 && (
-                    <div className="w-0.5 h-24 bg-surface-hover mx-auto mt-2" />
+                    <div className="w-0.5 h-24 bg-gradient-to-b from-surface-hover to-transparent mx-auto mt-2" />
                   )}
                 </div>
                 <div className="flex-1 pb-8">
@@ -297,7 +433,7 @@ function HowItWorksSection() {
         })}
       </div>
 
-      <div className="glass-card p-6">
+      <div className="glass-card p-6 bg-gradient-to-r from-accent-blue/5 to-accent-purple/5 border border-accent-blue/20">
         <div className="flex items-start gap-3">
           <Info className="w-6 h-6 text-accent-blue flex-shrink-0 mt-0.5" />
           <div>
@@ -319,17 +455,19 @@ function DrawTypesSection() {
       title: "Official Weekly Draws",
       interval: "Every 7 days",
       description: "Platform-managed draws with accumulated prize pools",
-      features: ["Fixed schedule", "0.1 LYX ticket price", "Single winner"],
+      features: ["Fixed schedule", "0.1 LYX ticket price", "Single winner", "Big prizes"],
       icon: Timer,
-      color: "accent-blue"
+      color: "accent-blue",
+      gradient: "from-accent-blue/20 to-accent-blue/5"
     },
     {
       title: "Official Monthly Draws",
       interval: "Every 30 days",
       description: "Special monthly draws with larger prize pools",
-      features: ["Monthly schedule", "Accumulated prizes", "Single winner"],
+      features: ["Monthly schedule", "Accumulated prizes", "Single winner", "Huge jackpots"],
       icon: Award,
-      color: "accent-purple"
+      color: "accent-purple",
+      gradient: "from-accent-purple/20 to-accent-purple/5"
     },
     {
       title: "User-Created Draws",
@@ -337,7 +475,8 @@ function DrawTypesSection() {
       description: "Create your own draws with custom prizes and rules",
       features: ["LYX/LSP7/LSP8 prizes", "Custom ticket price", "Multi-winner option", "Entry requirements"],
       icon: Gift,
-      color: "accent-green"
+      color: "accent-green",
+      gradient: "from-accent-green/20 to-accent-green/5"
     }
   ];
 
@@ -350,7 +489,7 @@ function DrawTypesSection() {
       <div>
         <h2 className="text-3xl font-bold text-text-primary mb-4">Draw Types</h2>
         <p className="text-lg text-text-secondary mb-8">
-          Gridotto offers multiple draw types to suit different needs
+          Different draw types for different opportunities
         </p>
       </div>
 
@@ -363,23 +502,23 @@ function DrawTypesSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="glass-card p-8"
+              className={`glass-card p-8 bg-gradient-to-r ${draw.gradient} border border-${draw.color}/20 hover:border-${draw.color}/40 transition-all`}
             >
               <div className="flex items-start gap-6">
-                <div className={`w-16 h-16 bg-${draw.color}/20 rounded-xl flex items-center justify-center flex-shrink-0`}>
+                <div className={`w-16 h-16 bg-gradient-to-br from-${draw.color}/30 to-${draw.color}/10 rounded-xl flex items-center justify-center flex-shrink-0`}>
                   <Icon className={`w-8 h-8 text-${draw.color}`} />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-2xl font-bold text-text-primary">{draw.title}</h3>
-                    <span className={`text-sm px-3 py-1 rounded-full bg-${draw.color}/20 text-${draw.color}`}>
+                    <span className={`text-sm px-3 py-1 rounded-full bg-${draw.color}/20 text-${draw.color} font-medium`}>
                       {draw.interval}
                     </span>
                   </div>
                   <p className="text-text-secondary mb-4">{draw.description}</p>
                   <div className="flex flex-wrap gap-2">
                     {draw.features.map((feature, idx) => (
-                      <span key={idx} className="text-sm px-3 py-1 rounded-lg bg-surface text-text-tertiary">
+                      <span key={idx} className={`text-sm px-3 py-1 rounded-lg bg-${draw.color}/10 text-${draw.color} border border-${draw.color}/20`}>
                         {feature}
                       </span>
                     ))}
@@ -391,21 +530,27 @@ function DrawTypesSection() {
         })}
       </div>
 
-      <div className="glass-card p-8 border border-primary/30">
+      <div className="glass-card p-8 border border-primary/30 bg-gradient-to-br from-primary/5 to-accent-purple/5">
         <h3 className="text-2xl font-bold mb-4 text-text-primary">Prize Types Supported</h3>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="text-center p-4">
-            <DollarSign className="w-12 h-12 text-accent-green mx-auto mb-2" />
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent-green/20 to-accent-green/10 flex items-center justify-center mx-auto mb-3">
+              <DollarSign className="w-8 h-8 text-accent-green" />
+            </div>
             <h4 className="font-semibold text-text-primary">LYX Tokens</h4>
             <p className="text-sm text-text-tertiary">Native LUKSO currency</p>
           </div>
           <div className="text-center p-4">
-            <Coins className="w-12 h-12 text-accent-blue mx-auto mb-2" />
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent-blue/20 to-accent-blue/10 flex items-center justify-center mx-auto mb-3">
+              <Coins className="w-8 h-8 text-accent-blue" />
+            </div>
             <h4 className="font-semibold text-text-primary">LSP7 Tokens</h4>
             <p className="text-sm text-text-tertiary">Fungible tokens</p>
           </div>
           <div className="text-center p-4">
-            <Gem className="w-12 h-12 text-accent-purple mx-auto mb-2" />
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent-purple/20 to-accent-purple/10 flex items-center justify-center mx-auto mb-3">
+              <Gem className="w-8 h-8 text-accent-purple" />
+            </div>
             <h4 className="font-semibold text-text-primary">LSP8 NFTs</h4>
             <p className="text-sm text-text-tertiary">Unique digital assets</p>
           </div>
@@ -429,11 +574,11 @@ function EarningSection() {
         </p>
       </div>
 
-      <div className="glass-card p-8">
+      <div className="glass-card p-8 bg-gradient-to-br from-accent-amber/5 to-accent-green/5">
         <h3 className="text-2xl font-bold mb-6 text-text-primary">Official Draws Fee Distribution</h3>
         
         <div className="space-y-6">
-          <div className="glass-card p-6">
+          <div className="glass-card p-6 bg-gradient-to-r from-accent-amber/10 to-transparent border border-accent-amber/20">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Trophy className="w-8 h-8 text-accent-amber" />
@@ -446,7 +591,7 @@ function EarningSection() {
             </p>
           </div>
 
-          <div className="glass-card p-6">
+          <div className="glass-card p-6 bg-gradient-to-r from-accent-purple/10 to-transparent border border-accent-purple/20">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Award className="w-8 h-8 text-accent-purple" />
@@ -459,7 +604,7 @@ function EarningSection() {
             </p>
           </div>
 
-          <div className="glass-card p-6">
+          <div className="glass-card p-6 bg-gradient-to-r from-primary/10 to-transparent border border-primary/20">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Heart className="w-8 h-8 text-primary" />
@@ -474,24 +619,28 @@ function EarningSection() {
         </div>
       </div>
 
-      <div className="glass-card p-8 mt-6">
+      <div className="glass-card p-8 mt-6 bg-gradient-to-br from-accent-green/5 to-accent-blue/5">
         <h3 className="text-2xl font-bold mb-6 text-text-primary">User-Created Draws</h3>
         <div className="space-y-4">
           <div className="flex items-start gap-3">
-            <Zap className="w-6 h-6 text-accent-amber flex-shrink-0 mt-0.5" />
+            <div className="w-10 h-10 rounded-full bg-accent-amber/20 flex items-center justify-center flex-shrink-0">
+              <Zap className="w-5 h-5 text-accent-amber" />
+            </div>
             <div>
-              <h4 className="font-semibold text-text-primary mb-1">Executor Reward</h4>
+              <h4 className="font-semibold text-text-primary mb-1">Executor Reward - 5%</h4>
               <p className="text-text-secondary">
-                5% of the prize pool goes to whoever executes the draw (calls the contract function)
+                Anyone who executes the draw earns 5% of the prize pool. Be fast and earn guaranteed rewards!
               </p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <Users className="w-6 h-6 text-accent-blue flex-shrink-0 mt-0.5" />
+            <div className="w-10 h-10 rounded-full bg-accent-blue/20 flex items-center justify-center flex-shrink-0">
+              <Users className="w-5 h-5 text-accent-blue" />
+            </div>
             <div>
-              <h4 className="font-semibold text-text-primary mb-1">Creator Options</h4>
+              <h4 className="font-semibold text-text-primary mb-1">Creator Earnings</h4>
               <p className="text-text-secondary">
-                Draw creators can set custom participation fees and prize distribution models
+                Draw creators can set custom participation fees and earn from every ticket sold
               </p>
             </div>
           </div>
@@ -507,25 +656,33 @@ function VIPBenefitsSection() {
       name: "Silver",
       level: 1,
       color: "gray",
-      benefits: ["20% ticket discount", "Priority support", "Exclusive draws access"]
+      gradient: "from-gray-400 to-gray-600",
+      benefits: ["20% ticket discount", "Priority support", "Exclusive draws access"],
+      savings: "Save 2 LYX per 10 LYX spent"
     },
     {
       name: "Gold",
       level: 2,
       color: "yellow",
-      benefits: ["40% ticket discount", "Bonus tickets", "Early access to features"]
+      gradient: "from-yellow-400 to-yellow-600",
+      benefits: ["40% ticket discount", "Bonus tickets", "Early access to features"],
+      savings: "Save 4 LYX per 10 LYX spent"
     },
     {
       name: "Diamond",
       level: 3,
       color: "blue",
-      benefits: ["60% ticket discount", "Extra bonus tickets", "Governance voting"]
+      gradient: "from-blue-400 to-blue-600",
+      benefits: ["60% ticket discount", "Extra bonus tickets", "Governance voting"],
+      savings: "Save 6 LYX per 10 LYX spent"
     },
     {
       name: "Universe",
       level: 4,
       color: "purple",
-      benefits: ["80% ticket discount", "Maximum bonus tickets", "Revenue sharing"]
+      gradient: "from-purple-400 to-purple-600",
+      benefits: ["80% ticket discount", "Maximum bonus tickets", "Revenue sharing"],
+      savings: "Save 8 LYX per 10 LYX spent"
     }
   ];
 
@@ -538,7 +695,7 @@ function VIPBenefitsSection() {
       <div>
         <h2 className="text-3xl font-bold text-text-primary mb-4">VIP Benefits</h2>
         <p className="text-lg text-text-secondary mb-8">
-          Hold BraveUniverse VIP Pass NFTs to unlock exclusive benefits
+          Hold BraveUniverse VIP Pass NFTs to unlock exclusive benefits and massive discounts!
         </p>
       </div>
 
@@ -549,18 +706,21 @@ function VIPBenefitsSection() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.1 }}
-            className={`glass-card p-6 border border-${tier.color}-500/30`}
+            className={`glass-card p-6 border border-${tier.color}-500/30 hover:border-${tier.color}-500/50 transition-all`}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold text-text-primary">{tier.name}</h3>
-              <span className={`text-sm px-3 py-1 rounded-full bg-${tier.color}-500/20 text-${tier.color}-400`}>
+              <h3 className={`text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${tier.gradient}`}>
+                {tier.name}
+              </h3>
+              <span className={`text-sm px-3 py-1 rounded-full bg-gradient-to-r ${tier.gradient} text-white font-medium`}>
                 Tier {tier.level}
               </span>
             </div>
+            <p className={`text-sm text-${tier.color}-400 mb-4`}>{tier.savings}</p>
             <ul className="space-y-2">
               {tier.benefits.map((benefit, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <CheckCircle className="w-5 h-5 text-accent-green flex-shrink-0 mt-0.5" />
+                  <CheckCircle className={`w-5 h-5 text-${tier.color}-400 flex-shrink-0 mt-0.5`} />
                   <span className="text-text-secondary">{benefit}</span>
                 </li>
               ))}
@@ -569,14 +729,14 @@ function VIPBenefitsSection() {
         ))}
       </div>
 
-      <div className="glass-card p-8 border border-primary/30">
+      <div className="glass-card p-8 border border-primary/30 bg-gradient-to-r from-primary/5 to-accent-purple/5">
         <div className="flex items-start gap-3">
           <Gem className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
           <div>
             <h4 className="font-semibold text-text-primary mb-1">How to Get VIP Status</h4>
             <p className="text-text-secondary">
               Purchase BraveUniverse VIP Pass NFTs from the official collection on LUKSO. 
-              Higher tier passes unlock better benefits and rewards.
+              Higher tier passes unlock better benefits and rewards. The discounts alone can save you hundreds of LYX!
             </p>
           </div>
         </div>
@@ -590,22 +750,26 @@ function SecuritySection() {
     {
       title: "Diamond Standard",
       description: "Built with EIP-2535 for upgradeable and modular smart contracts",
-      icon: Gem
+      icon: Gem,
+      color: "accent-purple"
     },
     {
       title: "Oracle Integration",
       description: "Uses blockchain oracle for verifiable random number generation",
-      icon: Target
+      icon: Target,
+      color: "accent-blue"
     },
     {
       title: "Automated Execution",
       description: "Draws execute automatically based on predefined conditions",
-      icon: Zap
+      icon: Zap,
+      color: "accent-amber"
     },
     {
       title: "LUKSO Security",
       description: "Protected by LUKSO blockchain's security standards",
-      icon: Shield
+      icon: Shield,
+      color: "accent-green"
     }
   ];
 
@@ -631,9 +795,9 @@ function SecuritySection() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 }}
-              className="glass-card p-6"
+              className={`glass-card p-6 bg-gradient-to-br from-${feature.color}/5 to-transparent border border-${feature.color}/20 hover:border-${feature.color}/40 transition-all`}
             >
-              <Icon className="w-10 h-10 text-primary mb-4" />
+              <Icon className={`w-10 h-10 text-${feature.color} mb-4`} />
               <h3 className="text-xl font-semibold mb-2 text-text-primary">{feature.title}</h3>
               <p className="text-text-secondary">{feature.description}</p>
             </motion.div>
@@ -641,13 +805,14 @@ function SecuritySection() {
         })}
       </div>
 
-      <div className="glass-card p-6 border border-error/30">
+      <div className="glass-card p-6 border border-error/30 bg-gradient-to-r from-error/5 to-transparent">
         <div className="flex items-start gap-3">
           <Shield className="w-6 h-6 text-error flex-shrink-0 mt-0.5" />
           <div>
             <h4 className="font-semibold text-text-primary mb-1">Security Tip</h4>
             <p className="text-text-secondary">
               Never share your private keys with anyone. Gridotto will never ask for your private keys.
+              Always verify you're on the official Gridotto website before connecting your wallet.
             </p>
           </div>
         </div>
@@ -659,7 +824,7 @@ function SecuritySection() {
           whileTap={{ scale: 0.95 }}
           className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-accent-purple text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-lg hover:shadow-primary/25 transition-all"
         >
-          Start Playing Now
+          Start Earning Now
           <ArrowRight className="w-5 h-5" />
         </motion.button>
       </div>
