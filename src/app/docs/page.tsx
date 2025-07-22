@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   BookOpen, 
@@ -32,13 +32,41 @@ const sections = [
   { id: 'intro', title: 'Introduction', icon: BookOpen },
   { id: 'how-it-works', title: 'How It Works', icon: Sparkles },
   { id: 'draw-types', title: 'Draw Types', icon: Gift },
-  { id: 'earning', title: 'Earning Model', icon: Coins },
+  { id: 'earning', title: 'Fee Structure', icon: Coins },
   { id: 'vip-benefits', title: 'VIP Benefits', icon: Gem },
   { id: 'security', title: 'Security', icon: Shield },
 ];
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState('intro');
+
+  // Update active section based on scroll position
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 100;
+      
+      for (const section of sections) {
+        const element = document.getElementById(section.id);
+        if (element) {
+          const { offsetTop, offsetHeight } = element;
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(section.id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,7 +105,7 @@ export default function DocsPage() {
                 return (
                   <button
                     key={section.id}
-                    onClick={() => setActiveSection(section.id)}
+                    onClick={() => scrollToSection(section.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                       activeSection === section.id
                         ? 'bg-gradient-to-r from-primary/20 to-accent-purple/20 text-white border border-primary/30'
@@ -93,15 +121,25 @@ export default function DocsPage() {
           </div>
 
           {/* Content Area */}
-          <div className="lg:col-span-3 mt-8 lg:mt-0">
-            <AnimatePresence mode="wait">
-              {activeSection === 'intro' && <IntroSection key="intro" />}
-              {activeSection === 'how-it-works' && <HowItWorksSection key="how-it-works" />}
-              {activeSection === 'draw-types' && <DrawTypesSection key="draw-types" />}
-              {activeSection === 'earning' && <EarningSection key="earning" />}
-              {activeSection === 'vip-benefits' && <VIPBenefitsSection key="vip-benefits" />}
-              {activeSection === 'security' && <SecuritySection key="security" />}
-            </AnimatePresence>
+          <div className="lg:col-span-3 mt-8 lg:mt-0 space-y-16">
+            <section id="intro">
+              <IntroSection />
+            </section>
+            <section id="how-it-works">
+              <HowItWorksSection />
+            </section>
+            <section id="draw-types">
+              <DrawTypesSection />
+            </section>
+            <section id="earning">
+              <EarningSection />
+            </section>
+            <section id="vip-benefits">
+              <VIPBenefitsSection />
+            </section>
+            <section id="security">
+              <SecuritySection />
+            </section>
           </div>
         </div>
       </div>
@@ -114,15 +152,14 @@ function IntroSection() {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
       <div>
         <h2 className="text-3xl font-bold text-text-primary mb-4">What is Gridotto?</h2>
         <div className="prose prose-invert max-w-none text-text-secondary">
           <p className="text-lg">
-            Gridotto is a revolutionary lottery platform built on the LUKSO blockchain using the Diamond Standard (EIP-2535). 
-            Unlike traditional lotteries, Gridotto ensures that everyone wins through its innovative reward distribution system.
+            Gridotto is a decentralized lottery platform built on the LUKSO blockchain using the Diamond Standard (EIP-2535). 
+            It offers both official draws and user-created draws with various prize types.
           </p>
         </div>
       </div>
@@ -155,9 +192,9 @@ function IntroSection() {
           className="glass-card p-6"
         >
           <Sparkles className="w-12 h-12 text-accent-purple mb-4" />
-          <h3 className="text-xl font-semibold mb-2 text-text-primary">Everyone Wins</h3>
+          <h3 className="text-xl font-semibold mb-2 text-text-primary">Multiple Winners</h3>
           <p className="text-text-tertiary">
-            Unique reward model where all participants benefit
+            Draws can be configured to have multiple winners
           </p>
         </motion.div>
       </div>
@@ -168,19 +205,19 @@ function IntroSection() {
           <div className="flex items-start gap-3">
             <CheckCircle className="w-6 h-6 text-accent-green flex-shrink-0 mt-0.5" />
             <p className="text-text-secondary">
-              <strong className="text-text-primary">Fair Distribution:</strong> Prize pool is distributed fairly among all participants
+              <strong className="text-text-primary">Transparent:</strong> All draws are executed on-chain with verifiable randomness
             </p>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle className="w-6 h-6 text-accent-green flex-shrink-0 mt-0.5" />
             <p className="text-text-secondary">
-              <strong className="text-text-primary">Low Entry Cost:</strong> Affordable ticket prices for everyone
+              <strong className="text-text-primary">Flexible:</strong> Create draws with LYX, LSP7 tokens, or LSP8 NFTs
             </p>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle className="w-6 h-6 text-accent-green flex-shrink-0 mt-0.5" />
             <p className="text-text-secondary">
-              <strong className="text-text-primary">Multi-Asset Support:</strong> LYX, LSP7 tokens, and LSP8 NFTs supported
+              <strong className="text-text-primary">VIP Benefits:</strong> Get discounts and bonuses with VIP Pass NFTs
             </p>
           </div>
         </div>
@@ -193,25 +230,25 @@ function HowItWorksSection() {
   const steps = [
     {
       title: "Buy Tickets",
-      description: "Purchase tickets for active draws using LYX",
+      description: "Purchase tickets for official or user-created draws",
       icon: Ticket,
       color: "accent-blue"
     },
     {
       title: "Wait for Draw",
-      description: "Draws execute automatically at scheduled times",
+      description: "Draws execute automatically when conditions are met",
       icon: Timer,
       color: "accent-green"
     },
     {
-      title: "Win Prizes",
-      description: "Multiple winners selected with fair distribution",
+      title: "Winners Selected",
+      description: "Random selection using blockchain oracle",
       icon: Trophy,
       color: "accent-purple"
     },
     {
-      title: "Claim Rewards",
-      description: "Winners can claim their prizes instantly",
+      title: "Claim Prizes",
+      description: "Winners can claim their prizes from the contract",
       icon: Wallet,
       color: "accent-amber"
     }
@@ -221,7 +258,6 @@ function HowItWorksSection() {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
       <div>
@@ -268,7 +304,7 @@ function HowItWorksSection() {
             <h4 className="font-semibold text-text-primary mb-1">Important Note</h4>
             <p className="text-text-secondary">
               All operations are executed through smart contracts automatically. 
-              No human intervention, completely transparent and secure!
+              Draw results are determined by blockchain oracle for true randomness.
             </p>
           </div>
         </div>
@@ -280,26 +316,26 @@ function HowItWorksSection() {
 function DrawTypesSection() {
   const drawTypes = [
     {
-      title: "Weekly Draws",
+      title: "Official Weekly Draws",
       interval: "Every 7 days",
-      description: "Regular draws with standard prize pools",
-      features: ["Fixed schedule", "Multiple winners", "Instant payouts"],
+      description: "Platform-managed draws with accumulated prize pools",
+      features: ["Fixed schedule", "0.1 LYX ticket price", "Single winner"],
       icon: Timer,
       color: "accent-blue"
     },
     {
-      title: "Monthly Draws",
+      title: "Official Monthly Draws",
       interval: "Every 30 days",
-      description: "Special draws with accumulated prize pools",
-      features: ["Higher prizes", "More winners", "Bonus rewards"],
+      description: "Special monthly draws with larger prize pools",
+      features: ["Monthly schedule", "Accumulated prizes", "Single winner"],
       icon: Award,
       color: "accent-purple"
     },
     {
       title: "User-Created Draws",
       interval: "Custom timing",
-      description: "Create your own draws with NFTs or tokens as prizes",
-      features: ["Custom prizes", "Set your rules", "Earn commissions"],
+      description: "Create your own draws with custom prizes and rules",
+      features: ["LYX/LSP7/LSP8 prizes", "Custom ticket price", "Multi-winner option", "Entry requirements"],
       icon: Gift,
       color: "accent-green"
     }
@@ -309,13 +345,12 @@ function DrawTypesSection() {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
       <div>
         <h2 className="text-3xl font-bold text-text-primary mb-4">Draw Types</h2>
         <p className="text-lg text-text-secondary mb-8">
-          Gridotto offers multiple draw types to suit different preferences
+          Gridotto offers multiple draw types to suit different needs
         </p>
       </div>
 
@@ -385,43 +420,29 @@ function EarningSection() {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
       <div>
-        <h2 className="text-3xl font-bold text-text-primary mb-4">Earning Model</h2>
+        <h2 className="text-3xl font-bold text-text-primary mb-4">Fee Structure</h2>
         <p className="text-lg text-text-secondary mb-8">
-          In Gridotto, everyone wins! Here's how the prize distribution works:
+          Understanding how ticket sales are distributed
         </p>
       </div>
 
       <div className="glass-card p-8">
-        <h3 className="text-2xl font-bold mb-6 text-text-primary">Prize Distribution</h3>
+        <h3 className="text-2xl font-bold mb-6 text-text-primary">Official Draws Fee Distribution</h3>
         
         <div className="space-y-6">
           <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Trophy className="w-8 h-8 text-accent-amber" />
-                <h4 className="text-lg font-semibold text-text-primary">Main Winners</h4>
+                <h4 className="text-lg font-semibold text-text-primary">Draw Prize Pool</h4>
               </div>
-              <span className="text-2xl font-bold text-accent-amber">60%</span>
+              <span className="text-2xl font-bold text-accent-amber">75%</span>
             </div>
             <p className="text-text-secondary">
-              The majority of the prize pool goes to the main draw winners
-            </p>
-          </div>
-
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Users className="w-8 h-8 text-accent-blue" />
-                <h4 className="text-lg font-semibold text-text-primary">All Participants</h4>
-              </div>
-              <span className="text-2xl font-bold text-accent-blue">15%</span>
-            </div>
-            <p className="text-text-secondary">
-              Distributed among all ticket holders through random selection
+              Goes directly to the current draw's prize pool for the winner
             </p>
           </div>
 
@@ -453,21 +474,27 @@ function EarningSection() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="glass-card p-6">
-          <Percent className="w-10 h-10 text-accent-purple mb-4" />
-          <h4 className="text-xl font-semibold mb-2 text-text-primary">Multiple Winning Chances</h4>
-          <p className="text-text-secondary">
-            Even if you don't win the main prize, you still have chances in the participant pool
-          </p>
-        </div>
-
-        <div className="glass-card p-6">
-          <TrendingUp className="w-10 h-10 text-accent-green mb-4" />
-          <h4 className="text-xl font-semibold mb-2 text-text-primary">Value Appreciation</h4>
-          <p className="text-text-secondary">
-            NFT prizes can increase in value over time, multiplying your winnings
-          </p>
+      <div className="glass-card p-8 mt-6">
+        <h3 className="text-2xl font-bold mb-6 text-text-primary">User-Created Draws</h3>
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <Zap className="w-6 h-6 text-accent-amber flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-text-primary mb-1">Executor Reward</h4>
+              <p className="text-text-secondary">
+                5% of the prize pool goes to whoever executes the draw (calls the contract function)
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Users className="w-6 h-6 text-accent-blue flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-text-primary mb-1">Creator Options</h4>
+              <p className="text-text-secondary">
+                Draw creators can set custom participation fees and prize distribution models
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -480,25 +507,25 @@ function VIPBenefitsSection() {
       name: "Silver",
       level: 1,
       color: "gray",
-      benefits: ["5% ticket discount", "Priority support", "Exclusive draws access"]
+      benefits: ["20% ticket discount", "Priority support", "Exclusive draws access"]
     },
     {
       name: "Gold",
       level: 2,
       color: "yellow",
-      benefits: ["10% ticket discount", "2x reward multiplier", "Early access to new features"]
+      benefits: ["40% ticket discount", "Bonus tickets", "Early access to features"]
     },
     {
       name: "Diamond",
       level: 3,
       color: "blue",
-      benefits: ["15% ticket discount", "3x reward multiplier", "Governance voting rights"]
+      benefits: ["60% ticket discount", "Extra bonus tickets", "Governance voting"]
     },
     {
       name: "Universe",
       level: 4,
       color: "purple",
-      benefits: ["20% ticket discount", "5x reward multiplier", "Revenue sharing", "Custom draws"]
+      benefits: ["80% ticket discount", "Maximum bonus tickets", "Revenue sharing"]
     }
   ];
 
@@ -506,7 +533,6 @@ function VIPBenefitsSection() {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
       <div>
@@ -567,13 +593,13 @@ function SecuritySection() {
       icon: Gem
     },
     {
-      title: "Transparent Operations",
-      description: "All transactions are recorded on-chain and publicly verifiable",
+      title: "Oracle Integration",
+      description: "Uses blockchain oracle for verifiable random number generation",
       icon: Target
     },
     {
-      title: "Automated Distribution",
-      description: "Prizes are distributed automatically without human intervention",
+      title: "Automated Execution",
+      description: "Draws execute automatically based on predefined conditions",
       icon: Zap
     },
     {
@@ -587,7 +613,6 @@ function SecuritySection() {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
       <div>
