@@ -299,7 +299,7 @@ export function useGridottoCoreV2() {
     if (!contract) return [];
     
     try {
-      const draws = [];
+      const draws: any[] = [];
       const nextDrawId = await getNextDrawId();
       
       // If nextDrawId is 0, no draws have been created yet
