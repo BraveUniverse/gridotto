@@ -21,6 +21,7 @@ export const StatsSection = () => {
     { label: 'Avg Ticket Price', value: 0, prefix: '', suffix: ' LYX' }
   ]);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -30,7 +31,10 @@ export const StatsSection = () => {
       }
 
       try {
-        setLoading(true);
+        // Only show loading on first load
+        if (!hasLoadedOnce) {
+          setLoading(true);
+        }
         
         // Get active draws
         const activeDraws = await getActiveUserDraws();
@@ -88,6 +92,8 @@ export const StatsSection = () => {
             suffix: ' LYX' 
           }
         ]);
+        
+        setHasLoadedOnce(true);
       } catch (error) {
         console.error('Error loading stats:', error);
       } finally {
@@ -97,10 +103,10 @@ export const StatsSection = () => {
 
     loadStats();
     
-    // Refresh every minute
-    const interval = setInterval(loadStats, 60000);
+    // Refresh every 2 minutes
+    const interval = setInterval(loadStats, 120000);
     return () => clearInterval(interval);
-  }, [isConnected, getActiveUserDraws, getUserDrawStats, getContractInfo]);
+  }, [isConnected]); // Removed function dependencies
 
   const icons = [CurrencyDollarIcon, SparklesIcon, UsersIcon, TicketIcon];
 

@@ -5,6 +5,7 @@ import { useUPProvider } from './useUPProvider';
 import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 import { CONTRACTS } from '@/config/contracts';
+import { cache } from '@/utils/cache';
 
 const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
@@ -222,9 +223,16 @@ export function useGridottoCoreV2() {
       return null;
     }
     
+    // Check cache first
+    const cacheKey = `drawDetails_${drawId}`;
+    const cachedDetails = cache.get<DrawDetails>(cacheKey);
+    if (cachedDetails) {
+      return cachedDetails;
+    }
+    
     try {
       const details = await contract.methods.getDrawDetails(drawId).call();
-      return {
+      const formattedDetails: DrawDetails = {
         creator: details.creator,
         drawType: Number(details.drawType),
         tokenAddress: details.tokenAddress,
@@ -241,6 +249,12 @@ export function useGridottoCoreV2() {
         participantCount: BigInt(details.participantCount),
         monthlyPoolContribution: BigInt(details.monthlyPoolContribution)
       };
+      
+      // Cache for 30 seconds if active, 5 minutes if completed/cancelled
+      const cacheTtl = formattedDetails.isCompleted || formattedDetails.isCancelled ? 300 : 30;
+      cache.set(cacheKey, formattedDetails, cacheTtl);
+      
+      return formattedDetails;
     } catch (err: any) {
       console.error('Error fetching draw details:', err);
       return null;
@@ -298,6 +312,14 @@ export function useGridottoCoreV2() {
   const getActiveDraws = async (): Promise<any[]> => {
     if (!contract) return [];
     
+    // Check cache first
+    const cacheKey = 'activeDraws';
+    const cachedDraws = cache.get<any[]>(cacheKey);
+    if (cachedDraws) {
+      console.log('Returning cached active draws');
+      return cachedDraws;
+    }
+    
     try {
       const draws: any[] = [];
       const nextDrawId = await getNextDrawId();
@@ -305,26 +327,36 @@ export function useGridottoCoreV2() {
       // If nextDrawId is 0, no draws have been created yet
       if (nextDrawId === 0) {
         console.log('No draws created yet (nextDrawId is 0)');
+        cache.set(cacheKey, [], 30); // Cache empty result for 30 seconds
         return [];
       }
       
       // Limit to last 20 draws to avoid too many requests
       const startId = Math.max(1, nextDrawId - 20);
       
-      // Batch fetch draw details
-      const promises = [];
-      for (let i = startId; i < nextDrawId; i++) {
-        promises.push(getDrawDetails(i));
+      // Batch fetch draw details - but limit concurrent requests
+      const batchSize = 5; // Process 5 draws at a time
+      const allResults: any[] = [];
+      
+      for (let i = startId; i < nextDrawId; i += batchSize) {
+        const batch = [];
+        for (let j = i; j < Math.min(i + batchSize, nextDrawId); j++) {
+          batch.push(getDrawDetails(j));
+        }
+        
+        const batchResults = await Promise.all(batch);
+        allResults.push(...batchResults);
       }
       
-      const results = await Promise.all(promises);
-      
       // Filter active draws
-      results.forEach((details, index) => {
+      allResults.forEach((details, index) => {
         if (details && !details.isCompleted && !details.isCancelled) {
           draws.push({ drawId: startId + index, ...details });
         }
       });
+      
+      // Cache the results for 30 seconds
+      cache.set(cacheKey, draws, 30);
       
       return draws;
     } catch (err: any) {

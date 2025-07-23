@@ -13,17 +13,11 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { useUPProvider } from '@/hooks/useUPProvider';
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Changed to false
   const { isConnected, account } = useUPProvider();
   const router = useRouter();
 
-  useEffect(() => {
-    // Simulate initial load
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
+  // Removed the unnecessary 2-second loading timer
 
   if (isLoading) {
     return <LoadingScreen />;
