@@ -14,6 +14,9 @@ import Web3 from 'web3';
 export const StatsSection = () => {
   const { isConnected } = useUPProvider();
   const { getActiveUserDraws, getUserDrawStats, getContractInfo } = useGridottoContract();
+  
+  console.log('StatsSection render - isConnected:', isConnected);
+  
   const [stats, setStats] = useState([
     { label: 'Total Prize Pool', value: 0, prefix: '', suffix: ' LYX' },
     { label: 'Active Draws', value: 0, prefix: '', suffix: '' },
@@ -21,7 +24,6 @@ export const StatsSection = () => {
     { label: 'Avg Ticket Price', value: 0, prefix: '', suffix: ' LYX' }
   ]);
   const [loading, setLoading] = useState(true);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -31,10 +33,7 @@ export const StatsSection = () => {
       }
 
       try {
-        // Only show loading on first load
-        if (!hasLoadedOnce) {
-          setLoading(true);
-        }
+        setLoading(true);
         
         // Get active draws
         const activeDraws = await getActiveUserDraws();
@@ -92,8 +91,6 @@ export const StatsSection = () => {
             suffix: ' LYX' 
           }
         ]);
-        
-        setHasLoadedOnce(true);
       } catch (error) {
         console.error('Error loading stats:', error);
       } finally {
@@ -101,12 +98,11 @@ export const StatsSection = () => {
       }
     };
 
+    // Load stats immediately
     loadStats();
     
-    // Refresh every 2 minutes
-    const interval = setInterval(loadStats, 120000);
-    return () => clearInterval(interval);
-  }, [isConnected]); // Only depend on isConnected
+    // Don't set up interval for now - let's fix the basic functionality first
+  }, []); // Empty dependency array - only run once on mount
 
   const icons = [CurrencyDollarIcon, SparklesIcon, UsersIcon, TicketIcon];
 

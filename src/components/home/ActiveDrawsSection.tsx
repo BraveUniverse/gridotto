@@ -43,10 +43,6 @@ export function ActiveDrawsSection() {
     };
 
     fetchActiveDraws();
-    
-    // Refresh every 2 minutes instead of 30 seconds
-    const interval = setInterval(fetchActiveDraws, 120000);
-    return () => clearInterval(interval);
   }, []); // Empty dependency array - run once on mount
 
   const formatTimeRemaining = (endTime: string) => {

@@ -238,5 +238,13 @@ export const useGridottoContract = () => {
     claimRefund: refund.claimRefund,
     getUserDraws: async (userAddress: string) => [],
     getPlatformStats: leaderboard.getPlatformStatistics
-  }), []); // Empty dependency array - memoize once
+  }), [
+    // Only include primitive values
+    core.loading,
+    execution.loading,
+    platform.loading,
+    refund.loading,
+    leaderboard.loading,
+    account
+  ]);
 };
