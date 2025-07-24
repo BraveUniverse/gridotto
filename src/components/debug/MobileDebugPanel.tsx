@@ -26,7 +26,7 @@ export function MobileDebugPanel() {
     error: typeof console.error;
     warn: typeof console.warn;
     info: typeof console.info;
-  }>();
+  } | null>(null);
 
   // Get system info
   const { isConnected, account, web3 } = useUPProvider();
@@ -40,29 +40,39 @@ export function MobileDebugPanel() {
 
   // Load saved state from localStorage
   useEffect(() => {
-    const savedState = localStorage.getItem('debugPanelState');
-    if (savedState) {
-      const { isOpen: savedIsOpen, activeTab: savedTab } = JSON.parse(savedState);
-      setIsOpen(savedIsOpen);
-      setActiveTab(savedTab || 'console');
+    if (typeof window !== 'undefined') {
+      const savedState = localStorage.getItem('debugPanelState');
+      if (savedState) {
+        try {
+          const { isOpen: savedIsOpen, activeTab: savedTab } = JSON.parse(savedState);
+          setIsOpen(savedIsOpen);
+          setActiveTab(savedTab || 'console');
+        } catch (e) {
+          console.error('Failed to parse debug panel state:', e);
+        }
+      }
     }
   }, []);
 
   // Save state to localStorage
   useEffect(() => {
-    localStorage.setItem('debugPanelState', JSON.stringify({ isOpen, activeTab }));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('debugPanelState', JSON.stringify({ isOpen, activeTab }));
+    }
   }, [isOpen, activeTab]);
 
   // Debug commands
   const clearCache = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    if ('caches' in window) {
-      caches.keys().then(names => {
-        names.forEach(name => caches.delete(name));
-      });
+    if (typeof window !== 'undefined') {
+      localStorage.clear();
+      sessionStorage.clear();
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        });
+      }
+      console.info('All caches cleared!');
     }
-    console.info('All caches cleared!');
   };
 
   const reloadPage = () => {
