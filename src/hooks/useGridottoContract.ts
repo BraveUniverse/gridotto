@@ -1,6 +1,7 @@
 'use client';
 
 // Compatibility layer for old code
+import { useMemo } from 'react';
 import { useGridottoCoreV2 } from './useGridottoCoreV2';
 import { useGridottoExecutionV2 } from './useGridottoExecutionV2';
 import { useGridottoPlatformDraws } from './useGridottoPlatformDraws';
@@ -192,7 +193,7 @@ export const useGridottoContract = () => {
     return { participants: [], ticketCounts: [] };
   };
 
-  return {
+  return useMemo(() => ({
     contract: core.contract,
     loading: core.loading || execution.loading || platform.loading || refund.loading || leaderboard.loading,
     error: core.error || execution.error || platform.error || refund.error || leaderboard.error,
@@ -237,5 +238,35 @@ export const useGridottoContract = () => {
     claimRefund: refund.claimRefund,
     getUserDraws: async (userAddress: string) => [],
     getPlatformStats: leaderboard.getPlatformStatistics
-  };
+  }), [
+    core.contract,
+    core.loading,
+    core.buyTickets,
+    execution.loading,
+    execution.executeDraw,
+    platform.loading,
+    platform.getPlatformDrawsInfo,
+    refund.loading,
+    refund.claimRefund,
+    leaderboard.loading,
+    leaderboard.getPlatformStatistics,
+    core.error,
+    execution.error,
+    platform.error,
+    refund.error,
+    leaderboard.error,
+    getActiveUserDraws,
+    getUserDrawStats,
+    getOfficialDrawInfo,
+    getContractInfo,
+    createDraw,
+    purchaseTickets,
+    getUserDraw,
+    getDrawInfo,
+    executeUserDraw,
+    canExecuteDraw,
+    claimAll,
+    getRecentWinners,
+    getDrawParticipants
+  ]);
 };

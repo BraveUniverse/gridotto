@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUPProvider } from './useUPProvider';
 import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
@@ -214,7 +214,7 @@ export function useGridottoCoreV2() {
   };
 
   // Get draw details
-  const getDrawDetails = async (drawId: number): Promise<DrawDetails | null> => {
+  const getDrawDetails = useCallback(async (drawId: number): Promise<DrawDetails | null> => {
     if (!contract) return null;
     
     // Validate drawId
@@ -292,7 +292,7 @@ export function useGridottoCoreV2() {
       console.error('Error fetching draw details:', err);
       return null;
     }
-  };
+  }, [contract]);
 
   // Get user draw history
   const getUserDrawHistory = async (user: string): Promise<number[]> => {
@@ -329,7 +329,7 @@ export function useGridottoCoreV2() {
   };
 
   // Get next draw ID
-  const getNextDrawId = async (): Promise<number> => {
+  const getNextDrawId = useCallback(async (): Promise<number> => {
     if (!contract) return 0;
     
     try {
@@ -339,10 +339,10 @@ export function useGridottoCoreV2() {
       console.error('Error fetching next draw ID:', err);
       return 0;
     }
-  };
+  }, [contract]);
 
   // Get active draws
-  const getActiveDraws = async (): Promise<any[]> => {
+  const getActiveDraws = useCallback(async (): Promise<any[]> => {
     if (!contract) return [];
     
     // Check cache first
@@ -396,7 +396,7 @@ export function useGridottoCoreV2() {
       console.error('Error fetching active draws:', err);
       return [];
     }
-  };
+  }, [contract, getDrawDetails, getNextDrawId]);
 
   return {
     contract,
