@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Web3 from 'web3';
@@ -85,17 +85,7 @@ const DrawDetailsPage = () => {
   const [canClaim, setCanClaim] = useState(false);
   const [refundAmount, setRefundAmount] = useState('0');
 
-  useEffect(() => {
-    loadDrawDetails();
-  }, [drawId]);
-
-  useEffect(() => {
-    if (draw && account) {
-      checkUserStatus();
-    }
-  }, [draw, account]);
-
-  const loadDrawDetails = async () => {
+  const loadDrawDetails = useCallback(async () => {
     // Double check drawId validity
     if (!drawId || isNaN(drawId) || drawId <= 0) {
       console.error('Invalid drawId in loadDrawDetails:', drawId);
@@ -160,9 +150,9 @@ const DrawDetailsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [drawId, getDrawDetails, getDrawWinners, account]);
 
-  const checkUserStatus = async () => {
+  const checkUserStatus = useCallback(async () => {
     if (!draw || !account) return;
 
     try {
@@ -184,7 +174,17 @@ const DrawDetailsPage = () => {
     } catch (err) {
       console.error('Error checking user status:', err);
     }
-  };
+  }, [draw, account, drawId, canExecuteDraw, canClaimPrize, getRefundAmount]);
+
+  useEffect(() => {
+    loadDrawDetails();
+  }, [loadDrawDetails]);
+
+  useEffect(() => {
+    if (draw && account) {
+      checkUserStatus();
+    }
+  }, [draw, account, checkUserStatus]);
 
   const handleBuyTickets = async () => {
     if (!isConnected) {

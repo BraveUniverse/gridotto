@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
 import { UserDraw } from '@/types/gridotto';
@@ -12,42 +12,42 @@ export function ActiveDrawsSection() {
   const [loading, setLoading] = useState(true);
   const { getActiveUserDraws, getUserDrawStats } = useGridottoContract();
 
-  useEffect(() => {
-    const fetchActiveDraws = async () => {
-      try {
-        setLoading(true);
-        const draws = await getActiveUserDraws();
-        
-        // Fetch detailed stats for each draw
-        const detailedDraws = await Promise.all(
-          draws.map(async (draw) => {
-            const stats = await getUserDrawStats(draw.drawId);
-            if (stats) {
-              return {
-                ...draw,
-                prizeAmount: stats.prizePool,
-                totalTicketsSold: Number(stats.totalTicketsSold),
-                ticketPrice: '1000000000000000000' // 1 LYX default
-              };
-            }
-            return draw;
-          })
-        );
-        
-        setActiveDraws(detailedDraws);
-      } catch (error) {
-        console.error('Error fetching active draws:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchActiveDraws = useCallback(async () => {
+    try {
+      setLoading(true);
+      const draws = await getActiveUserDraws();
+      
+      // Fetch detailed stats for each draw
+      const detailedDraws = await Promise.all(
+        draws.map(async (draw) => {
+          const stats = await getUserDrawStats(draw.drawId);
+          if (stats) {
+            return {
+              ...draw,
+              prizeAmount: stats.prizePool,
+              totalTicketsSold: Number(stats.totalTicketsSold),
+              ticketPrice: '1000000000000000000' // 1 LYX default
+            };
+          }
+          return draw;
+        })
+      );
+      
+      setActiveDraws(detailedDraws);
+    } catch (error) {
+      console.error('Error fetching active draws:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [getActiveUserDraws, getUserDrawStats]);
 
+  useEffect(() => {
     fetchActiveDraws();
     
     // Refresh every 2 minutes instead of 30 seconds
     const interval = setInterval(fetchActiveDraws, 120000);
     return () => clearInterval(interval);
-  }, []); // Empty dependency array to run only once
+  }, [fetchActiveDraws]); // Empty dependency array to run only once
 
   const formatTimeRemaining = (endTime: string) => {
     const now = Math.floor(Date.now() / 1000);
