@@ -151,6 +151,11 @@ const DrawDetailsPage = () => {
       }
     } catch (err) {
       console.error('Error loading draw details:', err);
+      console.error('DrawId:', drawId);
+      console.error('Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined
+      });
       toast.error('Failed to load draw details');
     } finally {
       setLoading(false);

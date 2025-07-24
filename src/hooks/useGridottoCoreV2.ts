@@ -232,22 +232,55 @@ export function useGridottoCoreV2() {
     
     try {
       const details = await contract.methods.getDrawDetails(drawId).call();
+      
+      // Handle both tuple and separate values format
+      let creator, drawType, tokenAddress, ticketPrice, maxTickets, ticketsSold, 
+          prizePool, startTime, endTime, minParticipants, platformFeePercent, 
+          isCompleted, isCancelled, participantCount, monthlyPoolContribution;
+      
+      if (details.creator !== undefined) {
+        // Tuple format (old ABI)
+        creator = details.creator;
+        drawType = details.drawType;
+        tokenAddress = details.tokenAddress;
+        ticketPrice = details.ticketPrice;
+        maxTickets = details.maxTickets;
+        ticketsSold = details.ticketsSold;
+        prizePool = details.prizePool;
+        startTime = details.startTime;
+        endTime = details.endTime;
+        minParticipants = details.minParticipants;
+        platformFeePercent = details.platformFeePercent;
+        isCompleted = details.isCompleted;
+        isCancelled = details.isCancelled;
+        participantCount = details.participantCount;
+        monthlyPoolContribution = details.monthlyPoolContribution;
+      } else if (Array.isArray(details)) {
+        // Array format (new contract)
+        [creator, drawType, tokenAddress, ticketPrice, maxTickets, ticketsSold, 
+         prizePool, startTime, endTime, minParticipants, platformFeePercent, 
+         isCompleted, isCancelled, participantCount, monthlyPoolContribution] = details;
+      } else {
+        console.error('Unexpected getDrawDetails response format:', details);
+        return null;
+      }
+      
       const formattedDetails: DrawDetails = {
-        creator: details.creator,
-        drawType: Number(details.drawType),
-        tokenAddress: details.tokenAddress,
-        ticketPrice: BigInt(details.ticketPrice),
-        maxTickets: BigInt(details.maxTickets),
-        ticketsSold: BigInt(details.ticketsSold),
-        prizePool: BigInt(details.prizePool),
-        startTime: BigInt(details.startTime),
-        endTime: BigInt(details.endTime),
-        minParticipants: BigInt(details.minParticipants),
-        platformFeePercent: BigInt(details.platformFeePercent),
-        isCompleted: details.isCompleted,
-        isCancelled: details.isCancelled,
-        participantCount: BigInt(details.participantCount),
-        monthlyPoolContribution: BigInt(details.monthlyPoolContribution)
+        creator,
+        drawType: Number(drawType),
+        tokenAddress,
+        ticketPrice: BigInt(ticketPrice),
+        maxTickets: BigInt(maxTickets),
+        ticketsSold: BigInt(ticketsSold),
+        prizePool: BigInt(prizePool),
+        startTime: BigInt(startTime),
+        endTime: BigInt(endTime),
+        minParticipants: BigInt(minParticipants),
+        platformFeePercent: BigInt(platformFeePercent),
+        isCompleted,
+        isCancelled,
+        participantCount: BigInt(participantCount),
+        monthlyPoolContribution: BigInt(monthlyPoolContribution)
       };
       
       // Cache for 30 seconds if active, 5 minutes if completed/cancelled
