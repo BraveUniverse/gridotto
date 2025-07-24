@@ -20,6 +20,7 @@ export function MobileDebugPanel() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<'all' | 'log' | 'error' | 'warn' | 'info'>('all');
   const [activeTab, setActiveTab] = useState<TabType>('console');
+  const [debugEnabled, setDebugEnabled] = useState(false);
   const logIdRef = useRef(0);
   const originalConsole = useRef<{
     log: typeof console.log;
@@ -37,6 +38,18 @@ export function MobileDebugPanel() {
     memory: '',
     connection: ''
   });
+
+  // Check if debug is enabled via URL parameter
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const debugParam = urlParams.get('debug');
+      const envEnabled = process.env.NEXT_PUBLIC_DEBUG_ENABLED === 'true';
+      const isDev = process.env.NODE_ENV === 'development';
+      
+      setDebugEnabled(debugParam === 'true' || envEnabled || isDev);
+    }
+  }, []);
 
   // Load saved state from localStorage
   useEffect(() => {
@@ -104,8 +117,8 @@ export function MobileDebugPanel() {
   }, []);
 
   useEffect(() => {
-    // Only show in development
-    if (process.env.NODE_ENV !== 'development') return;
+    // Only setup console overrides if debug is enabled
+    if (!debugEnabled) return;
 
     // Store original console methods
     originalConsole.current = {
@@ -177,10 +190,12 @@ export function MobileDebugPanel() {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleRejection);
     };
-  }, []);
+  }, [debugEnabled]);
 
-  // Don't render in production
-  if (process.env.NODE_ENV !== 'development') return null;
+  // Show debug panel if explicitly enabled via env variable
+  // const debugEnabled = process.env.NEXT_PUBLIC_DEBUG_ENABLED === 'true' || process.env.NODE_ENV === 'development';
+  
+  if (!debugEnabled) return null;
 
   const filteredLogs = filter === 'all' 
     ? logs 
@@ -205,7 +220,7 @@ export function MobileDebugPanel() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 right-4 z-50 bg-purple-600 text-white p-3 rounded-full shadow-lg md:hidden flex items-center justify-center"
+          className="fixed bottom-4 right-4 z-50 bg-purple-600 text-white p-3 rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition-colors"
           aria-label="Open debug panel"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
