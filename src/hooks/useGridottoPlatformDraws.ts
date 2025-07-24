@@ -130,7 +130,7 @@ export function useGridottoPlatformDraws() {
         nextMonthlyDraw: info.nextMonthlyDraw || info[4]
       };
     } catch (err: any) {
-      console.error('Error fetching platform draws info:', err);
+      // Silently fail - this is expected if platform draws are not set up
       return null;
     }
   };

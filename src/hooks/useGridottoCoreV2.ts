@@ -349,7 +349,6 @@ export function useGridottoCoreV2() {
     const cacheKey = 'activeDraws';
     const cachedDraws = cache.get<any[]>(cacheKey);
     if (cachedDraws) {
-      console.log('Returning cached active draws');
       return cachedDraws;
     }
     

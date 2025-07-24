@@ -238,35 +238,5 @@ export const useGridottoContract = () => {
     claimRefund: refund.claimRefund,
     getUserDraws: async (userAddress: string) => [],
     getPlatformStats: leaderboard.getPlatformStatistics
-  }), [
-    core.contract,
-    core.loading,
-    core.buyTickets,
-    execution.loading,
-    execution.executeDraw,
-    platform.loading,
-    platform.getPlatformDrawsInfo,
-    refund.loading,
-    refund.claimRefund,
-    leaderboard.loading,
-    leaderboard.getPlatformStatistics,
-    core.error,
-    execution.error,
-    platform.error,
-    refund.error,
-    leaderboard.error,
-    getActiveUserDraws,
-    getUserDrawStats,
-    getOfficialDrawInfo,
-    getContractInfo,
-    createDraw,
-    purchaseTickets,
-    getUserDraw,
-    getDrawInfo,
-    executeUserDraw,
-    canExecuteDraw,
-    claimAll,
-    getRecentWinners,
-    getDrawParticipants
-  ]);
+  }), []); // Empty dependency array - memoize once
 };
