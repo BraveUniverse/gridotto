@@ -20,7 +20,23 @@ export const useGridottoContract = () => {
   // Compatibility functions
   const getActiveUserDraws = async (limit?: number) => {
     const draws = await core.getActiveDraws();
-    return draws.slice(0, limit || 20);
+    
+    // Convert to UserDraw format
+    const userDraws = draws.map(draw => ({
+      drawId: draw.drawId,
+      creator: draw.creator,
+      endTime: draw.endTime.toString(),
+      prizeType: draw.drawType === 0 ? 'LYX' as const : draw.drawType === 1 ? 'LSP7' as const : 'LSP8' as const,
+      prizeAmount: draw.prizePool.toString(),
+      ticketPrice: draw.ticketPrice.toString(),
+      maxTickets: Number(draw.maxTickets),
+      minTickets: Number(draw.minParticipants),
+      isActive: !draw.isCompleted && !draw.isCancelled,
+      totalTicketsSold: Number(draw.ticketsSold),
+      participants: [] // This would need a separate call to get participants
+    }));
+    
+    return userDraws.slice(0, limit || 20);
   };
 
   const getUserDrawStats = async (drawId: number) => {

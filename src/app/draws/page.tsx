@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Header } from '@/components/Header';
+import { Header } from '@/components/layout/Header';
 import { DrawCard } from '@/components/draws/DrawCard';
 import { DrawFilters } from '@/components/draws/DrawFilters';
 import { useUPProvider } from '@/hooks/useUPProvider';
