@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoContract } from '@/hooks/useGridottoContract';
 import { 
@@ -23,90 +23,90 @@ export const StatsSection = () => {
   const [loading, setLoading] = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  const loadStats = useCallback(async () => {
-    if (!isConnected) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Only show loading on first load
-      if (!hasLoadedOnce) {
-        setLoading(true);
-      }
-      
-      // Get active draws
-      const activeDraws = await getActiveUserDraws();
-      
-      // Calculate total prize pool and participants
-      let totalPrizePool = BigInt(0);
-      let totalParticipants = 0;
-      let totalTicketPrice = BigInt(0);
-      let drawCount = 0;
-      
-      for (const draw of activeDraws) {
-        const stats = await getUserDrawStats(draw.drawId);
-        if (stats) {
-          totalPrizePool += BigInt(stats.prizePool);
-          totalParticipants += Number(stats.totalParticipants);
-          totalTicketPrice += BigInt(draw.ticketPrice);
-          drawCount++;
-        }
-      }
-      
-      // Get contract balance
-      const contractInfo = await getContractInfo();
-      if (contractInfo) {
-        totalPrizePool += BigInt(contractInfo.totalPrizePool);
-      }
-      
-      // Calculate average ticket price
-      const avgTicketPrice = drawCount > 0 
-        ? Number(Web3.utils.fromWei((totalTicketPrice / BigInt(drawCount)).toString(), 'ether'))
-        : 1;
-      
-      setStats([
-        { 
-          label: 'Total Prize Pool', 
-          value: Number(Web3.utils.fromWei(totalPrizePool.toString(), 'ether')), 
-          prefix: '', 
-          suffix: ' LYX' 
-        },
-        { 
-          label: 'Active Draws', 
-          value: activeDraws.length, 
-          prefix: '', 
-          suffix: '' 
-        },
-        { 
-          label: 'Total Participants', 
-          value: totalParticipants, 
-          prefix: '', 
-          suffix: '' 
-        },
-        { 
-          label: 'Avg Ticket Price', 
-          value: avgTicketPrice, 
-          prefix: '', 
-          suffix: ' LYX' 
-        }
-      ]);
-      
-      setHasLoadedOnce(true);
-    } catch (error) {
-      console.error('Error loading stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [isConnected, getActiveUserDraws, getUserDrawStats, getContractInfo, hasLoadedOnce]);
-
   useEffect(() => {
+    const loadStats = async () => {
+      if (!isConnected) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Only show loading on first load
+        if (!hasLoadedOnce) {
+          setLoading(true);
+        }
+        
+        // Get active draws
+        const activeDraws = await getActiveUserDraws();
+        
+        // Calculate total prize pool and participants
+        let totalPrizePool = BigInt(0);
+        let totalParticipants = 0;
+        let totalTicketPrice = BigInt(0);
+        let drawCount = 0;
+        
+        for (const draw of activeDraws) {
+          const stats = await getUserDrawStats(draw.drawId);
+          if (stats) {
+            totalPrizePool += BigInt(stats.prizePool);
+            totalParticipants += Number(stats.totalParticipants);
+            totalTicketPrice += BigInt(draw.ticketPrice);
+            drawCount++;
+          }
+        }
+        
+        // Get contract balance
+        const contractInfo = await getContractInfo();
+        if (contractInfo) {
+          totalPrizePool += BigInt(contractInfo.totalPrizePool);
+        }
+        
+        // Calculate average ticket price
+        const avgTicketPrice = drawCount > 0 
+          ? Number(Web3.utils.fromWei((totalTicketPrice / BigInt(drawCount)).toString(), 'ether'))
+          : 1;
+        
+        setStats([
+          { 
+            label: 'Total Prize Pool', 
+            value: Number(Web3.utils.fromWei(totalPrizePool.toString(), 'ether')), 
+            prefix: '', 
+            suffix: ' LYX' 
+          },
+          { 
+            label: 'Active Draws', 
+            value: activeDraws.length, 
+            prefix: '', 
+            suffix: '' 
+          },
+          { 
+            label: 'Total Participants', 
+            value: totalParticipants, 
+            prefix: '', 
+            suffix: '' 
+          },
+          { 
+            label: 'Avg Ticket Price', 
+            value: avgTicketPrice, 
+            prefix: '', 
+            suffix: ' LYX' 
+          }
+        ]);
+        
+        setHasLoadedOnce(true);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadStats();
     
     // Refresh every 2 minutes
     const interval = setInterval(loadStats, 120000);
     return () => clearInterval(interval);
-  }, [loadStats]); // Removed function dependencies
+  }, [isConnected]); // Only depend on isConnected
 
   const icons = [CurrencyDollarIcon, SparklesIcon, UsersIcon, TicketIcon];
 

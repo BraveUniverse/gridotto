@@ -150,7 +150,7 @@ const DrawDetailsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [drawId, getDrawDetails, getDrawWinners, account]);
+  }, [drawId, account]); // Only depend on drawId and account
 
   const checkUserStatus = useCallback(async () => {
     if (!draw || !account) return;
@@ -174,7 +174,7 @@ const DrawDetailsPage = () => {
     } catch (err) {
       console.error('Error checking user status:', err);
     }
-  }, [draw, account, drawId, canExecuteDraw, canClaimPrize, getRefundAmount]);
+  }, [draw, account, drawId]); // Only depend on state, not functions
 
   useEffect(() => {
     loadDrawDetails();
