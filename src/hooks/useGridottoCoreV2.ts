@@ -283,8 +283,8 @@ export function useGridottoCoreV2() {
         monthlyPoolContribution: BigInt(monthlyPoolContribution)
       };
       
-      // Cache for 30 seconds if active, 5 minutes if completed/cancelled
-      const cacheTtl = formattedDetails.isCompleted || formattedDetails.isCancelled ? 300 : 30;
+      // Cache for 2 minutes if active, 10 minutes if completed/cancelled
+      const cacheTtl = formattedDetails.isCompleted || formattedDetails.isCancelled ? 600 : 120;
       cache.set(cacheKey, formattedDetails, cacheTtl);
       
       return formattedDetails;
@@ -359,7 +359,7 @@ export function useGridottoCoreV2() {
       // If nextDrawId is 0, no draws have been created yet
       if (nextDrawId === 0) {
         console.log('No draws created yet (nextDrawId is 0)');
-        cache.set(cacheKey, [], 30); // Cache empty result for 30 seconds
+        cache.set(cacheKey, [], 120); // Cache empty result for 2 minutes
         return [];
       }
       
@@ -387,8 +387,8 @@ export function useGridottoCoreV2() {
         }
       });
       
-      // Cache the results for 30 seconds
-      cache.set(cacheKey, draws, 30);
+      // Cache the results for 2 minutes
+      cache.set(cacheKey, draws, 120);
       
       return draws;
     } catch (err: any) {

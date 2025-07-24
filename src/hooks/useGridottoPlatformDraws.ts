@@ -122,15 +122,35 @@ export function useGridottoPlatformDraws() {
     
     try {
       const info = await contract.methods.getPlatformDrawsInfo().call();
-      return {
-        weeklyDrawId: info.weeklyDrawId || info[0],
-        monthlyDrawId: info.monthlyDrawId || info[1],
-        monthlyPoolBalance: info.monthlyPoolBalance || info[2],
-        lastWeeklyDrawTime: info.lastWeeklyDrawTime || info[3],
-        nextMonthlyDraw: info.nextMonthlyDraw || info[4]
-      };
+      
+      // Handle both object and array response formats
+      if (Array.isArray(info)) {
+        // Array format: [weeklyDrawId, monthlyDrawId, weeklyEndTime, monthlyEndTime, monthlyPoolBalance, weeklyCount]
+        return {
+          weeklyDrawId: info[0],
+          monthlyDrawId: info[1], 
+          monthlyPoolBalance: info[4],
+          lastWeeklyDrawTime: info[2], // Using weeklyEndTime as lastWeeklyDrawTime
+          nextMonthlyDraw: info[3] // Using monthlyEndTime
+        };
+      } else if (info && typeof info === 'object') {
+        // Object format
+        return {
+          weeklyDrawId: info.weeklyDrawId || info[0],
+          monthlyDrawId: info.monthlyDrawId || info[1],
+          monthlyPoolBalance: info.monthlyPoolBalance || info[4],
+          lastWeeklyDrawTime: info.weeklyEndTime || info.lastWeeklyDrawTime || info[2],
+          nextMonthlyDraw: info.monthlyEndTime || info.nextMonthlyDraw || info[3]
+        };
+      }
+      
+      console.warn('Unexpected getPlatformDrawsInfo response format:', info);
+      return null;
     } catch (err: any) {
-      // Silently fail - this is expected if platform draws are not set up
+      // Only log error if it's not a "function not found" error
+      if (!err.message?.includes('does not exist') && !err.message?.includes('Method not found')) {
+        console.error('Error fetching platform draws info:', err.message);
+      }
       return null;
     }
   };
