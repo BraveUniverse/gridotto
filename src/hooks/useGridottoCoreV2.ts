@@ -410,7 +410,25 @@ export function useGridottoCoreV2() {
       // Filter active draws
       results.forEach((details, index) => {
         if (details && !details.isCompleted && !details.isCancelled) {
-          draws.push({ drawId: startId + index, ...details });
+          // Convert BigInt values to strings/numbers for safe serialization
+          draws.push({ 
+            drawId: startId + index,
+            creator: details.creator,
+            drawType: details.drawType,
+            tokenAddress: details.tokenAddress,
+            ticketPrice: details.ticketPrice.toString(),
+            maxTickets: details.maxTickets.toString(),
+            ticketsSold: details.ticketsSold.toString(),
+            prizePool: details.prizePool.toString(),
+            startTime: Number(details.startTime),
+            endTime: Number(details.endTime),
+            minParticipants: Number(details.minParticipants),
+            platformFeePercent: Number(details.platformFeePercent),
+            isCompleted: details.isCompleted,
+            isCancelled: details.isCancelled,
+            participantCount: Number(details.participantCount),
+            monthlyPoolContribution: details.monthlyPoolContribution.toString()
+          });
         }
       });
       
