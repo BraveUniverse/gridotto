@@ -89,10 +89,15 @@ const ProfilePage = () => {
           const participated = true; // Assuming user participated if in history
           
           if (participated) {
+            const endTimeBigInt = details.endTime;
+            const endTimeNum = typeof endTimeBigInt === 'bigint' 
+              ? Number(endTimeBigInt) 
+              : Number(endTimeBigInt || 0);
+            
             detailedHistory.push({
               drawId,
               drawType: details.drawType,
-              endTime: Number(details.endTime),
+              endTime: endTimeNum,
               isCompleted: details.isCompleted,
               prizePool: details.prizePool.toString(),
               ticketPrice: details.ticketPrice.toString()

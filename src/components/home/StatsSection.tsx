@@ -65,9 +65,16 @@ export const StatsSection = () => {
           
           if (isActive && prizePool) {
             activeDrawsCount++;
-            totalPrizePool += BigInt(prizePool.toString());
+            // Safe BigInt conversion
+            const prizePoolBigInt = typeof prizePool === 'bigint' ? prizePool : BigInt(prizePool.toString());
+            totalPrizePool += prizePoolBigInt;
+            
             totalParticipants += Number((drawDetails as any).participantCount);
-            totalTicketPrices += BigInt((drawDetails as any).ticketPrice.toString());
+            
+            // Safe BigInt conversion for ticket price
+            const ticketPrice = (drawDetails as any).ticketPrice;
+            const ticketPriceBigInt = typeof ticketPrice === 'bigint' ? ticketPrice : BigInt(ticketPrice.toString());
+            totalTicketPrices += ticketPriceBigInt;
             ticketPriceCount++;
           }
           
