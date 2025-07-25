@@ -50,12 +50,12 @@ export function useGridottoCoreV2() {
 
   // Create LYX Draw
   const createLYXDraw = async (
-    ticketPrice: string, // in LYX
+    ticketPrice: string, // already in Wei
     maxTickets: number,
     duration: number,
     minParticipants: number,
     platformFeePercent: number,
-    initialPrize: string = "0" // in LYX
+    initialPrize: string = "0" // already in Wei
   ) => {
     if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
@@ -63,11 +63,22 @@ export function useGridottoCoreV2() {
       setLoading(true);
       setError(null);
       
+      console.log('[createLYXDraw] Input params:', {
+        ticketPrice,
+        ticketPriceInLYX: web3.utils.fromWei(ticketPrice, 'ether'),
+        maxTickets,
+        duration,
+        minParticipants,
+        platformFeePercent,
+        initialPrize,
+        initialPrizeInLYX: web3.utils.fromWei(initialPrize, 'ether')
+      });
+      
       const tx = await sendTransaction(
         contract,
         'createLYXDraw',
         [
-          Web3.utils.toWei(ticketPrice, 'ether'),
+          ticketPrice, // Already in Wei, no conversion needed
           maxTickets,
           duration,
           minParticipants,
@@ -75,7 +86,7 @@ export function useGridottoCoreV2() {
         ],
         { 
           from: account,
-          value: Web3.utils.toWei(initialPrize, 'ether')
+          value: initialPrize // Already in Wei, no conversion needed
         },
         web3,
         account,
@@ -100,12 +111,12 @@ export function useGridottoCoreV2() {
   // Create Token Draw (LSP7)
   const createTokenDraw = async (
     tokenAddress: string,
-    ticketPrice: string, // in token units
+    ticketPrice: string, // already in Wei
     maxTickets: number,
     duration: number,
     minParticipants: number,
     platformFeePercent: number,
-    initialPrize: string // in token units
+    initialPrize: string = "0" // Token amount already in smallest unit
   ) => {
     if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
@@ -113,18 +124,29 @@ export function useGridottoCoreV2() {
       setLoading(true);
       setError(null);
       
-      // Note: Token approval should be done before this
+      console.log('[createTokenDraw] Input params:', {
+        tokenAddress,
+        ticketPrice,
+        ticketPriceInTokens: web3.utils.fromWei(ticketPrice, 'ether'),
+        maxTickets,
+        duration,
+        minParticipants,
+        platformFeePercent,
+        initialPrize,
+        initialPrizeInTokens: web3.utils.fromWei(initialPrize, 'ether')
+      });
+      
       const tx = await sendTransaction(
         contract,
         'createTokenDraw',
         [
           tokenAddress,
-          Web3.utils.toWei(ticketPrice, 'ether'), // Assuming 18 decimals
+          ticketPrice, // Already in smallest unit, no conversion needed
           maxTickets,
           duration,
           minParticipants,
           platformFeePercent,
-          Web3.utils.toWei(initialPrize, 'ether')
+          initialPrize // Already in smallest unit, no conversion needed
         ],
         { from: account },
         web3,
@@ -151,7 +173,7 @@ export function useGridottoCoreV2() {
   const createNFTDraw = async (
     nftContract: string,
     nftTokenIds: string[], // Will be converted to bytes32
-    ticketPrice: string, // in LYX
+    ticketPrice: string, // already in Wei (LYX)
     maxTickets: number,
     duration: number,
     minParticipants: number,
@@ -162,6 +184,17 @@ export function useGridottoCoreV2() {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('[createNFTDraw] Input params:', {
+        nftContract,
+        nftTokenIds,
+        ticketPrice,
+        ticketPriceInLYX: web3.utils.fromWei(ticketPrice, 'ether'),
+        maxTickets,
+        duration,
+        minParticipants,
+        platformFeePercent
+      });
       
       // Convert token IDs to bytes32
       const bytes32TokenIds = nftTokenIds.map(id => 
@@ -175,7 +208,7 @@ export function useGridottoCoreV2() {
         [
           nftContract,
           bytes32TokenIds,
-          Web3.utils.toWei(ticketPrice, 'ether'),
+          ticketPrice, // Already in Wei, no conversion needed
           maxTickets,
           duration,
           minParticipants,
