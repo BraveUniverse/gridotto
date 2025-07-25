@@ -68,20 +68,29 @@ export function ActiveDrawsSection() {
           
           if (isActive && creator) {
             const drawTypeNames = ["LYX", "LSP7", "LSP8", "WEEKLY", "MONTHLY"];
-            const timeRemaining = Math.max(0, Number(endTime) - currentTime);
+            const endTimeBigInt = (drawDetails as any).endTime;
+            const endTime = typeof endTimeBigInt === 'bigint' ? Number(endTimeBigInt) : Number(endTimeBigInt);
+            const timeRemaining = Math.max(0, endTime - currentTime);
+            
+            // Safely convert BigInt values
+            const ticketPriceBigInt = (drawDetails as any).ticketPrice;
+            const ticketPriceStr = typeof ticketPriceBigInt === 'bigint' ? ticketPriceBigInt.toString() : String(ticketPriceBigInt);
+            
+            const prizePoolBigInt = (drawDetails as any).prizePool;
+            const prizePoolStr = typeof prizePoolBigInt === 'bigint' ? prizePoolBigInt.toString() : String(prizePoolBigInt);
             
             const draw: ActiveDraw = {
               drawId: i,
               creator: creator.toString(),
               drawType: Number((drawDetails as any).drawType),
               drawTypeName: drawTypeNames[Number((drawDetails as any).drawType)] || 'UNKNOWN',
-              ticketPrice: (drawDetails as any).ticketPrice.toString(),
-              ticketPrice_LYX: Number(Web3.utils.fromWei((drawDetails as any).ticketPrice.toString(), 'ether')),
-              prizePool: (drawDetails as any).prizePool.toString(),
-              prizePool_LYX: Number(Web3.utils.fromWei((drawDetails as any).prizePool.toString(), 'ether')),
+              ticketPrice: ticketPriceStr,
+              ticketPrice_LYX: Number(Web3.utils.fromWei(ticketPriceStr, 'ether')),
+              prizePool: prizePoolStr,
+              prizePool_LYX: Number(Web3.utils.fromWei(prizePoolStr, 'ether')),
               ticketsSold: Number((drawDetails as any).ticketsSold),
               participantCount: Number((drawDetails as any).participantCount),
-              endTime: Number(endTime),
+              endTime: endTime,
               timeRemaining: timeRemaining,
               isActive: true,
               maxTickets: Number((drawDetails as any).maxTickets)

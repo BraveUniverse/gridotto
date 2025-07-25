@@ -389,12 +389,19 @@ export function useGridottoCoreV2() {
         return [];
       }
       
+      console.log('[getActiveDraws] nextDrawId:', nextDrawId, 'type:', typeof nextDrawId);
+      
+      // Convert to number if it's not already
+      const nextDrawIdNum = Number(nextDrawId);
+      
       // Limit to last 20 draws to avoid too many requests
-      const startId = Math.max(1, nextDrawId - 20);
+      const startId = Math.max(1, nextDrawIdNum - 20);
+      
+      console.log('[getActiveDraws] Fetching draws from', startId, 'to', nextDrawIdNum - 1);
       
       // Batch fetch draw details
       const promises = [];
-      for (let i = startId; i < nextDrawId; i++) {
+      for (let i = startId; i < nextDrawIdNum; i++) {
         promises.push(getDrawDetails(i));
       }
       
@@ -407,6 +414,7 @@ export function useGridottoCoreV2() {
         }
       });
       
+      console.log('[getActiveDraws] Found', draws.length, 'active draws');
       return draws;
     } catch (err: any) {
       console.error('Error fetching active draws:', err);
