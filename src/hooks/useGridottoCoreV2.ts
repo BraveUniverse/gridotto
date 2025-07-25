@@ -306,8 +306,21 @@ export function useGridottoCoreV2() {
 
   // Get draw details
   const getDrawDetails = useCallback(async (drawId: number): Promise<DrawDetails | null> => {
-    if (!contract) {
-      console.log('[getDrawDetails] No contract available');
+    // Contract'ı her seferinde kontrol et
+    if (!web3) {
+      console.log('[getDrawDetails] No web3 available');
+      return null;
+    }
+    
+    // Contract yoksa yeniden oluştur
+    let activeContract = contract;
+    if (!activeContract) {
+      console.log('[getDrawDetails] Contract not ready, creating new instance...');
+      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+    }
+    
+    if (!activeContract) {
+      console.log('[getDrawDetails] Failed to create contract');
       return null;
     }
     
@@ -319,7 +332,7 @@ export function useGridottoCoreV2() {
     
     try {
       console.log('[getDrawDetails] Fetching details for draw:', drawId);
-      const details = await contract.methods.getDrawDetails(drawId).call();
+      const details = await activeContract.methods.getDrawDetails(drawId).call();
       console.log('[getDrawDetails] Raw details:', details);
       
       // Check if draw exists
@@ -360,7 +373,7 @@ export function useGridottoCoreV2() {
       console.error('[getDrawDetails] DrawId was:', drawId);
       return null;
     }
-  }, [contract]);
+  }, [contract, web3]);
 
   // Get user draw history
   const getUserDrawHistory = async (user: string): Promise<number[]> => {
@@ -476,19 +489,35 @@ export function useGridottoCoreV2() {
 
   // Get draw participants
   const getDrawParticipants = useCallback(async (drawId: number): Promise<any[]> => {
-    if (!contract) return [];
+    // Contract'ı her seferinde kontrol et
+    if (!web3) {
+      console.log('[getDrawParticipants] No web3 available');
+      return [];
+    }
+    
+    // Contract yoksa yeniden oluştur
+    let activeContract = contract;
+    if (!activeContract) {
+      console.log('[getDrawParticipants] Contract not ready, creating new instance...');
+      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+    }
+    
+    if (!activeContract) {
+      console.log('[getDrawParticipants] Failed to create contract');
+      return [];
+    }
     
     try {
       console.log('[getDrawParticipants] Getting participants for draw:', drawId);
       
       // Try to get participants
-      const participants = await contract.methods.getDrawParticipants(drawId).call();
+      const participants = await activeContract.methods.getDrawParticipants(drawId).call();
       
       // Get ticket counts for each participant
       const participantsWithDetails = await Promise.all(
         participants.map(async (address: string) => {
           try {
-            const ticketCount = await contract.methods.getUserTicketCount(drawId, address).call();
+            const ticketCount = await activeContract.methods.getUserTicketCount(drawId, address).call();
             return {
               address,
               ticketCount: Number(ticketCount),
@@ -510,7 +539,7 @@ export function useGridottoCoreV2() {
       console.error('[getDrawParticipants] Error:', err);
       return [];
     }
-  }, [contract]);
+  }, [contract, web3]);
 
   return {
     contract,
