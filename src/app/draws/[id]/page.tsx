@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Web3 from 'web3';
@@ -85,17 +85,7 @@ const DrawDetailsPage = () => {
   const [canClaim, setCanClaim] = useState(false);
   const [refundAmount, setRefundAmount] = useState('0');
 
-  useEffect(() => {
-    loadDrawDetails();
-  }, [drawId]);
-
-  useEffect(() => {
-    if (draw && account) {
-      checkUserStatus();
-    }
-  }, [draw, account]);
-
-  const loadDrawDetails = async () => {
+  const loadDrawDetails = useCallback(async () => {
     // Double check drawId validity
     if (!drawId || isNaN(drawId) || drawId <= 0) {
       console.error('Invalid drawId in loadDrawDetails:', drawId);
@@ -151,13 +141,18 @@ const DrawDetailsPage = () => {
       }
     } catch (err) {
       console.error('Error loading draw details:', err);
+      console.error('DrawId:', drawId);
+      console.error('Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined
+      });
       toast.error('Failed to load draw details');
     } finally {
       setLoading(false);
     }
-  };
+  }, [drawId, account]); // Only depend on drawId and account
 
-  const checkUserStatus = async () => {
+  const checkUserStatus = useCallback(async () => {
     if (!draw || !account) return;
 
     try {
@@ -179,7 +174,17 @@ const DrawDetailsPage = () => {
     } catch (err) {
       console.error('Error checking user status:', err);
     }
-  };
+  }, [draw, account, drawId]); // Only depend on state, not functions
+
+  useEffect(() => {
+    loadDrawDetails();
+  }, [loadDrawDetails]);
+
+  useEffect(() => {
+    if (draw && account) {
+      checkUserStatus();
+    }
+  }, [draw, account, checkUserStatus]);
 
   const handleBuyTickets = async () => {
     if (!isConnected) {
