@@ -62,6 +62,7 @@ export async function sendTransaction(
     
     if (isUP) {
       console.log('[sendTransaction] Detected Universal Profile, using Key Manager');
+      console.log('[sendTransaction] Original options:', options);
       
       // For UP, we need to prepare the transaction differently
       const encodedData = contract.methods[method](...params).encodeABI();
@@ -78,18 +79,31 @@ export async function sendTransaction(
           keyManagerAddress
         );
         
+        // Ensure value is properly formatted
+        const valueToSend = options.value || '0';
+        const valueInHex = web3.utils.toHex(valueToSend);
+        
         // Build the execute parameters
         const executeParams = {
           operation: 0, // CALL operation
           to: targetAddress,
-          value: options.value || '0',
+          value: valueInHex,
           data: encodedData
         };
         
         console.log('[sendTransaction] Execute params:', executeParams);
-        console.log('[sendTransaction] Sending value:', options.value);
+        console.log('[sendTransaction] Value to send (decimal):', valueToSend);
+        console.log('[sendTransaction] Value to send (hex):', valueInHex);
+        console.log('[sendTransaction] Value in ETH:', web3.utils.fromWei(valueToSend, 'ether'));
         
         // Send via Key Manager - IMPORTANT: Include value in send options!
+        const txOptions = { 
+          from: account,
+          value: valueInHex // Pass the value here too!
+        };
+        
+        console.log('[sendTransaction] Transaction options:', txOptions);
+        
         return await keyManagerContract.methods
           .execute(
             executeParams.operation,
@@ -97,10 +111,7 @@ export async function sendTransaction(
             executeParams.value,
             executeParams.data
           )
-          .send({ 
-            from: account,
-            value: options.value || '0' // Pass the value here too!
-          });
+          .send(txOptions);
       } else {
         console.log('[sendTransaction] No Key Manager found, falling back to direct transaction');
       }

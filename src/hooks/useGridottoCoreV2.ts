@@ -217,15 +217,23 @@ export function useGridottoCoreV2() {
       // Get draw details to determine payment
       const details = await contract.methods.getDrawDetails(drawId).call();
       console.log('[buyTickets] Draw details:', details);
+      console.log('[buyTickets] Draw type:', details.drawType, 'Type of drawType:', typeof details.drawType);
+      console.log('[buyTickets] Ticket price:', details.ticketPrice);
       
-      const value = (details.drawType === '0' || 
-                     details.drawType === '2' ||
-                     details.drawType === '3' ||
-                     details.drawType === '4') 
+      // Convert drawType to number for comparison
+      const drawTypeNum = Number(details.drawType);
+      console.log('[buyTickets] Draw type as number:', drawTypeNum);
+      
+      // Check if this is a LYX payment draw (types 0, 2, 3, 4)
+      const isLYXPayment = drawTypeNum === 0 || drawTypeNum === 2 || drawTypeNum === 3 || drawTypeNum === 4;
+      console.log('[buyTickets] Is LYX payment:', isLYXPayment);
+      
+      const value = isLYXPayment 
         ? (BigInt(details.ticketPrice) * BigInt(amount)).toString()
         : '0';
       
-      console.log('[buyTickets] Transaction value:', value);
+      console.log('[buyTickets] Calculated transaction value:', value);
+      console.log('[buyTickets] Value in ETH:', web3.utils.fromWei(value, 'ether'));
       
       // Use the UP-compatible sendTransaction helper
       const tx = await sendTransaction(
