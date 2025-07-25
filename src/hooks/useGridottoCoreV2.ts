@@ -5,6 +5,7 @@ import { useUPProvider } from './useUPProvider';
 import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 import { CONTRACTS } from '@/config/contracts';
+import { sendTransaction } from '@/utils/luksoTransactionHelper';
 
 const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
@@ -56,22 +57,30 @@ export function useGridottoCoreV2() {
     platformFeePercent: number,
     initialPrize: string = "0" // in LYX
   ) => {
-    if (!contract || !account) throw new Error('Wallet not connected');
+    if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.methods.createLYXDraw(
-        Web3.utils.toWei(ticketPrice, 'ether'),
-        maxTickets,
-        duration,
-        minParticipants,
-        platformFeePercent
-      ).send({ 
-        from: account,
-        value: Web3.utils.toWei(initialPrize, 'ether')
-      });
+      const tx = await sendTransaction(
+        contract,
+        'createLYXDraw',
+        [
+          Web3.utils.toWei(ticketPrice, 'ether'),
+          maxTickets,
+          duration,
+          minParticipants,
+          platformFeePercent
+        ],
+        { 
+          from: account,
+          value: Web3.utils.toWei(initialPrize, 'ether')
+        },
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
       
       // Extract drawId from events
       const event = tx.events?.DrawCreated;
@@ -98,22 +107,30 @@ export function useGridottoCoreV2() {
     platformFeePercent: number,
     initialPrize: string // in token units
   ) => {
-    if (!contract || !account) throw new Error('Wallet not connected');
+    if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
       // Note: Token approval should be done before this
-      const tx = await contract.methods.createTokenDraw(
-        tokenAddress,
-        Web3.utils.toWei(ticketPrice, 'ether'), // Assuming 18 decimals
-        maxTickets,
-        duration,
-        minParticipants,
-        platformFeePercent,
-        Web3.utils.toWei(initialPrize, 'ether')
-      ).send({ from: account });
+      const tx = await sendTransaction(
+        contract,
+        'createTokenDraw',
+        [
+          tokenAddress,
+          Web3.utils.toWei(ticketPrice, 'ether'), // Assuming 18 decimals
+          maxTickets,
+          duration,
+          minParticipants,
+          platformFeePercent,
+          Web3.utils.toWei(initialPrize, 'ether')
+        ],
+        { from: account },
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
       
       // Extract drawId from events
       const event = tx.events?.DrawCreated;
@@ -140,7 +157,7 @@ export function useGridottoCoreV2() {
     minParticipants: number,
     platformFeePercent: number
   ) => {
-    if (!contract || !account) throw new Error('Wallet not connected');
+    if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
@@ -152,15 +169,23 @@ export function useGridottoCoreV2() {
       );
       
       // Note: NFT authorization should be done before this
-      const tx = await contract.methods.createNFTDraw(
-        nftContract,
-        bytes32TokenIds,
-        Web3.utils.toWei(ticketPrice, 'ether'),
-        maxTickets,
-        duration,
-        minParticipants,
-        platformFeePercent
-      ).send({ from: account });
+      const tx = await sendTransaction(
+        contract,
+        'createNFTDraw',
+        [
+          nftContract,
+          bytes32TokenIds,
+          Web3.utils.toWei(ticketPrice, 'ether'),
+          maxTickets,
+          duration,
+          minParticipants,
+          platformFeePercent
+        ],
+        { from: account },
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
       
       // Extract drawId from events
       const event = tx.events?.DrawCreated;
@@ -177,10 +202,10 @@ export function useGridottoCoreV2() {
     }
   };
 
-  // Buy tickets
+  // Buy tickets - LUKSO UP compatible
   const buyTickets = async (drawId: number, amount: number) => {
-    if (!contract || !account || !web3 || !web3.currentProvider) {
-      throw new Error('Wallet not connected or provider not available');
+    if (!contract || !account || !web3) {
+      throw new Error('Wallet not connected');
     }
     
     try {
@@ -188,59 +213,36 @@ export function useGridottoCoreV2() {
       setError(null);
       
       console.log('[buyTickets] Starting with params:', { drawId, amount, account });
-      console.log('[buyTickets] Account type:', typeof account);
-      console.log('[buyTickets] Web3 accounts:', await web3.eth.getAccounts());
       
       // Get draw details to determine payment
       const details = await contract.methods.getDrawDetails(drawId).call();
       console.log('[buyTickets] Draw details:', details);
       
-      if (details.drawType === '0' || 
-          details.drawType === '2' ||
-          details.drawType === '3' ||
-          details.drawType === '4') {
-        // LYX payment
-        const totalCost = BigInt(details.ticketPrice) * BigInt(amount);
-        console.log('[buyTickets] Calculated total cost:', totalCost.toString());
-        
-        // Manuel transaction gönder - cüzdana bildirim gidecek şekilde
-        console.log('[buyTickets] Manually sending transaction to trigger wallet...');
-        
-        const transactionData = contract.methods.buyTickets(drawId, amount).encodeABI();
-        console.log('[buyTickets] Encoded data:', transactionData);
-        
-        // UP Provider'ın request metodunu kullan
-        const txHash = await (web3.currentProvider as any).request({
-          method: 'eth_sendTransaction',
-          params: [{
-            from: account,
-            to: DIAMOND_ADDRESS,
-            data: transactionData,
-            value: '0x' + totalCost.toString(16), // hex formatında
-          }]
-        });
-        
-        console.log('[buyTickets] Transaction hash from wallet:', txHash);
-        
-        return { transactionHash: txHash };
-      } else if (details.drawType === '1') {
-        // Token payment - approval should be done before
-        console.log('[buyTickets] Sending token transaction...');
-        
-        const transactionData = contract.methods.buyTickets(drawId, amount).encodeABI();
-        
-        const txHash = await (web3.currentProvider as any).request({
-          method: 'eth_sendTransaction',
-          params: [{
-            from: account,
-            to: DIAMOND_ADDRESS,
-            data: transactionData
-          }]
-        });
-        
-        console.log('[buyTickets] Token transaction hash:', txHash);
-        return { transactionHash: txHash };
-      }
+      const value = (details.drawType === '0' || 
+                     details.drawType === '2' ||
+                     details.drawType === '3' ||
+                     details.drawType === '4') 
+        ? (BigInt(details.ticketPrice) * BigInt(amount)).toString()
+        : '0';
+      
+      console.log('[buyTickets] Transaction value:', value);
+      
+      // Use the UP-compatible sendTransaction helper
+      const tx = await sendTransaction(
+        contract,
+        'buyTickets',
+        [drawId, amount],
+        { 
+          from: account,
+          value: value
+        },
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
+      
+      console.log('[buyTickets] Transaction completed:', tx);
+      return tx;
     } catch (err: any) {
       console.error('[buyTickets] Error occurred:', err);
       setError(err.message);

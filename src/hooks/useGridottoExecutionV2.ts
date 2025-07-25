@@ -5,6 +5,7 @@ import { useUPProvider } from './useUPProvider';
 import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 import { CONTRACTS } from '@/config/contracts';
+import { sendTransaction } from '@/utils/luksoTransactionHelper';
 
 const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
@@ -31,15 +32,23 @@ export function useGridottoExecutionV2() {
     }
   }, [web3]);
 
-  // Execute draw
+  // Execute draw - LUKSO UP compatible
   const executeDraw = async (drawId: number) => {
-    if (!contract || !account) throw new Error('Wallet not connected');
+    if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.methods.executeDraw(drawId).send({ from: account });
+      const tx = await sendTransaction(
+        contract,
+        'executeDraw',
+        [drawId],
+        { from: account },
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
       
       // Extract winner info from events
       const event = tx.events?.DrawExecuted;

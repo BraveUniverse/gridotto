@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { useUPProvider } from './useUPProvider';
 import { diamondAbi } from '@/abi';
+import { CONTRACTS } from '@/config/contracts';
+import { sendTransaction } from '@/utils/luksoTransactionHelper';
 
-const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
+const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
 export interface CanClaimResult {
   canClaim: boolean;
@@ -28,15 +30,23 @@ export function useGridottoRefund() {
     }
   }, [web3]);
 
-  // Claim prize for a won draw
+  // Claim prize for a won draw - LUKSO UP compatible
   const claimPrize = async (drawId: number) => {
-    if (!contract || !account) throw new Error('Wallet not connected');
+    if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.methods.claimPrize(drawId).send({ from: account });
+      const tx = await sendTransaction(
+        contract,
+        'claimPrize',
+        [drawId],
+        { from: account },
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
       
       // Extract claim info from events
       const event = tx.events?.PrizeClaimed;
@@ -58,15 +68,23 @@ export function useGridottoRefund() {
     }
   };
 
-  // Claim refund for cancelled draw
+  // Claim refund for cancelled draw - LUKSO UP compatible
   const claimRefund = async (drawId: number) => {
-    if (!contract || !account) throw new Error('Wallet not connected');
+    if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.methods.claimRefund(drawId).send({ from: account });
+      const tx = await sendTransaction(
+        contract,
+        'claimRefund',
+        [drawId],
+        { from: account },
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
       
       // Extract refund info from events
       const event = tx.events?.RefundClaimed;
@@ -117,15 +135,23 @@ export function useGridottoRefund() {
     }
   };
 
-  // Batch claim multiple prizes
+  // Batch claim multiple prizes - LUKSO UP compatible
   const batchClaimPrizes = async (drawIds: number[]) => {
-    if (!contract || !account) throw new Error('Wallet not connected');
+    if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
     try {
       setLoading(true);
       setError(null);
       
-      const tx = await contract.methods.batchClaimPrizes(drawIds).send({ from: account });
+      const tx = await sendTransaction(
+        contract,
+        'batchClaimPrizes',
+        [drawIds],
+        { from: account },
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
       
       // Extract all claim events
       const claimEvents = tx.events?.PrizeClaimed || [];
