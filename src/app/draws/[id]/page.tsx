@@ -55,7 +55,7 @@ export default function DrawDetailPage() {
   const params = useParams();
   const drawId = params.id as string;
   const { account, isConnected } = useUPProvider();
-  const { getDrawDetails, purchaseTickets } = useGridottoContract();
+  const { getDrawDetails, buyTickets, getDrawParticipants } = useGridottoContract();
   
   const [draw, setDraw] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
@@ -91,8 +91,10 @@ export default function DrawDetailPage() {
       if (details) {
         setDraw(details);
         
-        // For now, we don't have participants data
-        setParticipants([]);
+        // Load participants
+        const participantsList = await getDrawParticipants(drawIdNum);
+        console.log('[DrawDetailPage] Participants loaded:', participantsList?.length || 0);
+        setParticipants(participantsList || []);
       } else {
         console.log('[DrawDetailPage] No draw details found');
         setDraw(null);
@@ -144,8 +146,7 @@ export default function DrawDetailPage() {
 
     try {
       setBuying(true);
-      const ticketPriceWei = draw.ticketPrice.toString();
-      await purchaseTickets(parseInt(drawId), ticketCount, ticketPriceWei);
+      await buyTickets(parseInt(drawId), ticketCount);
       // Reload data after purchase
       await loadDrawData();
       setTicketCount(1);

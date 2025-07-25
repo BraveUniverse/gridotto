@@ -470,13 +470,10 @@ export function useGridottoCoreV2() {
     try {
       console.log('[getDrawParticipants] Getting participants for draw:', drawId);
       
-      // For now, return empty array since getDrawParticipants might not be available
-      // TODO: Implement when contract function is available
-      return [];
-      
-      /* Original implementation - uncomment when contract supports it
+      // Try to get participants
       const participants = await contract.methods.getDrawParticipants(drawId).call();
       
+      // Get ticket counts for each participant
       const participantsWithDetails = await Promise.all(
         participants.map(async (address: string) => {
           try {
@@ -498,7 +495,6 @@ export function useGridottoCoreV2() {
       );
       
       return participantsWithDetails.sort((a, b) => b.ticketCount - a.ticketCount);
-      */
     } catch (err: any) {
       console.error('[getDrawParticipants] Error:', err);
       return [];

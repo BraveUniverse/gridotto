@@ -187,11 +187,6 @@ export const useGridottoContract = () => {
     return await execution.canExecuteDraw(drawId);
   };
 
-  const getDrawParticipants = async (drawId: number, offset?: number, limit?: number) => {
-    // This would need a new contract method
-    return { participants: [], ticketCounts: [] };
-  };
-
   return {
     contract: core.contract,
     loading: core.loading || execution.loading || platform.loading || refund.loading || leaderboard.loading,
@@ -207,6 +202,8 @@ export const useGridottoContract = () => {
     getUserDraw,
     getDrawInfo,
     getDrawDetails: core.getDrawDetails,
+    buyTickets: core.buyTickets,
+    getDrawParticipants: core.getDrawParticipants,
     
     // Execution functions
     executeUserDraw,
@@ -219,23 +216,11 @@ export const useGridottoContract = () => {
     getRecentWinners,
     
     // Platform functions
-    getUserCreatedDraws: async (creator: string) => [],
-    getAllClaimablePrizes: async (user: string) => ({ totalLYX: '0', hasTokenPrizes: false, hasNFTPrizes: false }),
-    getUserDrawExecutorReward: async (drawId: number) => '0',
-    getAdvancedDrawInfo: async (drawId: number) => null,
-    canUserParticipate: async (drawId: number, user: string) => ({ canParticipate: true, reason: '' }),
-    buyMonthlyTickets: core.buyTickets,
-    getDrawParticipants,
-    getUserParticipationHistory: async (user: string) => ({ drawIds: [], ticketsBought: [], won: [] }),
     getCurrentDrawInfo: platform.getPlatformDrawsInfo,
-    getCurrentDrawPrize: async () => {
-      console.log('[getCurrentDrawPrize] Called - returning hardcoded 0');
-      return '0';
-    },
-    getMonthlyPrize: async () => {
-      console.log('[getMonthlyPrize] Called - returning hardcoded 0');
-      return '0';
-    },
+    
+    // Mock functions (TODO: Implement these when contract supports them)
+    getDrawHistory: async (user: string, offset?: number, limit?: number) => ({ draws: [], total: 0 }),
+    getUserStats: async (user: string) => ({ totalDrawsCreated: 0, totalTicketsBought: 0, totalWins: 0, totalAmountWon: '0' }),
     getTicketPrice: async () => {
       const price = Web3.utils.toWei("0.1", "ether");
       console.log('[getTicketPrice] Called - returning:', price);
