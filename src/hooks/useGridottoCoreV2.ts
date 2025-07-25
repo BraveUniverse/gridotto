@@ -179,7 +179,9 @@ export function useGridottoCoreV2() {
 
   // Buy tickets
   const buyTickets = async (drawId: number, amount: number) => {
-    if (!contract || !account || !web3) throw new Error('Wallet not connected or web3 not available');
+    if (!contract || !account || !web3 || !web3.currentProvider) {
+      throw new Error('Wallet not connected or provider not available');
+    }
     
     try {
       setLoading(true);
@@ -201,28 +203,43 @@ export function useGridottoCoreV2() {
         const totalCost = BigInt(details.ticketPrice) * BigInt(amount);
         console.log('[buyTickets] Calculated total cost:', totalCost.toString());
         
-        // Use contract.methods.send() - doğru yöntem
-        console.log('[buyTickets] Sending transaction via contract.methods...');
-        const tx = await contract.methods.buyTickets(drawId, amount).send({ 
-          from: account,
-          value: totalCost.toString()
+        // Manuel transaction gönder - cüzdana bildirim gidecek şekilde
+        console.log('[buyTickets] Manually sending transaction to trigger wallet...');
+        
+        const transactionData = contract.methods.buyTickets(drawId, amount).encodeABI();
+        console.log('[buyTickets] Encoded data:', transactionData);
+        
+        // UP Provider'ın request metodunu kullan
+        const txHash = await (web3.currentProvider as any).request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: account,
+            to: DIAMOND_ADDRESS,
+            data: transactionData,
+            value: '0x' + totalCost.toString(16), // hex formatında
+          }]
         });
         
-        console.log('[buyTickets] Transaction result type:', typeof tx);
-        console.log('[buyTickets] Transaction result keys:', tx ? Object.keys(tx) : 'null');
-        console.log('[buyTickets] Transaction result:', tx);
+        console.log('[buyTickets] Transaction hash from wallet:', txHash);
         
-        return tx;
+        return { transactionHash: txHash };
       } else if (details.drawType === '1') {
         // Token payment - approval should be done before
         console.log('[buyTickets] Sending token transaction...');
         
-        const tx = await contract.methods.buyTickets(drawId, amount).send({ 
-          from: account 
+        const transactionData = contract.methods.buyTickets(drawId, amount).encodeABI();
+        
+        const txHash = await (web3.currentProvider as any).request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: account,
+            to: DIAMOND_ADDRESS,
+            data: transactionData
+          }]
         });
         
-        console.log('[buyTickets] Token transaction response:', tx);
-        return tx;
+        console.log('[buyTickets] Token transaction hash:', txHash);
+        return { transactionHash: txHash };
       }
     } catch (err: any) {
       console.error('[buyTickets] Error occurred:', err);

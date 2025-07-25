@@ -180,7 +180,7 @@ export const HeroSection = () => {
       console.log('[BuyTickets] Transaction object:', tx);
       
       // Try to find transaction hash in different possible locations
-      const txHash = tx?.transactionHash || tx?.hash || tx?.txHash || 'Unknown';
+      const txHash = tx?.transactionHash || 'Unknown';
       console.log('[BuyTickets] Found transaction hash:', txHash);
       
       // Refresh data after successful purchase
