@@ -79,15 +79,18 @@ export async function sendTransaction(
           keyManagerAddress
         );
         
-        // Ensure value is properly formatted
+        // Encode the function call
+        const encodedData = contract.methods[method](...params).encodeABI();
+        
+        // Ensure value is properly formatted as hex
         const valueToSend = options.value || '0';
         const valueInHex = web3.utils.toHex(valueToSend);
         
         // Build execute parameters
         const executeParams = {
-          operationType: 0, // CALL
+          operation: 0, // CALL operation (not operationType!)
           to: targetAddress,
-          value: valueToSend,
+          value: valueInHex, // Must be hex format
           data: encodedData
         };
 
@@ -100,9 +103,10 @@ export async function sendTransaction(
 
         // Add value if sending native currency
         if (options.value && options.value !== '0') {
-          txOptions.value = options.value;
+          txOptions.value = valueInHex; // Use hex format
           console.log('[sendTransaction] Including value in transaction:', {
             value: options.value,
+            valueInHex: valueInHex,
             valueInLYX: web3.utils.fromWei(options.value, 'ether')
           });
         }
@@ -116,7 +120,7 @@ export async function sendTransaction(
         // Execute through Key Manager
         const receipt = await keyManagerContract.methods
           .execute(
-            executeParams.operationType,
+            executeParams.operation,
             executeParams.to,
             executeParams.value,
             executeParams.data
