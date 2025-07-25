@@ -15,7 +15,7 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
-import { useProfile } from '@/hooks/useProfile';
+import { useLSP3Profile } from '@/hooks/useLSP3Profile';
 
 interface DrawCardProps {
   draw: UserDraw;
@@ -42,7 +42,7 @@ const drawTypeConfig: Record<number, { icon: any; label: string; color: string }
 export const DrawCard = ({ draw }: DrawCardProps) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [progress, setProgress] = useState(0);
-  const { profile } = useProfile(draw.creator);
+  const { profileData } = useLSP3Profile(draw.creator);
 
   const config = drawTypeConfig[draw.prizeType === 'LYX' ? 0 : draw.prizeType === 'LSP7' ? 1 : 2] || drawTypeConfig[0];
 
@@ -169,7 +169,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
               <div>
                 <p className="text-xs text-gray-400">Created by</p>
                 <p className="text-xs font-medium text-white">
-                  {profile?.name || `${draw.creator.slice(0, 6)}...${draw.creator.slice(-4)}`}
+                  {profileData?.name || `${draw.creator.slice(0, 6)}...${draw.creator.slice(-4)}`}
                 </p>
               </div>
             </div>

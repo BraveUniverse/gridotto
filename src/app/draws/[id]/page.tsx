@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
 import { useUPProvider } from '@/hooks/useUPProvider';
-import { useProfile, getProfileImageUrl } from '@/hooks/useProfile';
+import { useLSP3Profile } from '@/hooks/useLSP3Profile';
 import Web3 from 'web3';
 import { 
   ClockIcon, 
@@ -64,7 +64,7 @@ export default function DrawDetailPage() {
   const [ticketCount, setTicketCount] = useState(1);
   const [buying, setBuying] = useState(false);
   
-  const { profile: creatorProfile } = useProfile(draw?.creator);
+  const { profileData: creatorProfile } = useLSP3Profile(draw?.creator || '');
 
   useEffect(() => {
     console.log('[DrawDetailPage] Component mounted with drawId:', drawId);
@@ -442,7 +442,7 @@ export default function DrawDetailPage() {
 
 // Participant Row Component
 function ParticipantRow({ participant }: { participant: any }) {
-  const { profile } = useProfile(participant.address);
+  const { profileData } = useLSP3Profile(participant.address);
   
   return (
     <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
@@ -450,7 +450,7 @@ function ParticipantRow({ participant }: { participant: any }) {
         <ProfileDisplay address={participant.address} size="sm" />
         <div>
           <p className="text-sm font-medium text-white">
-            {profile?.name || `${participant.address.slice(0, 6)}...${participant.address.slice(-4)}`}
+            {profileData?.name || `${participant.address.slice(0, 6)}...${participant.address.slice(-4)}`}
           </p>
           <p className="text-xs text-gray-400">{participant.ticketCount} tickets</p>
         </div>
