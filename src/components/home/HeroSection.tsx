@@ -12,15 +12,15 @@ const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
 
 export const HeroSection = () => {
   const { web3, isConnected, account } = useUPProvider();
-  const { buyTickets, buyMonthlyTickets } = useGridottoContract();
+  const { buyTickets } = useGridottoContract();
   const [weeklyTickets, setWeeklyTickets] = useState(1);
-  const [monthlyTickets, setMonthlyTickets] = useState(1);
   const [buying, setBuying] = useState(false);
   const [loading, setLoading] = useState(false);
   
   // Platform data from contract
   const [weeklyDraw, setWeeklyDraw] = useState<any>(null);
   const [monthlyDraw, setMonthlyDraw] = useState<any>(null);
+  const [userMonthlyTickets, setUserMonthlyTickets] = useState<any>(null);
   const [platformStats, setPlatformStats] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<string>('');
 
@@ -32,6 +32,84 @@ export const HeroSection = () => {
       console.log('[HeroSection] Loading platform data...');
       
       const contract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+      
+      // Get platform draws info
+      try {
+        const platformInfo = await contract.methods.getPlatformDrawsInfo().call();
+        console.log('[HeroSection] Platform info:', platformInfo);
+        
+        // Type guard for platform info
+        if (platformInfo && typeof platformInfo === 'object') {
+          // Get weekly draw details
+          if ((platformInfo as any).weeklyDrawId && Number((platformInfo as any).weeklyDrawId) > 0) {
+            const weeklyDetails = await contract.methods.getDrawDetails(Number((platformInfo as any).weeklyDrawId)).call();
+            if (weeklyDetails && typeof weeklyDetails === 'object') {
+              const currentTime = Math.floor(Date.now() / 1000);
+              const timeRemaining = Math.max(0, Number((weeklyDetails as any).endTime) - currentTime);
+              
+              setWeeklyDraw({
+                drawId: Number((platformInfo as any).weeklyDrawId),
+                prizePool_LYX: Number(Web3.utils.fromWei((weeklyDetails as any).prizePool.toString(), 'ether')),
+                ticketPrice_LYX: Number(Web3.utils.fromWei((weeklyDetails as any).ticketPrice.toString(), 'ether')),
+                ticketsSold: Number((weeklyDetails as any).ticketsSold),
+                participantCount: Number((weeklyDetails as any).participantCount),
+                timeRemaining: timeRemaining,
+                endTime: Number((weeklyDetails as any).endTime)
+              });
+            }
+          }
+          
+          // Get monthly draw details if exists
+          if ((platformInfo as any).monthlyDrawId && Number((platformInfo as any).monthlyDrawId) > 0) {
+            const monthlyDetails = await contract.methods.getDrawDetails(Number((platformInfo as any).monthlyDrawId)).call();
+            if (monthlyDetails && typeof monthlyDetails === 'object') {
+              const currentTime = Math.floor(Date.now() / 1000);
+              const timeRemaining = Math.max(0, Number((monthlyDetails as any).endTime) - currentTime);
+              
+              setMonthlyDraw({
+                drawId: Number((platformInfo as any).monthlyDrawId),
+                prizePool_LYX: Number(Web3.utils.fromWei((monthlyDetails as any).prizePool.toString(), 'ether')),
+                ticketPrice_LYX: 0, // Monthly draws don't have direct ticket purchase
+                ticketsSold: Number((monthlyDetails as any).ticketsSold),
+                participantCount: Number((monthlyDetails as any).participantCount),
+                timeRemaining: timeRemaining,
+                endTime: Number((monthlyDetails as any).endTime)
+              });
+            }
+          } else {
+            // Monthly draw info from platform info
+            setMonthlyDraw({
+              drawId: 0,
+              prizePool_LYX: Number(Web3.utils.fromWei(((platformInfo as any).monthlyPoolBalance || 0).toString(), 'ether')),
+              ticketPrice_LYX: 0,
+              ticketsSold: 0,
+              participantCount: 0,
+              timeRemaining: 0,
+              endTime: 0,
+              isUpcoming: true // Next monthly draw
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[HeroSection] Error fetching platform draws:', error);
+      }
+      
+      // Get user's monthly tickets if connected
+      if (account) {
+        try {
+          const monthlyTickets = await contract.methods.getUserMonthlyTickets(account).call();
+          if (monthlyTickets && typeof monthlyTickets === 'object') {
+            setUserMonthlyTickets({
+              fromWeekly: Number((monthlyTickets as any).fromWeekly),
+              fromCreating: Number((monthlyTickets as any).fromCreating),
+              fromParticipating: Number((monthlyTickets as any).fromParticipating),
+              total: Number((monthlyTickets as any).total)
+            });
+          }
+        } catch (error) {
+          console.error('[HeroSection] Error fetching user monthly tickets:', error);
+        }
+      }
       
       // Get platform stats
       try {
@@ -49,66 +127,8 @@ export const HeroSection = () => {
         console.error('[HeroSection] Error fetching platform stats:', error);
       }
       
-      // Find weekly and monthly draws
-      const nextDrawId = await contract.methods.getNextDrawId().call();
-      let foundWeeklyDraw = null;
-      let foundMonthlyDraw = null;
-      
-      for (let i = 1; i < Number(nextDrawId) && i <= 10; i++) {
-        try {
-          const drawDetails = await contract.methods.getDrawDetails(i).call();
-          
-          // Type guard - ensure drawDetails has the expected structure
-          if (!drawDetails || typeof drawDetails !== 'object') {
-            console.log(`[HeroSection] Invalid draw details for draw #${i}`);
-            continue;
-          }
-          
-          // Check if it's a weekly draw (drawType = 3) and active with safe property access
-          const drawType = (drawDetails as any).drawType;
-          const isCompleted = (drawDetails as any).isCompleted;
-          const isCancelled = (drawDetails as any).isCancelled;
-          const prizePool = (drawDetails as any).prizePool;
-          const endTime = (drawDetails as any).endTime;
-          
-          const currentTime = Math.floor(Date.now() / 1000);
-          const isActive = !isCompleted && !isCancelled && Number(endTime) > currentTime;
-          
-          if (Number(drawType) === 3 && isActive && prizePool) {
-            const timeRemaining = Math.max(0, Number(endTime) - currentTime);
-            
-            foundWeeklyDraw = {
-              drawId: i,
-              prizePool_LYX: Number(Web3.utils.fromWei(prizePool.toString(), 'ether')),
-              ticketPrice_LYX: Number(Web3.utils.fromWei((drawDetails as any).ticketPrice.toString(), 'ether')),
-              ticketsSold: Number((drawDetails as any).ticketsSold),
-              participantCount: Number((drawDetails as any).participantCount),
-              timeRemaining: timeRemaining
-            };
-          }
-          
-          // Check for monthly draw (drawType = 4)
-          if (Number(drawType) === 4 && isActive && prizePool) {
-            const timeRemaining = Math.max(0, Number(endTime) - currentTime);
-            
-            foundMonthlyDraw = {
-              drawId: i,
-              prizePool_LYX: Number(Web3.utils.fromWei(prizePool.toString(), 'ether')),
-              ticketPrice_LYX: Number(Web3.utils.fromWei((drawDetails as any).ticketPrice.toString(), 'ether')),
-              ticketsSold: Number((drawDetails as any).ticketsSold),
-              participantCount: Number((drawDetails as any).participantCount),
-              timeRemaining: timeRemaining
-            };
-          }
-        } catch (error) {
-          console.error(`[HeroSection] Error fetching draw #${i}:`, error);
-        }
-      }
-      
-      setWeeklyDraw(foundWeeklyDraw);
-      setMonthlyDraw(foundMonthlyDraw);
       setLastUpdate(new Date().toLocaleTimeString());
-      console.log('[HeroSection] Platform data loaded:', { weeklyDraw: foundWeeklyDraw, monthlyDraw: foundMonthlyDraw, platformStats });
+      console.log('[HeroSection] Platform data loaded:', { weeklyDraw, monthlyDraw, userMonthlyTickets, platformStats });
       
     } catch (error) {
       console.error('[HeroSection] Error loading platform data:', error);
@@ -122,7 +142,7 @@ export const HeroSection = () => {
     if (web3 && isConnected) {
       loadPlatformData();
     }
-  }, [web3, isConnected]);
+  }, [web3, isConnected, account]);
 
   const formatTimeRemaining = (timeRemaining: number) => {
     if (timeRemaining <= 0) return 'Starting soon...';
@@ -150,6 +170,7 @@ export const HeroSection = () => {
         totalCost: weeklyTickets * weeklyDraw.ticketPrice_LYX
       });
       
+      // Use the real buyTickets function from contract
       await buyTickets(weeklyDraw.drawId, weeklyTickets);
       
       // Refresh data after successful purchase
@@ -160,42 +181,6 @@ export const HeroSection = () => {
       alert(`Successfully bought ${weeklyTickets} ticket(s) for Weekly Draw #${weeklyDraw.drawId}!`);
     } catch (err: any) {
       console.error('Error buying weekly tickets:', err);
-      alert(`Error buying tickets: ${err.message || 'Transaction failed'}`);
-    } finally {
-      setBuying(false);
-    }
-  };
-
-  const handleBuyMonthly = async () => {
-    if (!monthlyDraw || !account) {
-      alert('Please connect your wallet and ensure there is an active monthly draw');
-      return;
-    }
-
-    try {
-      setBuying(true);
-      console.log('[HeroSection] Buying monthly tickets:', {
-        drawId: monthlyDraw.drawId,
-        tickets: monthlyTickets,
-        totalCost: monthlyTickets * monthlyDraw.ticketPrice_LYX
-      });
-      
-      // For monthly tickets, use the monthly buying function if available
-      if (buyMonthlyTickets) {
-        await buyMonthlyTickets(monthlyTickets, monthlyDraw.ticketPrice_LYX);
-      } else {
-        // Fallback to regular ticket buying
-        await buyTickets(monthlyDraw.drawId, monthlyTickets);
-      }
-      
-      // Refresh data after successful purchase
-      setTimeout(() => {
-        loadPlatformData();
-      }, 2000);
-      
-      alert(`Successfully bought ${monthlyTickets} ticket(s) for Monthly Draw #${monthlyDraw.drawId}!`);
-    } catch (err: any) {
-      console.error('Error buying monthly tickets:', err);
       alert(`Error buying tickets: ${err.message || 'Transaction failed'}`);
     } finally {
       setBuying(false);
@@ -219,7 +204,7 @@ export const HeroSection = () => {
             </span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            The first decentralized lottery platform on LUKSO. Create your own draws or join official weekly & monthly lotteries!
+            The first decentralized lottery platform on LUKSO. Join weekly draws or earn monthly tickets through participation!
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -312,6 +297,12 @@ export const HeroSection = () => {
               >
                 {buying ? 'Processing...' : !isConnected ? 'Connect Wallet' : !weeklyDraw ? 'No Active Draw' : `Buy ${weeklyTickets} Ticket${weeklyTickets > 1 ? 's' : ''}`}
               </button>
+              
+              {userMonthlyTickets && userMonthlyTickets.total > 0 && (
+                <div className="text-center text-sm text-yellow-400">
+                  📧 Buying tickets earns you monthly draw tickets!
+                </div>
+              )}
             </div>
           </div>
 
@@ -326,58 +317,49 @@ export const HeroSection = () => {
               <div className="text-4xl font-bold text-white mb-2">
                 {loading ? '...' : monthlyDraw ? parseFloat(monthlyDraw.prizePool_LYX.toFixed(4)) : '0'} LYX
               </div>
-              <p className="text-gray-400">Monthly Prize Pool</p>
+              <p className="text-gray-400">
+                {monthlyDraw?.isUpcoming ? 'Accumulating Pool' : 'Current Prize Pool'}
+              </p>
             </div>
             
             <div className="flex items-center justify-center gap-2 mb-6">
               <ClockIcon className="w-5 h-5 text-gray-400" />
               <span className="text-gray-400">
-                {loading ? 'Loading...' : monthlyDraw ? formatTimeRemaining(monthlyDraw.timeRemaining) : 'No active draw'}
+                {loading ? 'Loading...' : 
+                 monthlyDraw?.isUpcoming ? 'Next monthly draw in 4 weeks' :
+                 monthlyDraw ? formatTimeRemaining(monthlyDraw.timeRemaining) : 'No active draw'}
               </span>
             </div>
             
-            {monthlyDraw && (
+            {userMonthlyTickets ? (
               <div className="text-center text-sm text-gray-400 mb-6 space-y-1">
-                <p>Tickets sold: {monthlyDraw.ticketsSold}</p>
-                <p>Participants: {monthlyDraw.participantCount}</p>
-                <p>Draw ID: #{monthlyDraw.drawId}</p>
+                <p className="text-white font-bold">Your Monthly Tickets: {userMonthlyTickets.total}</p>
+                <p>📧 From weekly: {userMonthlyTickets.fromWeekly}</p>
+                <p>✏️ From creating: {userMonthlyTickets.fromCreating}</p>
+                <p>🎯 From participating: {userMonthlyTickets.fromParticipating}</p>
+              </div>
+            ) : (
+              <div className="text-center text-sm text-gray-400 mb-6 space-y-1">
+                <p>Earn tickets by:</p>
+                <p>📧 Buying weekly tickets</p>
+                <p>✏️ Creating draws (max 5/month)</p>
+                <p>🎯 Participating in draws (max 15/month)</p>
               </div>
             )}
             
             <div className="space-y-4">
-              <div className="flex items-center justify-center gap-3">
-                <label className="text-white">Tickets:</label>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setMonthlyTickets(Math.max(1, monthlyTickets - 1))}
-                    className="w-8 h-8 bg-purple-500/20 rounded-lg text-purple-400 hover:bg-purple-500/30"
-                  >
-                    -
-                  </button>
-                  <span className="w-12 text-center text-white font-bold">{monthlyTickets}</span>
-                  <button
-                    onClick={() => setMonthlyTickets(monthlyTickets + 1)}
-                    className="w-8 h-8 bg-purple-500/20 rounded-lg text-purple-400 hover:bg-purple-500/30"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              
-              <div className="text-center text-gray-400">
-                {monthlyDraw ? parseFloat(monthlyDraw.ticketPrice_LYX.toFixed(4)) : '0.1'} LYX per ticket
-              </div>
-              
               <div className="text-center text-white font-bold">
-                Total: {monthlyDraw ? parseFloat((monthlyTickets * monthlyDraw.ticketPrice_LYX).toFixed(4)) : (monthlyTickets * 0.1)} LYX
+                No Direct Purchase Available
+              </div>
+              <div className="text-center text-gray-400 text-sm">
+                Monthly draws use tickets earned through platform participation
               </div>
 
               <button
-                onClick={handleBuyMonthly}
-                disabled={buying || !monthlyDraw || !isConnected}
-                className="w-full btn-primary bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50"
+                disabled={true}
+                className="w-full btn-primary bg-gradient-to-r from-purple-400 to-pink-400 opacity-50 cursor-not-allowed"
               >
-                {buying ? 'Processing...' : !isConnected ? 'Connect Wallet' : !monthlyDraw ? 'No Active Draw' : `Buy ${monthlyTickets} Ticket${monthlyTickets > 1 ? 's' : ''}`}
+                Earn Tickets Through Participation
               </button>
             </div>
           </div>
@@ -395,7 +377,7 @@ export const HeroSection = () => {
             </div>
             <div className="glass-card p-4">
               <div className="text-2xl font-bold text-purple-400">
-                {(weeklyDraw ? 1 : 0) + (monthlyDraw ? 1 : 0)}
+                {(weeklyDraw ? 1 : 0) + (monthlyDraw && !monthlyDraw.isUpcoming ? 1 : 0)}
               </div>
               <div className="text-sm text-gray-400">Active Draws</div>
             </div>
