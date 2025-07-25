@@ -173,22 +173,17 @@ export const HeroSection = () => {
       });
       
       // Gerçek blockchain transaction
-      const tx = await buyTickets(weeklyDraw.drawId, weeklyTickets);
+      const txHash = await buyTickets(weeklyDraw.drawId, weeklyTickets);
       
-      console.log('[BuyTickets] Transaction object type:', typeof tx);
-      console.log('[BuyTickets] Transaction object keys:', tx ? Object.keys(tx) : 'null');
-      console.log('[BuyTickets] Full transaction object:', tx);
-      
-      // Try different possible transaction hash locations
-      const possibleTxHash = tx?.transactionHash || tx?.hash || tx?.txHash || 'Unknown';
-      console.log('[BuyTickets] Transaction hash found:', possibleTxHash);
+      console.log('[BuyTickets] Transaction hash type:', typeof txHash);
+      console.log('[BuyTickets] Transaction hash:', txHash);
       
       // Refresh data after successful purchase
       setTimeout(() => {
         loadPlatformData();
       }, 3000);
       
-      console.log('✅ Transaction completed successfully!');
+      console.log('✅ Transaction completed successfully! TX:', txHash);
     } catch (err: any) {
       console.error('❌ Transaction failed:', err);
       console.error('❌ Error message:', err.message);
