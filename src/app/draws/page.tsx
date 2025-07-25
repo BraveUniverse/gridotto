@@ -14,6 +14,7 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
+import Web3 from 'web3';
 
 export default function DrawsPage() {
   const { isConnected } = useUPProvider();
@@ -206,12 +207,14 @@ export default function DrawsPage() {
                 <div>
                   <p className="text-gray-400 text-sm">Next Draw</p>
                   <p className="text-white font-semibold">
-                    {new Date(Number(officialDrawInfo.nextDrawTime) * 1000).toLocaleString()}
+                    {new Date(officialDrawInfo.nextDrawTime * 1000).toLocaleString()}
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">Ticket Price</p>
-                  <p className="text-white font-semibold">1 LYX</p>
+                  <p className="text-white font-semibold">
+                    {Web3.utils.fromWei(officialDrawInfo.ticketPrice, 'ether')} LYX
+                  </p>
                 </div>
               </div>
             </div>

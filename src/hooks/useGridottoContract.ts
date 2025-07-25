@@ -55,8 +55,8 @@ export const useGridottoContract = () => {
     
     const result = {
       currentDrawNumber: Number(info.weeklyDrawId),
-      nextDrawTime: Number(info.nextMonthlyDraw),
-      ticketPrice: Web3.utils.toWei("0.1", "ether") // Default price
+      nextDrawTime: Number(info.weeklyEndTime), // Use weeklyEndTime instead of non-existent field
+      ticketPrice: Web3.utils.toWei("0.25", "ether") // Weekly draw ticket price is 0.25 LYX
     };
     
     console.log('[getOfficialDrawInfo] Final result:', JSON.stringify(result, bigIntReplacer, 2));

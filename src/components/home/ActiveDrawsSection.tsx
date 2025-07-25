@@ -61,15 +61,14 @@ export function ActiveDrawsSection() {
           // Check if draw is active with safe property access
           const isCompleted = (drawDetails as any).isCompleted;
           const isCancelled = (drawDetails as any).isCancelled;
-          const endTime = (drawDetails as any).endTime;
+          const endTimeBigInt = (drawDetails as any).endTime;
+          const endTime = typeof endTimeBigInt === 'bigint' ? Number(endTimeBigInt) : Number(endTimeBigInt);
           const creator = (drawDetails as any).creator;
           
-          const isActive = !isCompleted && !isCancelled && Number(endTime) > currentTime;
+          const isActive = !isCompleted && !isCancelled && endTime > currentTime;
           
           if (isActive && creator) {
             const drawTypeNames = ["LYX", "LSP7", "LSP8", "WEEKLY", "MONTHLY"];
-            const endTimeBigInt = (drawDetails as any).endTime;
-            const endTime = typeof endTimeBigInt === 'bigint' ? Number(endTimeBigInt) : Number(endTimeBigInt);
             const timeRemaining = Math.max(0, endTime - currentTime);
             
             // Safely convert BigInt values

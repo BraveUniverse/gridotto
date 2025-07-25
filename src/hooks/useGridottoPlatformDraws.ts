@@ -10,9 +10,10 @@ const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
 export interface PlatformDrawsInfo {
   weeklyDrawId: bigint;
   monthlyDrawId: bigint;
+  weeklyEndTime: bigint;
+  monthlyEndTime: bigint;
   monthlyPoolBalance: bigint;
-  lastWeeklyDrawTime: bigint;
-  nextMonthlyDraw: bigint;
+  weeklyCount: bigint;
 }
 
 export interface MonthlyTickets {
@@ -151,9 +152,10 @@ export function useGridottoPlatformDraws() {
       const result = {
         weeklyDrawId: info.weeklyDrawId || info[0],
         monthlyDrawId: info.monthlyDrawId || info[1],
-        monthlyPoolBalance: info.monthlyPoolBalance || info[2],
-        lastWeeklyDrawTime: info.lastWeeklyDrawTime || info[3],
-        nextMonthlyDraw: info.nextMonthlyDraw || info[4]
+        weeklyEndTime: info.weeklyEndTime || info[2],
+        monthlyEndTime: info.monthlyEndTime || info[3],
+        monthlyPoolBalance: info.monthlyPoolBalance || info[4],
+        weeklyCount: info.weeklyCount || info[5]
       };
       
       console.log('[getPlatformDrawsInfo] Parsed object format:', JSON.stringify(result, bigIntReplacer, 2));
