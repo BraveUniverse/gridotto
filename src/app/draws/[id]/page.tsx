@@ -78,6 +78,11 @@ export default function DrawDetailPage() {
       setLoading(true);
       const drawIdNum = parseInt(drawId);
       console.log('[DrawDetailPage] Loading data for draw:', drawIdNum);
+      console.log('[DrawDetailPage] Contract hook status:', {
+        hasGetDrawDetails: !!getDrawDetails,
+        hasGetDrawParticipants: !!getDrawParticipants,
+        hasBuyTickets: !!buyTickets
+      });
       
       if (isNaN(drawIdNum) || drawIdNum <= 0) {
         console.error('[DrawDetailPage] Invalid draw ID:', drawId);

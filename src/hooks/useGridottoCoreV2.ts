@@ -42,9 +42,20 @@ export function useGridottoCoreV2() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[useGridottoCoreV2] Initializing...', {
+      web3: !!web3,
+      account,
+      DIAMOND_ADDRESS
+    });
+    
     if (web3) {
+      console.log('[useGridottoCoreV2] Creating contract instance...');
       const coreContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
       setContract(coreContract);
+      console.log('[useGridottoCoreV2] Contract instance created');
+    } else {
+      console.log('[useGridottoCoreV2] No web3 instance available');
+      setContract(null);
     }
   }, [web3]);
 
@@ -321,26 +332,26 @@ export function useGridottoCoreV2() {
         creator: details.creator,
         drawType: Number(details.drawType),
         tokenAddress: details.tokenAddress,
-        ticketPrice: BigInt(details.ticketPrice),
-        maxTickets: BigInt(details.maxTickets),
-        ticketsSold: BigInt(details.ticketsSold),
-        prizePool: BigInt(details.prizePool),
-        startTime: BigInt(details.startTime),
-        endTime: BigInt(details.endTime),
-        minParticipants: BigInt(details.minParticipants),
-        platformFeePercent: BigInt(details.platformFeePercent),
+        ticketPrice: details.ticketPrice,
+        maxTickets: details.maxTickets,
+        ticketsSold: details.ticketsSold,
+        prizePool: details.prizePool,
+        startTime: details.startTime,
+        endTime: details.endTime,
+        minParticipants: details.minParticipants,
+        platformFeePercent: details.platformFeePercent,
         isCompleted: details.isCompleted,
         isCancelled: details.isCancelled,
-        participantCount: BigInt(details.participantCount),
-        monthlyPoolContribution: BigInt(details.monthlyPoolContribution)
+        participantCount: details.participantCount,
+        monthlyPoolContribution: details.monthlyPoolContribution
       };
       
       console.log('[getDrawDetails] Processed details for draw #' + drawId + ':', {
-        ...result,
-        ticketPrice: result.ticketPrice.toString(),
-        maxTickets: result.maxTickets.toString(),
-        ticketsSold: result.ticketsSold.toString(),
-        prizePool: result.prizePool.toString()
+        creator: result.creator,
+        drawType: result.drawType,
+        isCompleted: result.isCompleted,
+        isCancelled: result.isCancelled,
+        endTime: result.endTime.toString()
       });
       
       return result;
