@@ -83,35 +83,48 @@ export async function sendTransaction(
         const valueToSend = options.value || '0';
         const valueInHex = web3.utils.toHex(valueToSend);
         
-        // Build the execute parameters
+        // Build execute parameters
         const executeParams = {
-          operation: 0, // CALL operation
+          operationType: 0, // CALL
           to: targetAddress,
-          value: valueInHex,
+          value: valueToSend,
           data: encodedData
         };
-        
-        console.log('[sendTransaction] Execute params:', executeParams);
-        console.log('[sendTransaction] Value to send (decimal):', valueToSend);
-        console.log('[sendTransaction] Value to send (hex):', valueInHex);
-        console.log('[sendTransaction] Value in ETH:', web3.utils.fromWei(valueToSend, 'ether'));
-        
-        // Send via Key Manager - IMPORTANT: Include value in send options!
-        const txOptions = { 
+
+        // Build transaction options
+        const txOptions: any = {
           from: account,
-          value: valueInHex // Pass the value here too!
+          gas: '1000000', // Increased gas limit
+          gasPrice: undefined // Let web3 calculate
         };
-        
+
+        // Add value if sending native currency
+        if (options.value && options.value !== '0') {
+          txOptions.value = options.value;
+          console.log('[sendTransaction] Including value in transaction:', {
+            value: options.value,
+            valueInLYX: web3.utils.fromWei(options.value, 'ether')
+          });
+        }
+
+        console.log('[sendTransaction] Execute params:', {
+          ...executeParams,
+          data: executeParams.data.substring(0, 10) + '...' // Show only first 10 chars
+        });
         console.log('[sendTransaction] Transaction options:', txOptions);
-        
-        return await keyManagerContract.methods
+
+        // Execute through Key Manager
+        const receipt = await keyManagerContract.methods
           .execute(
-            executeParams.operation,
+            executeParams.operationType,
             executeParams.to,
             executeParams.value,
             executeParams.data
           )
           .send(txOptions);
+
+        console.log('[sendTransaction] Transaction successful:', receipt);
+        return receipt;
       } else {
         console.log('[sendTransaction] No Key Manager found, falling back to direct transaction');
       }
@@ -121,8 +134,25 @@ export async function sendTransaction(
     
     // Fallback to regular transaction for EOA
     return await contract.methods[method](...params).send(options);
-  } catch (error) {
+  } catch (error: any) {
     console.error('[sendTransaction] Transaction error:', error);
+    
+    // More detailed error logging
+    if (error.message) {
+      console.error('[sendTransaction] Error message:', error.message);
+      
+      // Check for specific error patterns
+      if (error.message.includes('insufficient funds')) {
+        throw new Error('Insufficient funds. Please check your balance.');
+      } else if (error.message.includes('Relayer Error')) {
+        console.error('[sendTransaction] Relayer error details:', {
+          code: error.code,
+          message: error.message
+        });
+        throw new Error('Transaction rejected by relayer. Please check your UP permissions and balance.');
+      }
+    }
+    
     throw error;
   }
 }
