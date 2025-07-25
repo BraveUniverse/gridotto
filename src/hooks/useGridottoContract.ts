@@ -205,6 +205,12 @@ export const useGridottoContract = () => {
     buyTickets: core.buyTickets,
     getDrawParticipants: core.getDrawParticipants,
     
+    // Claim functions
+    claimPrize: core.claimPrize,
+    claimExecutorFees: core.claimExecutorFees,
+    getUnclaimedPrizes: core.getUnclaimedPrizes,
+    getClaimableExecutorFees: core.getClaimableExecutorFees,
+    
     // Execution functions
     executeUserDraw,
     canExecuteDraw,

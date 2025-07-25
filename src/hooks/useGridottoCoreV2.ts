@@ -541,20 +541,145 @@ export function useGridottoCoreV2() {
     }
   }, [contract, web3]);
 
+  // Claim prize for a specific draw
+  const claimPrize = useCallback(async (drawId: number) => {
+    if (!contract || !account || !web3) throw new Error('Wallet not connected');
+    
+    try {
+      console.log('[claimPrize] Claiming prize for draw:', drawId);
+      
+      const result = await sendTransaction(
+        contract,
+        'claimPrize',
+        [drawId],
+        {},
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
+      
+      console.log('[claimPrize] Prize claimed:', result);
+      return result;
+    } catch (err: any) {
+      console.error('[claimPrize] Error:', err);
+      throw err;
+    }
+  }, [contract, account, web3]);
+
+  // Claim executor fees
+  const claimExecutorFees = useCallback(async () => {
+    if (!contract || !account || !web3) throw new Error('Wallet not connected');
+    
+    try {
+      console.log('[claimExecutorFees] Claiming executor fees');
+      
+      const result = await sendTransaction(
+        contract,
+        'claimExecutorFees',
+        [],
+        {},
+        web3,
+        account,
+        DIAMOND_ADDRESS
+      );
+      
+      console.log('[claimExecutorFees] Fees claimed:', result);
+      return result;
+    } catch (err: any) {
+      console.error('[claimExecutorFees] Error:', err);
+      throw err;
+    }
+  }, [contract, account, web3]);
+
+  // Get unclaimed prizes for a user
+  const getUnclaimedPrizes = useCallback(async (userAddress: string): Promise<any[]> => {
+    if (!web3) {
+      console.log('[getUnclaimedPrizes] No web3 available');
+      return [];
+    }
+    
+    let activeContract = contract;
+    if (!activeContract) {
+      console.log('[getUnclaimedPrizes] Contract not ready, creating new instance...');
+      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+    }
+    
+    if (!activeContract) {
+      console.log('[getUnclaimedPrizes] Failed to create contract');
+      return [];
+    }
+    
+    try {
+      console.log('[getUnclaimedPrizes] Getting unclaimed prizes for:', userAddress);
+      const prizes = await activeContract.methods.getUnclaimedPrizes(userAddress).call();
+      console.log('[getUnclaimedPrizes] Raw prizes:', prizes);
+      
+      // Convert to array of draw IDs with prize info
+      const unclaimedPrizes = [];
+      if (prizes && prizes.drawIds && prizes.amounts) {
+        for (let i = 0; i < prizes.drawIds.length; i++) {
+          unclaimedPrizes.push({
+            drawId: Number(prizes.drawIds[i]),
+            amount: prizes.amounts[i],
+            isNFT: prizes.isNFT ? prizes.isNFT[i] : false
+          });
+        }
+      }
+      
+      return unclaimedPrizes;
+    } catch (err: any) {
+      console.error('[getUnclaimedPrizes] Error:', err);
+      return [];
+    }
+  }, [contract, web3]);
+
+  // Get claimable executor fees
+  const getClaimableExecutorFees = useCallback(async (executorAddress: string): Promise<string> => {
+    if (!web3) {
+      console.log('[getClaimableExecutorFees] No web3 available');
+      return '0';
+    }
+    
+    let activeContract = contract;
+    if (!activeContract) {
+      console.log('[getClaimableExecutorFees] Contract not ready, creating new instance...');
+      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+    }
+    
+    if (!activeContract) {
+      console.log('[getClaimableExecutorFees] Failed to create contract');
+      return '0';
+    }
+    
+    try {
+      console.log('[getClaimableExecutorFees] Getting claimable fees for:', executorAddress);
+      const fees = await activeContract.methods.getClaimableExecutorFees(executorAddress).call();
+      console.log('[getClaimableExecutorFees] Claimable fees:', fees);
+      return fees || '0';
+    } catch (err: any) {
+      console.error('[getClaimableExecutorFees] Error:', err);
+      return '0';
+    }
+  }, [contract, web3]);
+
   return {
     contract,
     loading,
     error,
-    isConnected,
+    // Draw creation functions
     createLYXDraw,
     createTokenDraw,
     createNFTDraw,
+    // Core functions
     buyTickets,
+    getActiveDraws,
     getDrawDetails,
     getUserDrawHistory,
-    cancelDraw,
-    getNextDrawId,
-    getActiveDraws,
-    getDrawParticipants
+    getDrawParticipants,
+    // Claim functions
+    claimPrize,
+    claimExecutorFees,
+    getUnclaimedPrizes,
+    getClaimableExecutorFees
   };
 }

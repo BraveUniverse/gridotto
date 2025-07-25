@@ -2,197 +2,107 @@
 
 import { useState, useEffect } from 'react';
 import Web3 from 'web3';
+import { Header } from '@/components/layout/Header';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
-import { useGridottoRefund } from '@/hooks/useGridottoRefund';
-import { useGridottoLeaderboard } from '@/hooks/useGridottoLeaderboard';
+import { useGridottoContract } from '@/hooks/useGridottoContract';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import { 
-  UserCircleIcon, 
+  TicketIcon, 
   TrophyIcon, 
-  TicketIcon,
+  ClockIcon, 
   CurrencyDollarIcon,
   ChartBarIcon,
   SparklesIcon,
   GiftIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  XCircleIcon
+  UserIcon,
+  BanknotesIcon
 } from '@heroicons/react/24/outline';
+import Link from 'next/link';
 
-import toast from 'react-hot-toast';
-
-interface ProfileStats {
-  totalWins: number;
-  totalWinnings: string;
-  totalTicketsBought: number;
-  totalSpent: string;
-  drawsParticipated: number;
-  drawsWon: number;
-  claimablePrizes: number;
-}
-
-const ProfilePage = () => {
+export default function ProfilePage() {
   const { account, isConnected } = useUPProvider();
   const { getUserDrawHistory, getDrawDetails } = useGridottoCoreV2();
-  const { canClaimPrize, claimPrize, batchClaimPrizes } = useGridottoRefund();
-  const { getTopWinners } = useGridottoLeaderboard();
-  
+  const { getUnclaimedPrizes, getClaimableExecutorFees, claimPrize, claimExecutorFees } = useGridottoContract();
+  const [userDraws, setUserDraws] = useState<any[]>([]);
+  const [unclaimedPrizes, setUnclaimedPrizes] = useState<any[]>([]);
+  const [claimableExecutorFee, setClaimableExecutorFee] = useState('0');
   const [loading, setLoading] = useState(true);
-  const [claiming, setClaiming] = useState(false);
-  const [stats, setStats] = useState<ProfileStats>({
-    totalWins: 0,
-    totalWinnings: '0',
-    totalTicketsBought: 0,
-    totalSpent: '0',
-    drawsParticipated: 0,
-    drawsWon: 0,
-    claimablePrizes: 0
-  });
-  const [claimableDraws, setClaimableDraws] = useState<number[]>([]);
-  const [participationHistory, setParticipationHistory] = useState<any[]>([]);
+  const [claiming, setClaiming] = useState<number | null>(null);
+  const [claimingFees, setClaimingFees] = useState(false);
 
   useEffect(() => {
-    if (account) {
-      loadProfileData();
+    if (account && isConnected) {
+      loadUserData();
     }
-  }, [account]);
+  }, [account, isConnected]);
 
-  const loadProfileData = async () => {
+  const loadUserData = async () => {
     if (!account) return;
-
+    
     try {
       setLoading(true);
-
-      // Get user's draw history
-      const history = await getUserDrawHistory(account);
       
-      // Get detailed information for each draw
-      const detailedHistory = [];
-      let totalSpent = BigInt(0);
-      let totalWon = BigInt(0);
-      let drawsWon = 0;
-      let totalTickets = 0;
-      const claimable: number[] = [];
-
-      for (const drawId of history) {
-        // Skip invalid draw IDs
-        if (!drawId || drawId <= 0) {
-          console.warn('Skipping invalid drawId in history:', drawId);
-          continue;
-        }
-        
+      // Load user draws
+      const drawIds = await getUserDrawHistory(account);
+      const drawPromises = drawIds.map(async (drawId: number) => {
         const details = await getDrawDetails(drawId);
-        if (details) {
-          // Calculate spent amount (this is approximate as we don't have exact ticket count per user)
-          // In a real implementation, you'd need a getUserTickets function
-          const participated = true; // Assuming user participated if in history
-          
-          if (participated) {
-            const endTimeBigInt = details.endTime;
-            const endTimeNum = typeof endTimeBigInt === 'bigint' 
-              ? Number(endTimeBigInt) 
-              : Number(endTimeBigInt || 0);
-            
-            detailedHistory.push({
-              drawId,
-              drawType: details.drawType,
-              endTime: endTimeNum,
-              isCompleted: details.isCompleted,
-              prizePool: details.prizePool.toString(),
-              ticketPrice: details.ticketPrice.toString()
-            });
-          }
-
-          // Check if user can claim prize
-          if (details.isCompleted && !details.isCancelled) {
-            const canClaim = await canClaimPrize(drawId, account);
-            if (canClaim.canClaim) {
-              claimable.push(drawId);
-            }
-          }
-        }
-      }
-
-      // Get winner stats from leaderboard
-      const topWinners = await getTopWinners(100);
-      const userWinnerStats = topWinners.find(w => w.player.toLowerCase() === account.toLowerCase());
-      
-      if (userWinnerStats) {
-        totalWon = userWinnerStats.totalWinnings;
-        drawsWon = Number(userWinnerStats.totalWins);
-      }
-
-      setStats({
-        totalWins: drawsWon,
-        totalWinnings: Web3.utils.fromWei(totalWon, 'ether'),
-        totalTicketsBought: totalTickets,
-        totalSpent: Web3.utils.fromWei(totalSpent, 'ether'),
-        drawsParticipated: detailedHistory.length,
-        drawsWon,
-        claimablePrizes: claimable.length
+        return details ? { ...details, drawId } : null;
       });
-
-      setClaimableDraws(claimable);
-      setParticipationHistory(detailedHistory);
-    } catch (err) {
-      console.error('Error loading profile data:', err);
-      toast.error('Failed to load profile data');
+      
+      const draws = await Promise.all(drawPromises);
+      setUserDraws(draws.filter(d => d !== null));
+      
+      // Load unclaimed prizes
+      const prizes = await getUnclaimedPrizes(account);
+      setUnclaimedPrizes(prizes);
+      
+      // Load claimable executor fees
+      const fees = await getClaimableExecutorFees(account);
+      setClaimableExecutorFee(fees);
+    } catch (error) {
+      console.error('Error loading user data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClaimAll = async () => {
-    if (claimableDraws.length === 0) return;
-
-    setClaiming(true);
+  const handleClaimPrize = async (drawId: number) => {
     try {
-      if (claimableDraws.length === 1) {
-        await claimPrize(claimableDraws[0]);
-      } else {
-        await batchClaimPrizes(claimableDraws);
-      }
-      
-      toast.success('All prizes claimed successfully!');
-      await loadProfileData();
-    } catch (err: any) {
-      console.error('Error claiming prizes:', err);
-      toast.error(err.message || 'Failed to claim prizes');
+      setClaiming(drawId);
+      await claimPrize(drawId);
+      // Reload data after claiming
+      await loadUserData();
+    } catch (error) {
+      console.error('Error claiming prize:', error);
     } finally {
-      setClaiming(false);
+      setClaiming(null);
     }
   };
 
-  const getDrawTypeLabel = (type: number) => {
-    switch (type) {
-      case 0: return 'LYX Draw';
-      case 1: return 'Token Draw';
-      case 2: return 'NFT Draw';
-      case 3: return 'Weekly Draw';
-      case 4: return 'Monthly Draw';
-      default: return 'Unknown';
+  const handleClaimExecutorFees = async () => {
+    try {
+      setClaimingFees(true);
+      await claimExecutorFees();
+      // Reload data after claiming
+      await loadUserData();
+    } catch (error) {
+      console.error('Error claiming executor fees:', error);
+    } finally {
+      setClaimingFees(false);
     }
   };
 
-  const getDrawTypeIcon = (type: number) => {
-    switch (type) {
-      case 0: return CurrencyDollarIcon;
-      case 1: return CurrencyDollarIcon;
-      case 2: return GiftIcon;
-      case 3: return ClockIcon;
-      case 4: return TrophyIcon;
-      default: return SparklesIcon;
-    }
-  };
-
-  if (!isConnected) {
+  if (!isConnected || !account) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <UserCircleIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
-          <p className="text-gray-400">Please connect your wallet to view your profile.</p>
+      <div className="min-h-screen bg-black">
+        <Header />
+        <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+          <div className="text-center">
+            <UserIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Connect Your Wallet</h2>
+            <p className="text-gray-400">Please connect your wallet to view your profile</p>
+          </div>
         </div>
       </div>
     );
@@ -200,151 +110,183 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <SparklesIcon className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-black">
+        <Header />
+        <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-20">
-      <div className="container mx-auto px-4">
-        {/* Profile Header */}
-        <div className="glass-card p-8 mb-8">
-          <div className="flex items-center gap-6 mb-6">
-            <ProfileDisplay address={account!} size="lg" showName={false} />
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Your Profile</h1>
-              <p className="text-gray-400 font-mono text-sm">{account}</p>
-            </div>
-          </div>
-
-          {/* Claim All Button */}
-          {claimableDraws.length > 0 && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-400 font-medium flex items-center gap-2">
-                    <GiftIcon className="w-5 h-5" />
-                    You have {claimableDraws.length} unclaimed prize{claimableDraws.length > 1 ? 's' : ''}!
-                  </p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Click the button to claim all your prizes at once.
-                  </p>
-                </div>
-                <button
-                  onClick={handleClaimAll}
-                  disabled={claiming}
-                  className="btn-primary"
-                >
-                  {claiming ? 'Claiming...' : 'Claim All'}
-                </button>
-              </div>
-            </div>
-          )}
+    <div className="min-h-screen bg-black">
+      <Header />
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">My Profile</h1>
+          <p className="text-gray-400">Manage your draws and track your activity</p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <TrophyIcon className="w-8 h-8 text-yellow-400" />
-              <span className="text-2xl font-bold text-yellow-400">{stats.totalWins}</span>
+        {/* Profile Overview */}
+        <div className="bg-gray-800 rounded-xl p-6 mb-8">
+          <div className="flex items-center space-x-4">
+            <ProfileDisplay address={account} size="lg" />
+            <div>
+              <p className="text-sm text-gray-400">Wallet Address</p>
+              <p className="font-mono text-lg">{account}</p>
             </div>
-            <p className="text-gray-400 text-sm">Total Wins</p>
-            <p className="text-xl font-bold text-white">{stats.totalWinnings} LYX</p>
           </div>
+        </div>
 
-          <div className="glass-card p-6">
+        {/* Unclaimed Prizes */}
+        {unclaimedPrizes.length > 0 && (
+          <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-600/30 rounded-xl p-6 mb-8">
+            <h2 className="text-2xl font-bold mb-4 flex items-center">
+              <GiftIcon className="w-8 h-8 mr-3 text-yellow-400" />
+              Unclaimed Prizes
+            </h2>
+            <div className="space-y-3">
+              {unclaimedPrizes.map((prize) => (
+                <div key={prize.drawId} className="bg-gray-800/50 rounded-lg p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">Draw #{prize.drawId}</p>
+                    <p className="text-sm text-gray-400">
+                      {prize.isNFT ? 'NFT Prize' : `${Web3.utils.fromWei(prize.amount, 'ether')} LYX`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleClaimPrize(prize.drawId)}
+                    disabled={claiming === prize.drawId}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      claiming === prize.drawId
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:shadow-lg'
+                    }`}
+                  >
+                    {claiming === prize.drawId ? 'Claiming...' : 'Claim Prize'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Claimable Executor Fees */}
+        {claimableExecutorFee !== '0' && (
+          <div className="bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-600/30 rounded-xl p-6 mb-8">
+            <h2 className="text-2xl font-bold mb-4 flex items-center">
+              <BanknotesIcon className="w-8 h-8 mr-3 text-purple-400" />
+              Claimable Executor Fees
+            </h2>
+            <div className="bg-gray-800/50 rounded-lg p-4 flex items-center justify-between">
+              <div>
+                <p className="font-semibold">Total Fees Earned</p>
+                <p className="text-2xl font-bold text-purple-400">
+                  {Web3.utils.fromWei(claimableExecutorFee, 'ether')} LYX
+                </p>
+              </div>
+              <button
+                onClick={handleClaimExecutorFees}
+                disabled={claimingFees}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                  claimingFees
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:shadow-lg'
+                }`}
+              >
+                {claimingFees ? 'Claiming...' : 'Claim All Fees'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* User Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-gray-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <TicketIcon className="w-8 h-8 text-blue-400" />
-              <span className="text-2xl font-bold text-blue-400">{stats.totalTicketsBought}</span>
+              <span className="text-2xl font-bold text-blue-400">{userDraws.length}</span>
             </div>
-            <p className="text-gray-400 text-sm">Tickets Bought</p>
-            <p className="text-xl font-bold text-white">{stats.totalSpent} LYX spent</p>
+            <p className="text-gray-400 text-sm">Draws Created</p>
+            <p className="text-xl font-bold">Total Draws</p>
           </div>
 
-          <div className="glass-card p-6">
+          <div className="bg-gray-800 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <TrophyIcon className="w-8 h-8 text-yellow-400" />
+              <span className="text-2xl font-bold text-yellow-400">
+                {userDraws.filter(d => d.isCompleted).length}
+              </span>
+            </div>
+            <p className="text-gray-400 text-sm">Completed Draws</p>
+            <p className="text-xl font-bold">Successfully Executed</p>
+          </div>
+
+          <div className="bg-gray-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <ChartBarIcon className="w-8 h-8 text-purple-400" />
-              <span className="text-2xl font-bold text-purple-400">{stats.drawsParticipated}</span>
+              <span className="text-2xl font-bold text-purple-400">
+                {Web3.utils.fromWei(
+                  userDraws.reduce((sum, d) => sum + BigInt(d.prizePool || 0), BigInt(0)),
+                  'ether'
+                )}
+              </span>
             </div>
-            <p className="text-gray-400 text-sm">Draws Participated</p>
-            <p className="text-xl font-bold text-white">{stats.drawsWon} won</p>
-          </div>
-
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <GiftIcon className="w-8 h-8 text-green-400" />
-              <span className="text-2xl font-bold text-green-400">{stats.claimablePrizes}</span>
-            </div>
-            <p className="text-gray-400 text-sm">Claimable Prizes</p>
-            <p className="text-xl font-bold text-white">Ready to claim</p>
+            <p className="text-gray-400 text-sm">Total Prize Pools</p>
+            <p className="text-xl font-bold">LYX Distributed</p>
           </div>
         </div>
 
-        {/* Participation History */}
-        <div className="glass-card p-6">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-            <ClockIcon className="w-6 h-6" />
-            Participation History
+        {/* Draw History */}
+        <div className="bg-gray-800 rounded-xl p-6">
+          <h2 className="text-2xl font-bold mb-6 flex items-center">
+            <ClockIcon className="w-6 h-6 mr-2" />
+            Draw History
           </h2>
           
-          {participationHistory.length > 0 ? (
+          {userDraws.length > 0 ? (
             <div className="space-y-4">
-              {participationHistory.map((draw) => {
-                const DrawIcon = getDrawTypeIcon(draw.drawType);
-                const isWon = false; // This would need to check if user won this specific draw
-                
-                return (
-                  <div key={draw.drawId} className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 bg-primary/20 rounded-lg">
-                        <DrawIcon className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">
-                          Draw #{draw.drawId} - {getDrawTypeLabel(draw.drawType)}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          Ended {new Date(draw.endTime * 1000).toLocaleDateString()}
-                        </p>
-                      </div>
+              {userDraws.map((draw) => (
+                <Link
+                  key={draw.drawId}
+                  href={`/draws/${draw.drawId}`}
+                  className="block bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">Draw #{draw.drawId}</p>
+                      <p className="text-sm text-gray-400">
+                        {draw.isCompleted ? 'Completed' : draw.isCancelled ? 'Cancelled' : 'Active'}
+                        {' • '}
+                        {new Date(Number(draw.endTime) * 1000).toLocaleDateString()}
+                      </p>
                     </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-400">Prize Pool</p>
-                        <p className="text-white font-medium">
-                          {Web3.utils.fromWei(draw.prizePool, 'ether')} LYX
-                        </p>
-                      </div>
-                      
-                      {draw.isCompleted && (
-                        <div className="flex items-center gap-2">
-                          {isWon ? (
-                            <CheckCircleIcon className="w-5 h-5 text-green-400" />
-                          ) : (
-                            <XCircleIcon className="w-5 h-5 text-gray-400" />
-                          )}
-                        </div>
-                      )}
+                    <div className="text-right">
+                      <p className="text-sm text-gray-400">Prize Pool</p>
+                      <p className="font-semibold">
+                        {Web3.utils.fromWei(draw.prizePool || '0', 'ether')} LYX
+                      </p>
                     </div>
                   </div>
-                );
-              })}
+                </Link>
+              ))}
             </div>
           ) : (
             <div className="text-center py-12">
               <TicketIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-400">No participation history yet.</p>
-              <p className="text-sm text-gray-500 mt-2">Start by buying tickets in active draws!</p>
+              <p className="text-gray-400">No draws created yet</p>
+              <Link
+                href="/create-draw"
+                className="mt-4 inline-block text-primary hover:text-primary-light"
+              >
+                Create your first draw →
+              </Link>
             </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 };
-
-export default ProfilePage;

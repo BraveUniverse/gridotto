@@ -12,7 +12,8 @@ import {
   CurrencyDollarIcon,
   PhotoIcon,
   SparklesIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import { useLSP3Profile } from '@/hooks/useLSP3Profile';
@@ -91,6 +92,7 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
   const prizeAmount = draw.prizeAmount || '0';
   const prizeInLYX = Web3.utils.fromWei(prizeAmount, 'ether');
   const ticketPriceInLYX = Web3.utils.fromWei(draw.ticketPrice, 'ether');
+  const prizePoolInLYX = Web3.utils.fromWei(draw.prizeAmount, 'ether');
 
   return (
     <Link href={`/draws/${draw.drawId}`}>
@@ -122,11 +124,20 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
           </div>
 
           {/* Prize Pool */}
-          <div className="mb-4">
-            <p className="text-sm text-gray-400 mb-1">Prize Pool</p>
-            <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
-              {prizeInLYX} LYX
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CurrencyDollarIcon className="w-5 h-5 text-primary" />
+              <span className="text-sm text-gray-400">Prize Pool</span>
+              <div className="group relative">
+                <InformationCircleIcon className="w-4 h-4 text-gray-500 cursor-help" />
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-xs text-gray-300 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                  Prize pool shows amount after platform fees
+                </div>
+              </div>
+            </div>
+            <span className="text-lg font-bold text-primary">
+              {prizePoolInLYX} LYX
+            </span>
           </div>
 
           {/* Info Grid */}

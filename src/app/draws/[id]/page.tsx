@@ -18,10 +18,13 @@ import {
   ChartBarIcon,
   ShoppingCartIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import Link from 'next/link';
+import { calculateFeeBreakdown, getDrawTypeName } from '@/utils/feeCalculations';
+import { DrawType } from '@/hooks/useGridottoCoreV2';
 
 const drawTypeConfig: Record<number, { icon: any; label: string; color: string }> = {
   0: { // LYX
@@ -63,6 +66,7 @@ export default function DrawDetailPage() {
   const [timeLeft, setTimeLeft] = useState('');
   const [ticketCount, setTicketCount] = useState(1);
   const [buying, setBuying] = useState(false);
+  const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
   
   const { profileData: creatorProfile } = useLSP3Profile(draw?.creator || '');
 
@@ -155,12 +159,15 @@ export default function DrawDetailPage() {
       // Reload data after purchase
       await loadDrawData();
       setTicketCount(1);
+      setShowFeeBreakdown(false);
     } catch (error) {
       console.error('Error buying tickets:', error);
     } finally {
       setBuying(false);
     }
   };
+
+  const feeBreakdown = draw ? calculateFeeBreakdown(draw.ticketPrice, ticketCount, draw.drawType) : null;
 
   if (loading) {
     return (
@@ -337,18 +344,21 @@ export default function DrawDetailPage() {
               </div>
             </div>
 
-            {/* Buy Tickets */}
-            {isActive && (
-              <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border border-white/10">
-                <h3 className="text-lg font-bold text-white mb-4">Buy Tickets</h3>
+            {/* Buy Tickets Section */}
+            {draw && !draw.isCompleted && !draw.isCancelled && (
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <h3 className="text-xl font-bold mb-4 flex items-center">
+                  <ShoppingCartIcon className="w-6 h-6 mr-2" />
+                  Buy Tickets
+                </h3>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm text-gray-400 mb-2 block">Number of tickets</label>
-                    <div className="flex items-center gap-2">
+                    <label className="block text-sm font-medium mb-2">Number of Tickets</label>
+                    <div className="flex items-center space-x-4">
                       <button
                         onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
-                        className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors"
+                        className="w-10 h-10 rounded-lg bg-gray-700 hover:bg-gray-600 flex items-center justify-center"
                       >
                         -
                       </button>
@@ -356,55 +366,83 @@ export default function DrawDetailPage() {
                         type="number"
                         value={ticketCount}
                         onChange={(e) => setTicketCount(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-center"
-                        min="1"
+                        className="w-20 text-center bg-gray-700 rounded-lg px-3 py-2"
                       />
                       <button
                         onClick={() => setTicketCount(ticketCount + 1)}
-                        className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors"
+                        className="w-10 h-10 rounded-lg bg-gray-700 hover:bg-gray-600 flex items-center justify-center"
                       >
                         +
                       </button>
                     </div>
                   </div>
-
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-400">Ticket price</span>
-                      <span className="text-white">{ticketPriceInLYX} LYX</span>
+                  
+                  <div className="bg-gray-700/50 rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-400">Ticket Price</span>
+                      <span>{Web3.utils.fromWei(draw.ticketPrice, 'ether')} LYX</span>
                     </div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-400">Quantity</span>
-                      <span className="text-white">×{ticketCount}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Total Cost</span>
+                      <span className="text-xl font-bold text-primary">
+                        {feeBreakdown?.totalCost} LYX
+                      </span>
                     </div>
-                    <div className="border-t border-white/10 pt-2 mt-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Total</span>
-                        <span className="text-lg font-bold text-white">{totalCost} LYX</span>
+                    
+                    {/* Fee Breakdown Toggle */}
+                    <button
+                      onClick={() => setShowFeeBreakdown(!showFeeBreakdown)}
+                      className="mt-3 text-sm text-primary hover:text-primary-light flex items-center"
+                    >
+                      <InformationCircleIcon className="w-4 h-4 mr-1" />
+                      {showFeeBreakdown ? 'Hide' : 'Show'} Fee Breakdown
+                    </button>
+                    
+                    {/* Fee Breakdown Details */}
+                    {showFeeBreakdown && feeBreakdown && (
+                      <div className="mt-4 pt-4 border-t border-gray-600 space-y-2 text-sm">
+                        <div className="flex justify-between text-green-400">
+                          <span>→ Prize Pool ({feeBreakdown.prizePoolPercent}%)</span>
+                          <span>{feeBreakdown.prizePool} LYX</span>
+                        </div>
+                        {feeBreakdown.monthlyPoolPercent > 0 && (
+                          <div className="flex justify-between text-blue-400">
+                            <span>→ Monthly Pool ({feeBreakdown.monthlyPoolPercent}%)</span>
+                            <span>{feeBreakdown.monthlyPool} LYX</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-yellow-400">
+                          <span>→ Platform Fee ({feeBreakdown.platformFeePercent}%)</span>
+                          <span>{feeBreakdown.platformFee} LYX</span>
+                        </div>
+                        <div className="flex justify-between text-orange-400">
+                          <span>→ Executor Fee ({feeBreakdown.executorFeePercent}%)</span>
+                          <span>{feeBreakdown.executorFee} LYX</span>
+                        </div>
+                        {draw.drawType === DrawType.USER_LSP8 && (
+                          <div className="mt-2 pt-2 border-t border-gray-600 text-purple-400">
+                            <p>Creator receives: {feeBreakdown.creatorAmount} LYX</p>
+                            <p>Winner receives: NFT</p>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    )}
                   </div>
-
+                  
                   <button
                     onClick={handleBuyTickets}
-                    disabled={!isConnected || buying}
-                    className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/80 hover:to-purple-600/80 disabled:from-gray-600 disabled:to-gray-600 text-white font-medium py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2"
+                    disabled={buying || !isConnected}
+                    className={`w-full py-3 px-4 rounded-lg font-semibold transition-all ${
+                      buying || !isConnected
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-primary to-primary-light hover:shadow-lg'
+                    }`}
                   >
-                    {buying ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCartIcon className="w-5 h-5" />
-                        Buy Tickets
-                      </>
-                    )}
+                    {buying ? 'Processing...' : `Buy ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''}`}
                   </button>
-
+                  
                   {!isConnected && (
-                    <p className="text-xs text-center text-gray-400">
+                    <p className="text-sm text-gray-400 text-center">
                       Connect your wallet to buy tickets
                     </p>
                   )}
