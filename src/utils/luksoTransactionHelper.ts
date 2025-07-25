@@ -87,8 +87,9 @@ export async function sendTransaction(
         };
         
         console.log('[sendTransaction] Execute params:', executeParams);
+        console.log('[sendTransaction] Sending value:', options.value);
         
-        // Send via Key Manager
+        // Send via Key Manager - IMPORTANT: Include value in send options!
         return await keyManagerContract.methods
           .execute(
             executeParams.operation,
@@ -96,7 +97,10 @@ export async function sendTransaction(
             executeParams.value,
             executeParams.data
           )
-          .send({ from: account });
+          .send({ 
+            from: account,
+            value: options.value || '0' // Pass the value here too!
+          });
       } else {
         console.log('[sendTransaction] No Key Manager found, falling back to direct transaction');
       }
