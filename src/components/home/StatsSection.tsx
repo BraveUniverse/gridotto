@@ -171,7 +171,13 @@ export const StatsSection = () => {
                   ) : (
                     <>
                       {stat.prefix}
-                      {typeof stat.value === 'number' ? stat.value.toFixed(4) : stat.value}
+                      {typeof stat.value === 'number' ? 
+                        (stat.suffix === ' LYX' ? 
+                          parseFloat(stat.value.toFixed(4)).toString() : 
+                          stat.value.toLocaleString()
+                        ) : 
+                        stat.value
+                      }
                       {stat.suffix}
                     </>
                   )}

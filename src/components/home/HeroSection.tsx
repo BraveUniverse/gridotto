@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SparklesIcon, TicketIcon, TrophyIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useUPProvider } from '@/hooks/useUPProvider';
+import { useGridottoContract } from '@/hooks/useGridottoContract';
 import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 
 const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
 
 export const HeroSection = () => {
-  const { web3, isConnected } = useUPProvider();
+  const { web3, isConnected, account } = useUPProvider();
+  const { buyTickets, buyMonthlyTickets } = useGridottoContract();
   const [weeklyTickets, setWeeklyTickets] = useState(1);
   const [monthlyTickets, setMonthlyTickets] = useState(1);
   const [buying, setBuying] = useState(false);
@@ -18,6 +20,7 @@ export const HeroSection = () => {
   
   // Platform data from contract
   const [weeklyDraw, setWeeklyDraw] = useState<any>(null);
+  const [monthlyDraw, setMonthlyDraw] = useState<any>(null);
   const [platformStats, setPlatformStats] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<string>('');
 
@@ -46,9 +49,10 @@ export const HeroSection = () => {
         console.error('[HeroSection] Error fetching platform stats:', error);
       }
       
-      // Find weekly draw
+      // Find weekly and monthly draws
       const nextDrawId = await contract.methods.getNextDrawId().call();
       let foundWeeklyDraw = null;
+      let foundMonthlyDraw = null;
       
       for (let i = 1; i < Number(nextDrawId) && i <= 10; i++) {
         try {
@@ -67,8 +71,10 @@ export const HeroSection = () => {
           const prizePool = (drawDetails as any).prizePool;
           const endTime = (drawDetails as any).endTime;
           
-          if (Number(drawType) === 3 && !isCompleted && !isCancelled && prizePool) {
-            const currentTime = Math.floor(Date.now() / 1000);
+          const currentTime = Math.floor(Date.now() / 1000);
+          const isActive = !isCompleted && !isCancelled && Number(endTime) > currentTime;
+          
+          if (Number(drawType) === 3 && isActive && prizePool) {
             const timeRemaining = Math.max(0, Number(endTime) - currentTime);
             
             foundWeeklyDraw = {
@@ -79,7 +85,20 @@ export const HeroSection = () => {
               participantCount: Number((drawDetails as any).participantCount),
               timeRemaining: timeRemaining
             };
-            break;
+          }
+          
+          // Check for monthly draw (drawType = 4)
+          if (Number(drawType) === 4 && isActive && prizePool) {
+            const timeRemaining = Math.max(0, Number(endTime) - currentTime);
+            
+            foundMonthlyDraw = {
+              drawId: i,
+              prizePool_LYX: Number(Web3.utils.fromWei(prizePool.toString(), 'ether')),
+              ticketPrice_LYX: Number(Web3.utils.fromWei((drawDetails as any).ticketPrice.toString(), 'ether')),
+              ticketsSold: Number((drawDetails as any).ticketsSold),
+              participantCount: Number((drawDetails as any).participantCount),
+              timeRemaining: timeRemaining
+            };
           }
         } catch (error) {
           console.error(`[HeroSection] Error fetching draw #${i}:`, error);
@@ -87,8 +106,9 @@ export const HeroSection = () => {
       }
       
       setWeeklyDraw(foundWeeklyDraw);
+      setMonthlyDraw(foundMonthlyDraw);
       setLastUpdate(new Date().toLocaleTimeString());
-      console.log('[HeroSection] Platform data loaded:', { weeklyDraw: foundWeeklyDraw, platformStats });
+      console.log('[HeroSection] Platform data loaded:', { weeklyDraw: foundWeeklyDraw, monthlyDraw: foundMonthlyDraw, platformStats });
       
     } catch (error) {
       console.error('[HeroSection] Error loading platform data:', error);
@@ -117,24 +137,66 @@ export const HeroSection = () => {
   };
 
   const handleBuyWeekly = async () => {
+    if (!weeklyDraw || !account) {
+      alert('Please connect your wallet and ensure there is an active weekly draw');
+      return;
+    }
+
     try {
       setBuying(true);
-      // This would normally connect to wallet and buy tickets
-      console.log('Buying weekly tickets:', weeklyTickets);
-    } catch (err) {
+      console.log('[HeroSection] Buying weekly tickets:', {
+        drawId: weeklyDraw.drawId,
+        tickets: weeklyTickets,
+        totalCost: weeklyTickets * weeklyDraw.ticketPrice_LYX
+      });
+      
+      await buyTickets(weeklyDraw.drawId, weeklyTickets);
+      
+      // Refresh data after successful purchase
+      setTimeout(() => {
+        loadPlatformData();
+      }, 2000);
+      
+      alert(`Successfully bought ${weeklyTickets} ticket(s) for Weekly Draw #${weeklyDraw.drawId}!`);
+    } catch (err: any) {
       console.error('Error buying weekly tickets:', err);
+      alert(`Error buying tickets: ${err.message || 'Transaction failed'}`);
     } finally {
       setBuying(false);
     }
   };
 
   const handleBuyMonthly = async () => {
+    if (!monthlyDraw || !account) {
+      alert('Please connect your wallet and ensure there is an active monthly draw');
+      return;
+    }
+
     try {
       setBuying(true);
-      // This would normally connect to wallet and buy tickets
-      console.log('Buying monthly tickets:', monthlyTickets);
-    } catch (err) {
+      console.log('[HeroSection] Buying monthly tickets:', {
+        drawId: monthlyDraw.drawId,
+        tickets: monthlyTickets,
+        totalCost: monthlyTickets * monthlyDraw.ticketPrice_LYX
+      });
+      
+      // For monthly tickets, use the monthly buying function if available
+      if (buyMonthlyTickets) {
+        await buyMonthlyTickets(monthlyTickets, monthlyDraw.ticketPrice_LYX);
+      } else {
+        // Fallback to regular ticket buying
+        await buyTickets(monthlyDraw.drawId, monthlyTickets);
+      }
+      
+      // Refresh data after successful purchase
+      setTimeout(() => {
+        loadPlatformData();
+      }, 2000);
+      
+      alert(`Successfully bought ${monthlyTickets} ticket(s) for Monthly Draw #${monthlyDraw.drawId}!`);
+    } catch (err: any) {
       console.error('Error buying monthly tickets:', err);
+      alert(`Error buying tickets: ${err.message || 'Transaction failed'}`);
     } finally {
       setBuying(false);
     }
@@ -187,20 +249,20 @@ export const HeroSection = () => {
         {/* Official Draws */}
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {/* Weekly Draw */}
-          <div className="glass-card p-8">
+          <div className="glass-card p-8 border-2 border-yellow-500/20">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">Weekly Draw</h2>
               <TrophyIcon className="w-8 h-8 text-yellow-400" />
             </div>
             
-            <div className="mb-6">
+            <div className="mb-6 text-center">
               <div className="text-4xl font-bold text-white mb-2">
-                {loading ? '...' : weeklyDraw ? weeklyDraw.prizePool_LYX.toFixed(4) : '0.0000'} LYX
+                {loading ? '...' : weeklyDraw ? parseFloat(weeklyDraw.prizePool_LYX.toFixed(4)) : '0'} LYX
               </div>
               <p className="text-gray-400">Current Prize Pool</p>
             </div>
             
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center justify-center gap-2 mb-6">
               <ClockIcon className="w-5 h-5 text-gray-400" />
               <span className="text-gray-400">
                 {loading ? 'Loading...' : weeklyDraw ? formatTimeRemaining(weeklyDraw.timeRemaining) : 'No active draw'}
@@ -208,65 +270,82 @@ export const HeroSection = () => {
             </div>
             
             {weeklyDraw && (
-              <div className="text-sm text-gray-400 mb-6">
-                <p>Tickets sold: {weeklyDraw.ticketsSold} | Participants: {weeklyDraw.participantCount}</p>
+              <div className="text-center text-sm text-gray-400 mb-6 space-y-1">
+                <p>Tickets sold: {weeklyDraw.ticketsSold}</p>
+                <p>Participants: {weeklyDraw.participantCount}</p>
+                <p>Draw ID: #{weeklyDraw.drawId}</p>
               </div>
             )}
             
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center gap-3">
                 <label className="text-white">Tickets:</label>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setWeeklyTickets(Math.max(1, weeklyTickets - 1))}
-                    className="w-8 h-8 bg-pink-500/20 rounded-lg text-pink-400 hover:bg-pink-500/30"
+                    className="w-8 h-8 bg-yellow-500/20 rounded-lg text-yellow-400 hover:bg-yellow-500/30"
                   >
                     -
                   </button>
-                  <span className="w-12 text-center text-white">{weeklyTickets}</span>
+                  <span className="w-12 text-center text-white font-bold">{weeklyTickets}</span>
                   <button
                     onClick={() => setWeeklyTickets(weeklyTickets + 1)}
-                    className="w-8 h-8 bg-pink-500/20 rounded-lg text-pink-400 hover:bg-pink-500/30"
+                    className="w-8 h-8 bg-yellow-500/20 rounded-lg text-yellow-400 hover:bg-yellow-500/30"
                   >
                     +
                   </button>
                 </div>
-                <div className="text-gray-400">
-                  × {weeklyDraw ? weeklyDraw.ticketPrice_LYX.toFixed(4) : '0.25'} LYX = {weeklyDraw ? (weeklyTickets * weeklyDraw.ticketPrice_LYX).toFixed(4) : (weeklyTickets * 0.25).toFixed(4)} LYX
-                </div>
+              </div>
+              
+              <div className="text-center text-gray-400">
+                {weeklyDraw ? parseFloat(weeklyDraw.ticketPrice_LYX.toFixed(4)) : '0.25'} LYX per ticket
+              </div>
+              
+              <div className="text-center text-white font-bold">
+                Total: {weeklyDraw ? parseFloat((weeklyTickets * weeklyDraw.ticketPrice_LYX).toFixed(4)) : (weeklyTickets * 0.25)} LYX
               </div>
 
               <button
                 onClick={handleBuyWeekly}
-                disabled={buying || !weeklyDraw}
-                className="w-full btn-primary disabled:opacity-50"
+                disabled={buying || !weeklyDraw || !isConnected}
+                className="w-full btn-primary bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50"
               >
-                {buying ? 'Processing...' : `Buy ${weeklyTickets} Ticket${weeklyTickets > 1 ? 's' : ''}`}
+                {buying ? 'Processing...' : !isConnected ? 'Connect Wallet' : !weeklyDraw ? 'No Active Draw' : `Buy ${weeklyTickets} Ticket${weeklyTickets > 1 ? 's' : ''}`}
               </button>
             </div>
           </div>
 
           {/* Monthly Draw */}
-          <div className="glass-card p-8">
+          <div className="glass-card p-8 border-2 border-purple-500/20">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">Monthly Draw</h2>
               <SparklesIcon className="w-8 h-8 text-purple-400" />
             </div>
             
-            <div className="mb-6">
+            <div className="mb-6 text-center">
               <div className="text-4xl font-bold text-white mb-2">
-                Coming Soon
+                {loading ? '...' : monthlyDraw ? parseFloat(monthlyDraw.prizePool_LYX.toFixed(4)) : '0'} LYX
               </div>
-              <p className="text-gray-400">Monthly Pool</p>
+              <p className="text-gray-400">Monthly Prize Pool</p>
             </div>
             
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center justify-center gap-2 mb-6">
               <ClockIcon className="w-5 h-5 text-gray-400" />
-              <span className="text-gray-400">Feature in development</span>
+              <span className="text-gray-400">
+                {loading ? 'Loading...' : monthlyDraw ? formatTimeRemaining(monthlyDraw.timeRemaining) : 'No active draw'}
+              </span>
             </div>
+            
+            {monthlyDraw && (
+              <div className="text-center text-sm text-gray-400 mb-6 space-y-1">
+                <p>Tickets sold: {monthlyDraw.ticketsSold}</p>
+                <p>Participants: {monthlyDraw.participantCount}</p>
+                <p>Draw ID: #{monthlyDraw.drawId}</p>
+              </div>
+            )}
             
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center gap-3">
                 <label className="text-white">Tickets:</label>
                 <div className="flex items-center gap-2">
                   <button
@@ -275,7 +354,7 @@ export const HeroSection = () => {
                   >
                     -
                   </button>
-                  <span className="w-12 text-center text-white">{monthlyTickets}</span>
+                  <span className="w-12 text-center text-white font-bold">{monthlyTickets}</span>
                   <button
                     onClick={() => setMonthlyTickets(monthlyTickets + 1)}
                     className="w-8 h-8 bg-purple-500/20 rounded-lg text-purple-400 hover:bg-purple-500/30"
@@ -283,17 +362,22 @@ export const HeroSection = () => {
                     +
                   </button>
                 </div>
-                <div className="text-gray-400">
-                  × 0.1 LYX = {(monthlyTickets * 0.1).toFixed(1)} LYX
-                </div>
+              </div>
+              
+              <div className="text-center text-gray-400">
+                {monthlyDraw ? parseFloat(monthlyDraw.ticketPrice_LYX.toFixed(4)) : '0.1'} LYX per ticket
+              </div>
+              
+              <div className="text-center text-white font-bold">
+                Total: {monthlyDraw ? parseFloat((monthlyTickets * monthlyDraw.ticketPrice_LYX).toFixed(4)) : (monthlyTickets * 0.1)} LYX
               </div>
 
               <button
                 onClick={handleBuyMonthly}
-                disabled={true}
-                className="w-full btn-primary bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 opacity-50 cursor-not-allowed"
+                disabled={buying || !monthlyDraw || !isConnected}
+                className="w-full btn-primary bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50"
               >
-                Coming Soon
+                {buying ? 'Processing...' : !isConnected ? 'Connect Wallet' : !monthlyDraw ? 'No Active Draw' : `Buy ${monthlyTickets} Ticket${monthlyTickets > 1 ? 's' : ''}`}
               </button>
             </div>
           </div>
@@ -311,7 +395,7 @@ export const HeroSection = () => {
             </div>
             <div className="glass-card p-4">
               <div className="text-2xl font-bold text-purple-400">
-                {weeklyDraw ? '1' : '0'}
+                {(weeklyDraw ? 1 : 0) + (monthlyDraw ? 1 : 0)}
               </div>
               <div className="text-sm text-gray-400">Active Draws</div>
             </div>
@@ -323,9 +407,9 @@ export const HeroSection = () => {
             </div>
             <div className="glass-card p-4">
               <div className="text-2xl font-bold text-green-400">
-                {loading ? '...' : weeklyDraw ? weeklyDraw.prizePool_LYX.toFixed(2) : '0.00'}
+                {loading ? '...' : parseFloat(((weeklyDraw ? weeklyDraw.prizePool_LYX : 0) + (monthlyDraw ? monthlyDraw.prizePool_LYX : 0)).toFixed(2))}
               </div>
-              <div className="text-sm text-gray-400">Prize Pool LYX</div>
+              <div className="text-sm text-gray-400">Total Prize LYX</div>
             </div>
           </div>
         </div>

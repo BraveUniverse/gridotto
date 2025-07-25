@@ -192,7 +192,7 @@ export function ActiveDrawsSection() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-pink-400">
-                        {draw.prizePool_LYX.toFixed(4)} LYX
+                        {parseFloat(draw.prizePool_LYX.toFixed(4))} LYX
                       </p>
                       <p className="text-xs text-gray-400">Prize Pool</p>
                     </div>
@@ -207,7 +207,7 @@ export function ActiveDrawsSection() {
 
                   <div className="flex justify-between text-sm text-gray-400 mb-4">
                     <span>{draw.ticketsSold} tickets sold</span>
-                    <span>{draw.ticketPrice_LYX.toFixed(4)} LYX per ticket</span>
+                    <span>{parseFloat(draw.ticketPrice_LYX.toFixed(4))} LYX per ticket</span>
                   </div>
 
                   <div className="flex justify-between text-xs text-gray-500 mb-4">
