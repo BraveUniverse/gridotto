@@ -440,6 +440,43 @@ export function useGridottoCoreV2() {
     }
   }, [contract, getNextDrawId, getDrawDetails]);
 
+  // Get draw participants
+  const getDrawParticipants = useCallback(async (drawId: number): Promise<any[]> => {
+    if (!contract) return [];
+    
+    try {
+      // Get participants addresses
+      const participants = await contract.methods.getDrawParticipants(drawId).call();
+      
+      // Get ticket counts for each participant
+      const participantsWithDetails = await Promise.all(
+        participants.map(async (address: string) => {
+          try {
+            const ticketCount = await contract.methods.getUserTicketCount(drawId, address).call();
+            return {
+              address,
+              ticketCount: Number(ticketCount),
+              timestamp: Date.now() / 1000 // We don't have exact timestamp, use current
+            };
+          } catch (err) {
+            console.error(`Error getting ticket count for ${address}:`, err);
+            return {
+              address,
+              ticketCount: 1,
+              timestamp: Date.now() / 1000
+            };
+          }
+        })
+      );
+      
+      // Sort by ticket count (descending)
+      return participantsWithDetails.sort((a, b) => b.ticketCount - a.ticketCount);
+    } catch (err: any) {
+      console.error('Error fetching draw participants:', err);
+      return [];
+    }
+  }, [contract]);
+
   return {
     contract,
     loading,
@@ -453,6 +490,7 @@ export function useGridottoCoreV2() {
     getUserDrawHistory,
     cancelDraw,
     getNextDrawId,
-    getActiveDraws
+    getActiveDraws,
+    getDrawParticipants
   };
 }
