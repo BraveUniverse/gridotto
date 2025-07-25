@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SparklesIcon, TicketIcon, TrophyIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useUPProvider } from '@/hooks/useUPProvider';
-import { useGridottoContract } from '@/hooks/useGridottoContract';
+import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
 import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 
@@ -12,7 +12,7 @@ const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
 
 export const HeroSection = () => {
   const { web3, isConnected, account } = useUPProvider();
-  const { buyTickets } = useGridottoContract();
+  const { buyTickets } = useGridottoCoreV2(); // GERÇEKTİ contract function
   const [weeklyTickets, setWeeklyTickets] = useState(1);
   const [buying, setBuying] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -164,24 +164,25 @@ export const HeroSection = () => {
 
     try {
       setBuying(true);
-      console.log('[HeroSection] Buying weekly tickets:', {
+      console.log('[HeroSection] GERÇEK BLOCKCHAIN İŞLEMİ BAŞLATIYOR:', {
         drawId: weeklyDraw.drawId,
         tickets: weeklyTickets,
         totalCost: weeklyTickets * weeklyDraw.ticketPrice_LYX
       });
       
-      // Use the real buyTickets function from contract
-      await buyTickets(weeklyDraw.drawId, weeklyTickets);
+      // GERÇEKTİ blockchain transaction gönder
+      const tx = await buyTickets(weeklyDraw.drawId, weeklyTickets);
+      console.log('[HeroSection] Transaction completed:', tx);
       
       // Refresh data after successful purchase
       setTimeout(() => {
         loadPlatformData();
-      }, 2000);
+      }, 3000);
       
-      alert(`Successfully bought ${weeklyTickets} ticket(s) for Weekly Draw #${weeklyDraw.drawId}!`);
+      alert(`✅ Transaction successful! TX Hash: ${tx.transactionHash}\nBought ${weeklyTickets} ticket(s) for Weekly Draw #${weeklyDraw.drawId}`);
     } catch (err: any) {
-      console.error('Error buying weekly tickets:', err);
-      alert(`Error buying tickets: ${err.message || 'Transaction failed'}`);
+      console.error('🚨 GERÇEK Transaction error:', err);
+      alert(`❌ Transaction failed: ${err.message || 'Blockchain transaction failed'}`);
     } finally {
       setBuying(false);
     }
@@ -295,7 +296,7 @@ export const HeroSection = () => {
                 disabled={buying || !weeklyDraw || !isConnected}
                 className="w-full btn-primary bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50"
               >
-                {buying ? 'Processing...' : !isConnected ? 'Connect Wallet' : !weeklyDraw ? 'No Active Draw' : `Buy ${weeklyTickets} Ticket${weeklyTickets > 1 ? 's' : ''}`}
+                {buying ? 'Sending Transaction...' : !isConnected ? 'Connect Wallet' : !weeklyDraw ? 'No Active Draw' : `🚀 Buy ${weeklyTickets} Ticket${weeklyTickets > 1 ? 's' : ''}`}
               </button>
               
               {userMonthlyTickets && userMonthlyTickets.total > 0 && (
