@@ -185,8 +185,11 @@ export function useGridottoCoreV2() {
       setLoading(true);
       setError(null);
       
+      console.log('[buyTickets] Starting with params:', { drawId, amount, account });
+      
       // Get draw details to determine payment
       const details = await contract.methods.getDrawDetails(drawId).call();
+      console.log('[buyTickets] Draw details:', details);
       
       if (details.drawType === '0' || 
           details.drawType === '2' ||
@@ -194,17 +197,29 @@ export function useGridottoCoreV2() {
           details.drawType === '4') {
         // LYX payment
         const totalCost = BigInt(details.ticketPrice) * BigInt(amount);
+        console.log('[buyTickets] Calculated total cost:', totalCost.toString());
+        
+        console.log('[buyTickets] Sending transaction...');
         const tx = await contract.methods.buyTickets(drawId, amount).send({ 
           from: account,
           value: totalCost.toString()
         });
+        
+        console.log('[buyTickets] Transaction response type:', typeof tx);
+        console.log('[buyTickets] Transaction response keys:', tx ? Object.keys(tx) : 'null');
+        console.log('[buyTickets] Transaction response:', tx);
+        
         return tx;
       } else if (details.drawType === '1') {
         // Token payment - approval should be done before
+        console.log('[buyTickets] Sending token transaction...');
         const tx = await contract.methods.buyTickets(drawId, amount).send({ from: account });
+        
+        console.log('[buyTickets] Token transaction response:', tx);
         return tx;
       }
     } catch (err: any) {
+      console.error('[buyTickets] Error occurred:', err);
       setError(err.message);
       throw err;
     } finally {

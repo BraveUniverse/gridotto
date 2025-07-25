@@ -158,31 +158,50 @@ export const HeroSection = () => {
 
   const handleBuyWeekly = async () => {
     if (!weeklyDraw || !account) {
-      alert('Please connect your wallet and ensure there is an active weekly draw');
+      console.error('[BuyTickets] Missing requirements:', { weeklyDraw, account });
       return;
     }
 
     try {
       setBuying(true);
-      console.log('[HeroSection] GERÇEK BLOCKCHAIN İŞLEMİ BAŞLATIYOR:', {
+      console.log('[BuyTickets] Starting transaction:', {
         drawId: weeklyDraw.drawId,
         tickets: weeklyTickets,
-        totalCost: weeklyTickets * weeklyDraw.ticketPrice_LYX
+        ticketPrice: weeklyDraw.ticketPrice_LYX,
+        totalCost: weeklyTickets * weeklyDraw.ticketPrice_LYX,
+        account
       });
       
-      // GERÇEKTİ blockchain transaction gönder
+      // Gerçek blockchain transaction
       const tx = await buyTickets(weeklyDraw.drawId, weeklyTickets);
-      console.log('[HeroSection] Transaction completed:', tx);
+      
+      console.log('[BuyTickets] Transaction object type:', typeof tx);
+      console.log('[BuyTickets] Transaction object keys:', tx ? Object.keys(tx) : 'null');
+      console.log('[BuyTickets] Full transaction object:', tx);
+      
+      // Try different possible transaction hash locations
+      const possibleTxHash = tx?.transactionHash || tx?.hash || tx?.txHash || 'Unknown';
+      console.log('[BuyTickets] Transaction hash found:', possibleTxHash);
       
       // Refresh data after successful purchase
       setTimeout(() => {
         loadPlatformData();
       }, 3000);
       
-      alert(`✅ Transaction successful! TX Hash: ${tx.transactionHash}\nBought ${weeklyTickets} ticket(s) for Weekly Draw #${weeklyDraw.drawId}`);
+      console.log('✅ Transaction completed successfully!');
     } catch (err: any) {
-      console.error('🚨 GERÇEK Transaction error:', err);
-      alert(`❌ Transaction failed: ${err.message || 'Blockchain transaction failed'}`);
+      console.error('❌ Transaction failed:', err);
+      console.error('❌ Error message:', err.message);
+      console.error('❌ Error object:', err);
+      
+      // Check if it's a user rejection
+      if (err.code === 4001 || err.message?.includes('User denied')) {
+        console.log('User rejected transaction');
+      } else if (err.message?.includes('insufficient funds')) {
+        console.log('Insufficient funds');
+      } else {
+        console.log('Unknown transaction error');
+      }
     } finally {
       setBuying(false);
     }
