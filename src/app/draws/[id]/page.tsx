@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
-import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
+import { useGridottoContract } from '@/hooks/useGridottoContract';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useLSP3Profile } from '@/hooks/useLSP3Profile';
 import Web3 from 'web3';
@@ -55,7 +55,7 @@ export default function DrawDetailPage() {
   const params = useParams();
   const drawId = params.id as string;
   const { account, isConnected } = useUPProvider();
-  const { getDrawDetails, getDrawParticipants, buyTickets } = useGridottoCoreV2();
+  const { getDrawDetails, purchaseTickets } = useGridottoContract();
   
   const [draw, setDraw] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
@@ -91,10 +91,8 @@ export default function DrawDetailPage() {
       if (details) {
         setDraw(details);
         
-        // Load participants
-        const participantsList = await getDrawParticipants(drawIdNum);
-        console.log('[DrawDetailPage] Participants loaded:', participantsList?.length || 0);
-        setParticipants(participantsList || []);
+        // For now, we don't have participants data
+        setParticipants([]);
       } else {
         console.log('[DrawDetailPage] No draw details found');
         setDraw(null);
@@ -146,7 +144,8 @@ export default function DrawDetailPage() {
 
     try {
       setBuying(true);
-      await buyTickets(parseInt(drawId), ticketCount);
+      const ticketPriceWei = draw.ticketPrice.toString();
+      await purchaseTickets(parseInt(drawId), ticketCount, ticketPriceWei);
       // Reload data after purchase
       await loadDrawData();
       setTicketCount(1);

@@ -206,6 +206,7 @@ export const useGridottoContract = () => {
     purchaseTickets,
     getUserDraw,
     getDrawInfo,
+    getDrawDetails: core.getDrawDetails,
     
     // Execution functions
     executeUserDraw,
@@ -223,7 +224,6 @@ export const useGridottoContract = () => {
     getUserDrawExecutorReward: async (drawId: number) => '0',
     getAdvancedDrawInfo: async (drawId: number) => null,
     canUserParticipate: async (drawId: number, user: string) => ({ canParticipate: true, reason: '' }),
-    buyTickets: core.buyTickets,
     buyMonthlyTickets: core.buyTickets,
     getDrawParticipants,
     getUserParticipationHistory: async (user: string) => ({ drawIds: [], ticketsBought: [], won: [] }),
