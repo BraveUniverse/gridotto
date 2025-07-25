@@ -67,22 +67,41 @@ export default function DrawDetailPage() {
   const { profile: creatorProfile } = useProfile(draw?.creator);
 
   useEffect(() => {
-    loadDrawData();
+    console.log('[DrawDetailPage] Component mounted with drawId:', drawId);
+    if (drawId) {
+      loadDrawData();
+    }
   }, [drawId]);
 
   const loadDrawData = async () => {
     try {
       setLoading(true);
-      const details = await getDrawDetails(parseInt(drawId));
+      const drawIdNum = parseInt(drawId);
+      console.log('[DrawDetailPage] Loading data for draw:', drawIdNum);
+      
+      if (isNaN(drawIdNum) || drawIdNum <= 0) {
+        console.error('[DrawDetailPage] Invalid draw ID:', drawId);
+        setDraw(null);
+        return;
+      }
+      
+      const details = await getDrawDetails(drawIdNum);
+      console.log('[DrawDetailPage] Draw details received:', details);
+      
       if (details) {
         setDraw(details);
         
         // Load participants
-        const participantsList = await getDrawParticipants(parseInt(drawId));
+        const participantsList = await getDrawParticipants(drawIdNum);
+        console.log('[DrawDetailPage] Participants loaded:', participantsList?.length || 0);
         setParticipants(participantsList || []);
+      } else {
+        console.log('[DrawDetailPage] No draw details found');
+        setDraw(null);
       }
     } catch (error) {
-      console.error('Error loading draw:', error);
+      console.error('[DrawDetailPage] Error loading draw:', error);
+      setDraw(null);
     } finally {
       setLoading(false);
     }

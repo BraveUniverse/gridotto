@@ -37,6 +37,8 @@ export function useProfile(address: string | undefined) {
         setLoading(true);
         setError(null);
 
+        console.log('[useProfile] Fetching profile for address:', address);
+
         const erc725 = new ERC725(
           lsp3ProfileSchema,
           address,
@@ -47,14 +49,18 @@ export function useProfile(address: string | undefined) {
         );
 
         const profileData = await erc725.fetchData('LSP3Profile');
+        console.log('[useProfile] Profile data received:', profileData);
         
         if (profileData && profileData.value) {
-          setProfile(profileData.value as ProfileData);
+          const profile = profileData.value as ProfileData;
+          console.log('[useProfile] Profile name:', profile.name);
+          setProfile(profile);
         } else {
+          console.log('[useProfile] No profile data found');
           setProfile(null);
         }
       } catch (err) {
-        console.error('Error fetching profile:', err);
+        console.error('[useProfile] Error fetching profile:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch profile');
         setProfile(null);
       } finally {

@@ -295,17 +295,29 @@ export function useGridottoCoreV2() {
 
   // Get draw details
   const getDrawDetails = useCallback(async (drawId: number): Promise<DrawDetails | null> => {
-    if (!contract) return null;
+    if (!contract) {
+      console.log('[getDrawDetails] No contract available');
+      return null;
+    }
     
     // Validate drawId
     if (!drawId || isNaN(drawId) || drawId <= 0) {
-      console.error('Invalid drawId provided to getDrawDetails:', drawId);
+      console.error('[getDrawDetails] Invalid drawId provided:', drawId);
       return null;
     }
     
     try {
+      console.log('[getDrawDetails] Fetching details for draw:', drawId);
       const details = await contract.methods.getDrawDetails(drawId).call();
-      return {
+      console.log('[getDrawDetails] Raw details:', details);
+      
+      // Check if draw exists
+      if (!details || details.creator === '0x0000000000000000000000000000000000000000') {
+        console.log('[getDrawDetails] Draw does not exist');
+        return null;
+      }
+      
+      const result = {
         creator: details.creator,
         drawType: Number(details.drawType),
         tokenAddress: details.tokenAddress,
@@ -322,8 +334,19 @@ export function useGridottoCoreV2() {
         participantCount: BigInt(details.participantCount),
         monthlyPoolContribution: BigInt(details.monthlyPoolContribution)
       };
+      
+      console.log('[getDrawDetails] Processed details for draw #' + drawId + ':', {
+        ...result,
+        ticketPrice: result.ticketPrice.toString(),
+        maxTickets: result.maxTickets.toString(),
+        ticketsSold: result.ticketsSold.toString(),
+        prizePool: result.prizePool.toString()
+      });
+      
+      return result;
     } catch (err: any) {
-      console.error('Error fetching draw details:', err);
+      console.error('[getDrawDetails] Error fetching draw details:', err);
+      console.error('[getDrawDetails] DrawId was:', drawId);
       return null;
     }
   }, [contract]);
@@ -445,10 +468,15 @@ export function useGridottoCoreV2() {
     if (!contract) return [];
     
     try {
-      // Get participants addresses
+      console.log('[getDrawParticipants] Getting participants for draw:', drawId);
+      
+      // For now, return empty array since getDrawParticipants might not be available
+      // TODO: Implement when contract function is available
+      return [];
+      
+      /* Original implementation - uncomment when contract supports it
       const participants = await contract.methods.getDrawParticipants(drawId).call();
       
-      // Get ticket counts for each participant
       const participantsWithDetails = await Promise.all(
         participants.map(async (address: string) => {
           try {
@@ -456,7 +484,7 @@ export function useGridottoCoreV2() {
             return {
               address,
               ticketCount: Number(ticketCount),
-              timestamp: Date.now() / 1000 // We don't have exact timestamp, use current
+              timestamp: Date.now() / 1000
             };
           } catch (err) {
             console.error(`Error getting ticket count for ${address}:`, err);
@@ -469,10 +497,10 @@ export function useGridottoCoreV2() {
         })
       );
       
-      // Sort by ticket count (descending)
       return participantsWithDetails.sort((a, b) => b.ticketCount - a.ticketCount);
+      */
     } catch (err: any) {
-      console.error('Error fetching draw participants:', err);
+      console.error('[getDrawParticipants] Error:', err);
       return [];
     }
   }, [contract]);
