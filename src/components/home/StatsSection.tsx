@@ -1,58 +1,153 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useUPProvider } from '@/hooks/useUPProvider';
 import { 
   CurrencyDollarIcon,
   TicketIcon,
   UsersIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-import contractData from '@/data/contractData.json';
+import { diamondAbi } from '@/abi';
+import Web3 from 'web3';
+
+const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
 
 export const StatsSection = () => {
-  const [stats] = useState([
-    { 
-      label: 'Total Prize Pool', 
-      value: contractData.summary.total_active_prize_pool_LYX, 
-      prefix: '', 
-      suffix: ' LYX' 
-    },
-    { 
-      label: 'Active Draws', 
-      value: contractData.summary.total_active_draws, 
-      prefix: '', 
-      suffix: '' 
-    },
-    { 
-      label: 'Total Participants', 
-      value: contractData.summary.total_participants, 
-      prefix: '', 
-      suffix: '' 
-    },
-    { 
-      label: 'Avg Ticket Price', 
-      value: contractData.summary.average_ticket_price_LYX, 
-      prefix: '', 
-      suffix: ' LYX' 
-    }
+  const { web3, isConnected } = useUPProvider();
+  const [stats, setStats] = useState([
+    { label: 'Total Prize Pool', value: 0, prefix: '', suffix: ' LYX' },
+    { label: 'Active Draws', value: 0, prefix: '', suffix: '' },
+    { label: 'Total Participants', value: 0, prefix: '', suffix: '' },
+    { label: 'Avg Ticket Price', value: 0, prefix: '', suffix: ' LYX' }
   ]);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
+
+  const loadRealStats = async () => {
+    if (!web3 || loading) return;
+
+    try {
+      setLoading(true);
+      console.log('[StatsSection] Loading real contract data...');
+      
+      const contract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+      
+      // Get next draw ID to know how many draws exist
+      const nextDrawId = await contract.methods.getNextDrawId().call();
+      console.log('[StatsSection] Next draw ID:', nextDrawId);
+      
+      let totalPrizePool = BigInt(0);
+      let activeDrawsCount = 0;
+      let totalParticipants = 0;
+      let totalTicketPrices = BigInt(0);
+      let ticketPriceCount = 0;
+      
+      // Check draws 1 to nextDrawId-1
+      for (let i = 1; i < Number(nextDrawId) && i <= 10; i++) {
+        try {
+          const drawDetails = await contract.methods.getDrawDetails(i).call();
+          
+          // Type guard - ensure drawDetails has the expected structure
+          if (!drawDetails || typeof drawDetails !== 'object') {
+            console.log(`[StatsSection] Invalid draw details for draw #${i}`);
+            continue;
+          }
+          
+          // Check if draw is active with safe property access
+          const currentTime = Math.floor(Date.now() / 1000);
+          const isCompleted = (drawDetails as any).isCompleted;
+          const isCancelled = (drawDetails as any).isCancelled;
+          const endTime = (drawDetails as any).endTime;
+          const prizePool = (drawDetails as any).prizePool;
+          
+          const isActive = !isCompleted && !isCancelled && Number(endTime) > currentTime;
+          
+          if (isActive && prizePool) {
+            activeDrawsCount++;
+            totalPrizePool += BigInt(prizePool.toString());
+            totalParticipants += Number((drawDetails as any).participantCount);
+            totalTicketPrices += BigInt((drawDetails as any).ticketPrice.toString());
+            ticketPriceCount++;
+          }
+          
+          console.log(`[StatsSection] Draw #${i}: Active=${isActive}, Prize=${prizePool}, Participants=${(drawDetails as any).participantCount}`);
+        } catch (error) {
+          console.error(`[StatsSection] Error fetching draw #${i}:`, error);
+        }
+      }
+      
+      // Calculate average ticket price
+      const avgTicketPrice = ticketPriceCount > 0 
+        ? Number(Web3.utils.fromWei((totalTicketPrices / BigInt(ticketPriceCount)).toString(), 'ether'))
+        : 0.1;
+      
+      const newStats = [
+        { 
+          label: 'Total Prize Pool', 
+          value: Number(Web3.utils.fromWei(totalPrizePool.toString(), 'ether')), 
+          prefix: '', 
+          suffix: ' LYX' 
+        },
+        { 
+          label: 'Active Draws', 
+          value: activeDrawsCount, 
+          prefix: '', 
+          suffix: '' 
+        },
+        { 
+          label: 'Total Participants', 
+          value: totalParticipants, 
+          prefix: '', 
+          suffix: '' 
+        },
+        { 
+          label: 'Avg Ticket Price', 
+          value: avgTicketPrice, 
+          prefix: '', 
+          suffix: ' LYX' 
+        }
+      ];
+      
+      console.log('[StatsSection] Final stats:', newStats);
+      setStats(newStats);
+      setLastUpdate(new Date().toLocaleTimeString());
+      
+    } catch (error) {
+      console.error('[StatsSection] Error loading real stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load stats only once when component mounts and web3 is available
+  useEffect(() => {
+    if (web3 && isConnected) {
+      loadRealStats();
+    }
+  }, [web3, isConnected]); // Only depend on web3 and isConnected
 
   const icons = [CurrencyDollarIcon, SparklesIcon, UsersIcon, TicketIcon];
 
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-8 text-white">
-          Platform Statistics
-        </h2>
-        
-        <div className="text-center mb-4">
-          <p className="text-sm text-gray-400">
-            Last updated: {new Date(contractData.timestamp).toLocaleString()}
-          </p>
-          <p className="text-xs text-gray-500">
-            Network: {contractData.network} | Contract: {contractData.contract_address.slice(0, 8)}...
-          </p>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Platform Statistics
+          </h2>
+          <div className="flex items-center justify-center gap-4">
+            <p className="text-sm text-gray-400">
+              {lastUpdate ? `Last updated: ${lastUpdate}` : 'Loading...'}
+            </p>
+            <button
+              onClick={loadRealStats}
+              disabled={loading || !web3}
+              className="px-3 py-1 bg-pink-500/20 text-pink-400 rounded-lg hover:bg-pink-500/30 disabled:opacity-50 text-sm"
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -71,9 +166,15 @@ export const StatsSection = () => {
                 </div>
                 
                 <p className="text-3xl font-bold text-white">
-                  {stat.prefix}
-                  {typeof stat.value === 'number' ? stat.value.toFixed(4) : stat.value}
-                  {stat.suffix}
+                  {loading ? (
+                    <span className="animate-pulse">...</span>
+                  ) : (
+                    <>
+                      {stat.prefix}
+                      {typeof stat.value === 'number' ? stat.value.toFixed(4) : stat.value}
+                      {stat.suffix}
+                    </>
+                  )}
                 </p>
               </div>
             );
