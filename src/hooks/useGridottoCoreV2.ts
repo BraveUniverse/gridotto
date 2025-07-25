@@ -186,6 +186,8 @@ export function useGridottoCoreV2() {
       setError(null);
       
       console.log('[buyTickets] Starting with params:', { drawId, amount, account });
+      console.log('[buyTickets] Account type:', typeof account);
+      console.log('[buyTickets] Web3 accounts:', await web3.eth.getAccounts());
       
       // Get draw details to determine payment
       const details = await contract.methods.getDrawDetails(drawId).call();
@@ -199,38 +201,28 @@ export function useGridottoCoreV2() {
         const totalCost = BigInt(details.ticketPrice) * BigInt(amount);
         console.log('[buyTickets] Calculated total cost:', totalCost.toString());
         
-        // Encode the function call
-        const data = contract.methods.buyTickets(drawId, amount).encodeABI();
-        console.log('[buyTickets] Encoded transaction data:', data);
-        
-        // Send transaction using UP Provider's request method
-        console.log('[buyTickets] Sending transaction via UP Provider...');
-        const txHash = await web3.eth.sendTransaction({
+        // Use contract.methods.send() - doğru yöntem
+        console.log('[buyTickets] Sending transaction via contract.methods...');
+        const tx = await contract.methods.buyTickets(drawId, amount).send({ 
           from: account,
-          to: DIAMOND_ADDRESS,
-          data: data,
           value: totalCost.toString()
         });
         
-        console.log('[buyTickets] Transaction hash:', txHash);
-        console.log('[buyTickets] Transaction response type:', typeof txHash);
-        console.log('[buyTickets] Transaction response:', txHash);
+        console.log('[buyTickets] Transaction result type:', typeof tx);
+        console.log('[buyTickets] Transaction result keys:', tx ? Object.keys(tx) : 'null');
+        console.log('[buyTickets] Transaction result:', tx);
         
-        return txHash;
+        return tx;
       } else if (details.drawType === '1') {
         // Token payment - approval should be done before
         console.log('[buyTickets] Sending token transaction...');
         
-        const data = contract.methods.buyTickets(drawId, amount).encodeABI();
-        
-        const txHash = await web3.eth.sendTransaction({
-          from: account,
-          to: DIAMOND_ADDRESS,
-          data: data
+        const tx = await contract.methods.buyTickets(drawId, amount).send({ 
+          from: account 
         });
         
-        console.log('[buyTickets] Token transaction response:', txHash);
-        return txHash;
+        console.log('[buyTickets] Token transaction response:', tx);
+        return tx;
       }
     } catch (err: any) {
       console.error('[buyTickets] Error occurred:', err);
