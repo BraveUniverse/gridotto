@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Web3 from 'web3';
 import { useUPProvider } from './useUPProvider';
 import { diamondAbi } from '@/abi';
@@ -117,23 +117,52 @@ export function useGridottoPlatformDraws() {
   };
 
   // Get platform draws info
-  const getPlatformDrawsInfo = async (): Promise<PlatformDrawsInfo | null> => {
-    if (!contract) return null;
+  const getPlatformDrawsInfo = useCallback(async (): Promise<PlatformDrawsInfo | null> => {
+    if (!contract) {
+      console.log('[getPlatformDrawsInfo] Contract not available');
+      return null;
+    }
     
     try {
+      console.log('[getPlatformDrawsInfo] Calling contract method...');
       const info = await contract.methods.getPlatformDrawsInfo().call();
-      return {
+      // Custom replacer for BigInt values
+      const bigIntReplacer = (key: string, value: any) => {
+        return typeof value === 'bigint' ? value.toString() + 'n' : value;
+      };
+      
+      console.log('[getPlatformDrawsInfo] Raw response from contract:', JSON.stringify(info, bigIntReplacer, 2));
+      console.log('[getPlatformDrawsInfo] Raw response type:', typeof info);
+      console.log('[getPlatformDrawsInfo] Raw response is array:', Array.isArray(info));
+      
+      if (Array.isArray(info)) {
+        console.log('[getPlatformDrawsInfo] Array elements:');
+        info.forEach((item, index) => {
+          console.log(`  [${index}]: ${typeof item === 'bigint' ? item.toString() + 'n' : item} (type: ${typeof item})`);
+        });
+      } else {
+        console.log('[getPlatformDrawsInfo] Object properties:');
+        Object.keys(info).forEach(key => {
+          const value = info[key];
+          console.log(`  ${key}: ${typeof value === 'bigint' ? value.toString() + 'n' : value} (type: ${typeof value})`);
+        });
+      }
+      
+      const result = {
         weeklyDrawId: info.weeklyDrawId || info[0],
         monthlyDrawId: info.monthlyDrawId || info[1],
         monthlyPoolBalance: info.monthlyPoolBalance || info[2],
         lastWeeklyDrawTime: info.lastWeeklyDrawTime || info[3],
         nextMonthlyDraw: info.nextMonthlyDraw || info[4]
       };
+      
+      console.log('[getPlatformDrawsInfo] Parsed object format:', JSON.stringify(result, bigIntReplacer, 2));
+      return result;
     } catch (err: any) {
-      console.error('Error fetching platform draws info:', err);
+      console.error('[getPlatformDrawsInfo] Error fetching platform draws info:', err);
       return null;
     }
-  };
+  }, [contract]);
 
   // Get user monthly tickets
   const getUserMonthlyTickets = async (user: string): Promise<MonthlyTickets | null> => {

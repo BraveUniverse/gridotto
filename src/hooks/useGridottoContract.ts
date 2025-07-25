@@ -1,6 +1,7 @@
 'use client';
 
 // Compatibility layer for old code
+import { useCallback } from 'react';
 import { useGridottoCoreV2 } from './useGridottoCoreV2';
 import { useGridottoExecutionV2 } from './useGridottoExecutionV2';
 import { useGridottoPlatformDraws } from './useGridottoPlatformDraws';
@@ -17,13 +18,13 @@ export const useGridottoContract = () => {
   const refund = useGridottoRefund();
   const leaderboard = useGridottoLeaderboard();
 
-  // Compatibility functions
-  const getActiveUserDraws = async (limit?: number) => {
+  // Compatibility functions with useCallback
+  const getActiveUserDraws = useCallback(async (limit?: number) => {
     const draws = await core.getActiveDraws();
     return draws.slice(0, limit || 20);
-  };
+  }, [core.getActiveDraws]);
 
-  const getUserDrawStats = async (drawId: number) => {
+  const getUserDrawStats = useCallback(async (drawId: number) => {
     const details = await core.getDrawDetails(drawId);
     if (!details) return null;
     
@@ -34,20 +35,35 @@ export const useGridottoContract = () => {
       totalParticipants: Number(details.participantCount),
       totalTicketsSold: Number(details.ticketsSold)
     };
-  };
+  }, [core.getDrawDetails]);
 
-  const getOfficialDrawInfo = async () => {
+  const getOfficialDrawInfo = useCallback(async () => {
+    console.log('[getOfficialDrawInfo] Starting...');
     const info = await platform.getPlatformDrawsInfo();
-    if (!info) return null;
     
-    return {
+    if (!info) {
+      console.log('[getOfficialDrawInfo] No info received from platform');
+      return null;
+    }
+    
+    // Custom replacer for BigInt values
+    const bigIntReplacer = (key: string, value: any) => {
+      return typeof value === 'bigint' ? value.toString() + 'n' : value;
+    };
+    
+    console.log('[getOfficialDrawInfo] Platform info received:', JSON.stringify(info, bigIntReplacer, 2));
+    
+    const result = {
       currentDrawNumber: Number(info.weeklyDrawId),
       nextDrawTime: Number(info.nextMonthlyDraw),
       ticketPrice: Web3.utils.toWei("0.1", "ether") // Default price
     };
-  };
+    
+    console.log('[getOfficialDrawInfo] Final result:', JSON.stringify(result, bigIntReplacer, 2));
+    return result;
+  }, [platform.getPlatformDrawsInfo]);
 
-  const getContractInfo = async () => {
+  const getContractInfo = useCallback(async () => {
     const stats = await leaderboard.getPlatformStatistics();
     const officialInfo = await getOfficialDrawInfo();
     
@@ -57,7 +73,7 @@ export const useGridottoContract = () => {
       nextDrawTime: officialInfo?.nextDrawTime || 0,
       ticketPrice: officialInfo?.ticketPrice || '100000000000000000'
     };
-  };
+  }, [leaderboard.getPlatformStatistics, getOfficialDrawInfo]);
 
   const createDraw = async (params: any) => {
     if (params.drawType === 'LYX') {
@@ -212,9 +228,19 @@ export const useGridottoContract = () => {
     getDrawParticipants,
     getUserParticipationHistory: async (user: string) => ({ drawIds: [], ticketsBought: [], won: [] }),
     getCurrentDrawInfo: platform.getPlatformDrawsInfo,
-    getCurrentDrawPrize: async () => '0',
-    getMonthlyPrize: async () => '0',
-    getTicketPrice: async () => Web3.utils.toWei("0.1", "ether"),
+    getCurrentDrawPrize: async () => {
+      console.log('[getCurrentDrawPrize] Called - returning hardcoded 0');
+      return '0';
+    },
+    getMonthlyPrize: async () => {
+      console.log('[getMonthlyPrize] Called - returning hardcoded 0');
+      return '0';
+    },
+    getTicketPrice: async () => {
+      const price = Web3.utils.toWei("0.1", "ether");
+      console.log('[getTicketPrice] Called - returning:', price);
+      return price;
+    },
     getExpiredDrawsWaitingExecution: async () => ({ drawIds: [], endTimes: [], participantCounts: [], minParticipants: [] }),
     forceExecuteDraw: execution.executeDraw,
     refundDraw: async (drawId: number) => {},

@@ -44,10 +44,10 @@ export function ActiveDrawsSection() {
 
     fetchActiveDraws();
     
-    // Refresh every 2 minutes instead of 30 seconds
-    const interval = setInterval(fetchActiveDraws, 120000);
+    // Refresh every 5 minutes to reduce API calls
+    const interval = setInterval(fetchActiveDraws, 300000);
     return () => clearInterval(interval);
-  }, [getActiveUserDraws, getUserDrawStats]);
+  }, []); // Dependency array'i boş bıraktım
 
   const formatTimeRemaining = (endTime: string) => {
     const now = Math.floor(Date.now() / 1000);

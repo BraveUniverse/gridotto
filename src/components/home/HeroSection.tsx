@@ -27,6 +27,8 @@ export const HeroSection = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('[HeroSection] Starting to load data...');
+        
         const [info, weekly, monthly, price] = await Promise.all([
           getCurrentDrawInfo(),
           getCurrentDrawPrize(),
@@ -34,12 +36,22 @@ export const HeroSection = () => {
           getTicketPrice()
         ]);
         
+        // Custom replacer for BigInt values
+        const bigIntReplacer = (key: string, value: any) => {
+          return typeof value === 'bigint' ? value.toString() + 'n' : value;
+        };
+        
+        console.log('[HeroSection] getCurrentDrawInfo result:', JSON.stringify(info, bigIntReplacer, 2));
+        console.log('[HeroSection] Weekly prize:', weekly);
+        console.log('[HeroSection] Monthly prize:', monthly);
+        console.log('[HeroSection] Ticket price:', price);
+        
         setDrawInfo(info);
         setWeeklyPrize(weekly);
         setMonthlyPrize(monthly);
         setTicketPrice(price);
       } catch (err) {
-        console.error('Error loading official draw data:', err);
+        console.error('[HeroSection] Error loading official draw data:', err);
       }
     };
 

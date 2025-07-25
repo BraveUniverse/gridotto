@@ -97,10 +97,10 @@ export const StatsSection = () => {
 
     loadStats();
     
-    // Refresh every minute
-    const interval = setInterval(loadStats, 60000);
+    // Refresh every 5 minutes
+    const interval = setInterval(loadStats, 300000);
     return () => clearInterval(interval);
-  }, [isConnected, getActiveUserDraws, getUserDrawStats, getContractInfo]);
+  }, [isConnected]); // Sadece isConnected bıraktım
 
   const icons = [CurrencyDollarIcon, SparklesIcon, UsersIcon, TicketIcon];
 

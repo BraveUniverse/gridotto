@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Web3 from 'web3';
 import { useUPProvider } from './useUPProvider';
 import { diamondAbi } from '@/abi';
@@ -110,7 +110,7 @@ export function useGridottoLeaderboard() {
   };
 
   // Get overall platform statistics
-  const getPlatformStatistics = async (): Promise<PlatformStats | null> => {
+  const getPlatformStatistics = useCallback(async (): Promise<PlatformStats | null> => {
     if (!contract) return null;
     
     try {
@@ -120,7 +120,7 @@ export function useGridottoLeaderboard() {
       console.error('Error fetching platform statistics:', err);
       return null;
     }
-  };
+  }, [contract]);
 
   return {
     contract,
