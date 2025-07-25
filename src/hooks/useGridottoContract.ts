@@ -246,6 +246,11 @@ export const useGridottoContract = () => {
     refundDraw: async (drawId: number) => {},
     claimRefund: refund.claimRefund,
     getUserDraws: async (userAddress: string) => [],
-    getPlatformStats: leaderboard.getPlatformStatistics
+    getPlatformStats: leaderboard.getPlatformStatistics,
+    
+    // New payable functions
+    bulkBuyForSelectedFollowers: core.bulkBuyForSelectedFollowers,
+    fundWeeklyPool: core.fundWeeklyPool,
+    fundMonthlyPool: core.fundMonthlyPool
   };
 };
