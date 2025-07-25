@@ -27,12 +27,18 @@ export const HeroSection = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('[HeroSection] Loading platform draw data...');
         const [info, weekly, monthly, price] = await Promise.all([
           getCurrentDrawInfo(),
           getCurrentDrawPrize(),
           getMonthlyPrize(),
           getTicketPrice()
         ]);
+        
+        console.log('[HeroSection] getCurrentDrawInfo result:', info);
+        console.log('[HeroSection] Weekly prize:', weekly);
+        console.log('[HeroSection] Monthly prize:', monthly);
+        console.log('[HeroSection] Ticket price:', price);
         
         setDrawInfo(info);
         setWeeklyPrize(weekly);
@@ -150,7 +156,7 @@ export const HeroSection = () => {
               <div className="flex items-center gap-2 text-primary">
                 <ClockIcon className="w-5 h-5" />
                 <span className="text-sm font-medium">
-                  {drawInfo ? formatTimeRemaining(drawInfo.drawTime) : 'Loading...'}
+                  {drawInfo ? formatTimeRemaining(drawInfo.weeklyEndTime || drawInfo.lastWeeklyDrawTime) : 'Loading...'}
                 </span>
               </div>
             </div>
@@ -233,7 +239,7 @@ export const HeroSection = () => {
               <div className="flex items-center gap-2 text-primary">
                 <ClockIcon className="w-5 h-5" />
                 <span className="text-sm font-medium">
-                  {drawInfo ? formatTimeRemaining(drawInfo.monthlyDrawTime) : 'Loading...'}
+                  {drawInfo ? formatTimeRemaining(drawInfo.monthlyEndTime || drawInfo.nextMonthlyDraw) : 'Loading...'}
                 </span>
               </div>
             </div>

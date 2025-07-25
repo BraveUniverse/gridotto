@@ -10,9 +10,15 @@ const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
 export interface PlatformDrawsInfo {
   weeklyDrawId: bigint;
   monthlyDrawId: bigint;
+  weeklyEndTime?: bigint;
+  monthlyEndTime?: bigint;
   monthlyPoolBalance: bigint;
+  weeklyCount?: bigint;
+  // Legacy fields for compatibility
   lastWeeklyDrawTime: bigint;
   nextMonthlyDraw: bigint;
+  // Additional fields that might be needed
+  monthlyDrawTime?: bigint;
 }
 
 export interface MonthlyTickets {
@@ -118,35 +124,53 @@ export function useGridottoPlatformDraws() {
 
   // Get platform draws info
   const getPlatformDrawsInfo = async (): Promise<PlatformDrawsInfo | null> => {
-    if (!contract) return null;
+    if (!contract) {
+      console.log('[getPlatformDrawsInfo] No contract available');
+      return null;
+    }
     
     try {
+      console.log('[getPlatformDrawsInfo] Calling contract method...');
       const info = await contract.methods.getPlatformDrawsInfo().call();
+      console.log('[getPlatformDrawsInfo] Raw response from contract:', info);
       
       // Handle both object and array response formats
       if (Array.isArray(info)) {
         // Array format: [weeklyDrawId, monthlyDrawId, weeklyEndTime, monthlyEndTime, monthlyPoolBalance, weeklyCount]
-        return {
+        const result = {
           weeklyDrawId: info[0],
           monthlyDrawId: info[1], 
+          weeklyEndTime: info[2],
+          monthlyEndTime: info[3],
           monthlyPoolBalance: info[4],
+          weeklyCount: info[5] || 0,
+          // Legacy fields for compatibility
           lastWeeklyDrawTime: info[2], // Using weeklyEndTime as lastWeeklyDrawTime
           nextMonthlyDraw: info[3] // Using monthlyEndTime
         };
+        console.log('[getPlatformDrawsInfo] Parsed array format:', result);
+        return result;
       } else if (info && typeof info === 'object') {
         // Object format
-        return {
+        const result = {
           weeklyDrawId: info.weeklyDrawId || info[0],
           monthlyDrawId: info.monthlyDrawId || info[1],
+          weeklyEndTime: info.weeklyEndTime || info[2],
+          monthlyEndTime: info.monthlyEndTime || info[3],
           monthlyPoolBalance: info.monthlyPoolBalance || info[4],
+          weeklyCount: info.weeklyCount || info[5] || 0,
+          // Legacy fields for compatibility
           lastWeeklyDrawTime: info.weeklyEndTime || info.lastWeeklyDrawTime || info[2],
           nextMonthlyDraw: info.monthlyEndTime || info.nextMonthlyDraw || info[3]
         };
+        console.log('[getPlatformDrawsInfo] Parsed object format:', result);
+        return result;
       }
       
       console.warn('Unexpected getPlatformDrawsInfo response format:', info);
       return null;
     } catch (err: any) {
+      console.error('[getPlatformDrawsInfo] Error:', err.message);
       // Only log error if it's not a "function not found" error
       if (!err.message?.includes('does not exist') && !err.message?.includes('Method not found')) {
         console.error('Error fetching platform draws info:', err.message);

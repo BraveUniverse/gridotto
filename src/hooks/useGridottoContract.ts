@@ -55,13 +55,29 @@ export const useGridottoContract = () => {
 
   const getOfficialDrawInfo = async () => {
     const info = await platform.getPlatformDrawsInfo();
-    if (!info) return null;
+    console.log('[getOfficialDrawInfo] Raw platform draws info:', info);
     
-    return {
-      currentDrawNumber: Number(info.weeklyDrawId),
-      nextDrawTime: Number(info.nextMonthlyDraw),
-      ticketPrice: Web3.utils.toWei("0.1", "ether") // Default price
+    if (!info) {
+      console.warn('[getOfficialDrawInfo] No platform draws info returned');
+      return null;
+    }
+    
+    // Platform draws info returns: weeklyDrawId, monthlyDrawId, weeklyEndTime, monthlyEndTime, monthlyPoolBalance, weeklyCount
+    const result = {
+      weeklyDrawId: info.weeklyDrawId || 0,
+      monthlyDrawId: info.monthlyDrawId || 0,
+      weeklyEndTime: info.weeklyEndTime || 0,
+      monthlyEndTime: info.monthlyEndTime || 0,
+      monthlyPoolBalance: info.monthlyPoolBalance || '0',
+      weeklyCount: info.weeklyCount || 0,
+      // Legacy fields for compatibility
+      currentDrawNumber: Number(info.weeklyDrawId || 0),
+      nextDrawTime: Number(info.monthlyEndTime || 0),
+      ticketPrice: Web3.utils.toWei("0.25", "ether") // Weekly ticket price is 0.25 LYX
     };
+    
+    console.log('[getOfficialDrawInfo] Processed result:', result);
+    return result;
   };
 
   const getContractInfo = async () => {
