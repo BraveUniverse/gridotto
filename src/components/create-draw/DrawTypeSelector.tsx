@@ -40,13 +40,26 @@ const drawTypes = [
 ];
 
 export const DrawTypeSelector = ({ drawData, updateDrawData }: DrawTypeSelectorProps) => {
+  const handleTypeChange = (type: 'LYX' | 'TOKEN' | 'NFT') => {
+    // Clear previous prize configuration when changing type
+    updateDrawData({ 
+      drawType: type,
+      prizeAmount: undefined,
+      tokenAddress: undefined,
+      nftContract: undefined,
+      tokenIds: [],
+      prizeAsset: undefined,
+      selectedAsset: undefined
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {drawTypes.map((drawType) => (
           <button
             key={drawType.type}
-            onClick={() => updateDrawData({ drawType: drawType.type })}
+            onClick={() => handleTypeChange(drawType.type)}
             className={`
               relative group text-left transition-all duration-300
               ${drawData.drawType === drawType.type 

@@ -82,12 +82,12 @@ export default function CreateDrawPage() {
       case 1:
         return drawData.drawType !== null;
       case 2:
-        if (drawData.drawType === 'LYX') return (drawData.prizeAmount || 0) > 0;
-        if (drawData.drawType === 'TOKEN') return drawData.tokenAddress && (drawData.prizeAmount || 0) > 0;
-        if (drawData.drawType === 'NFT') return drawData.nftContract && drawData.tokenIds && drawData.tokenIds.length > 0;
+        if (drawData.drawType === 'LYX') return true; // LYX initial prize is optional
+        if (drawData.drawType === 'TOKEN') return drawData.prizeAsset && (drawData.prizeAmount || 0) > 0;
+        if (drawData.drawType === 'NFT') return drawData.prizeAsset && drawData.tokenIds && drawData.tokenIds.length > 0;
         return false;
       case 3:
-        return drawData.ticketPrice > 0 && drawData.duration > 0 && drawData.maxTickets > 0;
+        return drawData.ticketPrice > 0 && drawData.duration > 0; // maxTickets is optional (0 = unlimited)
       case 4:
         return true; // Requirements are optional
       case 5:
