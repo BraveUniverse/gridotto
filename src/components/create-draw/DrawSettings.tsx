@@ -62,32 +62,60 @@ export function DrawSettings({ drawData, updateDrawData }: DrawSettingsProps) {
             type="number"
             min="0"
             value={drawData.maxTickets || ''}
-            onChange={(e) => updateDrawData({ maxTickets: parseInt(e.target.value) || 0 })}
+            onChange={(e) => {
+              const value = e.target.value;
+              updateDrawData({ maxTickets: value === '' ? 0 : parseInt(value) });
+            }}
             className="input-glass w-full"
-            placeholder="0 for unlimited"
+            placeholder="0"
           />
           <p className="text-xs text-gray-400 mt-1">
             Leave as 0 for unlimited tickets
           </p>
         </div>
 
-        {/* Winner Count */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Number of Winners
-          </label>
-          <input
-            type="number"
-            min="1"
-            max="100"
-            value={drawData.winnerCount || 1}
-            onChange={(e) => updateDrawData({ winnerCount: parseInt(e.target.value) || 1 })}
-            className="input-glass w-full"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            How many winners will share the prize
-          </p>
-        </div>
+        {/* Winner Count - Only for NFT draws with multiple tokens */}
+        {drawData.drawType === 'NFT' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Number of Winners
+            </label>
+            <input
+              type="number"
+              min="1"
+              max={drawData.tokenIds?.length || 1}
+              value={drawData.winnerCount || 1}
+              onChange={(e) => updateDrawData({ winnerCount: parseInt(e.target.value) || 1 })}
+              className="input-glass w-full"
+              disabled={!drawData.tokenIds || drawData.tokenIds.length <= 1}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {drawData.tokenIds && drawData.tokenIds.length > 1 
+                ? `You have ${drawData.tokenIds.length} NFTs. Each winner gets one NFT.`
+                : 'Add multiple NFTs to have multiple winners'}
+            </p>
+          </div>
+        )}
+
+        {/* Winner Count - For other draw types */}
+        {drawData.drawType !== 'NFT' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Number of Winners
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={drawData.winnerCount || 1}
+              onChange={(e) => updateDrawData({ winnerCount: parseInt(e.target.value) || 1 })}
+              className="input-glass w-full"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Prize will be split equally among winners
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Advanced Settings */}
@@ -95,25 +123,6 @@ export function DrawSettings({ drawData, updateDrawData }: DrawSettingsProps) {
         <h3 className="text-lg font-semibold text-white mb-4">Advanced Settings (Optional)</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Creator Fee */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Creator Fee (%)
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="10"
-              value={drawData.creatorFeePercent || 0}
-              onChange={(e) => updateDrawData({ creatorFeePercent: parseInt(e.target.value) || 0 })}
-              className="input-glass w-full"
-              placeholder="0-10%"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Your commission from ticket sales (max 10%)
-            </p>
-          </div>
-
           {/* Min Participants */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -122,13 +131,16 @@ export function DrawSettings({ drawData, updateDrawData }: DrawSettingsProps) {
             <input
               type="number"
               min="0"
-              value={drawData.minParticipants || 0}
-              onChange={(e) => updateDrawData({ minParticipants: parseInt(e.target.value) || 0 })}
+              value={drawData.minParticipants || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                updateDrawData({ minParticipants: value === '' ? 0 : parseInt(value) });
+              }}
               className="input-glass w-full"
-              placeholder="0 for no minimum"
+              placeholder="0"
             />
             <p className="text-xs text-gray-400 mt-1">
-              Draw will only execute if this many people join
+              Draw will only execute if this many people join (0 = no minimum)
             </p>
           </div>
 
@@ -140,13 +152,16 @@ export function DrawSettings({ drawData, updateDrawData }: DrawSettingsProps) {
             <input
               type="number"
               min="0"
-              value={drawData.maxParticipants || 0}
-              onChange={(e) => updateDrawData({ maxParticipants: parseInt(e.target.value) || 0 })}
+              value={drawData.maxParticipants || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                updateDrawData({ maxParticipants: value === '' ? 0 : parseInt(value) });
+              }}
               className="input-glass w-full"
-              placeholder="0 for unlimited"
+              placeholder="0"
             />
             <p className="text-xs text-gray-400 mt-1">
-              Limit the number of unique participants
+              Limit the number of unique participants (0 = unlimited)
             </p>
           </div>
 
@@ -158,13 +173,29 @@ export function DrawSettings({ drawData, updateDrawData }: DrawSettingsProps) {
             <input
               type="number"
               min="0"
-              value={drawData.maxTicketsPerUser || 0}
-              onChange={(e) => updateDrawData({ maxTicketsPerUser: parseInt(e.target.value) || 0 })}
+              value={drawData.maxTicketsPerUser || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                updateDrawData({ maxTicketsPerUser: value === '' ? 0 : parseInt(value) });
+              }}
               className="input-glass w-full"
-              placeholder="0 for unlimited"
+              placeholder="0"
             />
             <p className="text-xs text-gray-400 mt-1">
-              Limit tickets per participant
+              Limit tickets per participant (0 = unlimited)
+            </p>
+          </div>
+
+          {/* Platform Fee Info */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Platform Fee
+            </label>
+            <div className="input-glass w-full bg-gray-800 cursor-not-allowed">
+              <span className="text-gray-400">5% (Fixed)</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Automatically deducted from ticket sales
             </p>
           </div>
         </div>
@@ -173,10 +204,11 @@ export function DrawSettings({ drawData, updateDrawData }: DrawSettingsProps) {
       {/* Info Box */}
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
         <p className="text-sm text-blue-300">
-          <strong>Platform Fee:</strong> 5% of ticket sales automatically goes to the platform.
-          {drawData.creatorFeePercent && drawData.creatorFeePercent > 0 && (
-            <span> You'll receive an additional {drawData.creatorFeePercent}% as creator fee.</span>
-          )}
+          <strong>Fee Structure:</strong> 
+          <br />• Platform Fee: 5% (goes to platform)
+          <br />• Executor Fee: 5% (reward for executing the draw)
+          <br />• Monthly Pool: 2% (for user draws) or 20% (for weekly draws)
+          <br />• Prize Pool: Remaining amount after fees
         </p>
       </div>
     </div>

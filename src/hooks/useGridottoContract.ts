@@ -215,19 +215,26 @@ export const useGridottoContract = () => {
     purchaseTickets,
     getUserDraw,
     getDrawInfo,
-    getDrawDetails: core.getDrawDetails,
+    
+    // Draw creation functions
+    createLYXDraw: core.createLYXDraw,
+    createLSP7Draw: core.createTokenDraw,
+    createLSP8Draw: core.createNFTDraw,
+    
+    // Draw management
     buyTickets: core.buyTickets,
+    getDrawDetails: core.getDrawDetails,
     getDrawParticipants: core.getDrawParticipants,
+    executeDraw: execution.executeDraw,
+    executeUserDraw,
+    getDrawWinners: execution.getDrawWinners,
+    canExecuteDraw,
     
     // Claim functions
     claimPrize: core.claimPrize,
     claimExecutorFees: core.claimExecutorFees,
     getUnclaimedPrizes: core.getUnclaimedPrizes,
     getClaimableExecutorFees: core.getClaimableExecutorFees,
-    
-    // Execution functions
-    executeUserDraw,
-    canExecuteDraw,
     
     // Refund functions
     claimAll,

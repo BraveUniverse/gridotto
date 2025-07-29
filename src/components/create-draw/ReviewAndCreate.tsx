@@ -18,7 +18,7 @@ interface ReviewAndCreateProps {
 
 export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) => {
   const { account } = useUPProvider();
-  const { createDraw } = useGridottoContract();
+  const { createLYXDraw, createLSP7Draw, createLSP8Draw } = useGridottoContract();
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -36,65 +36,92 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
       setIsCreating(true);
       setError(null);
 
-      // Prepare parameters based on draw type
-      const params: any = {
-        drawType: drawData.drawType,
-        duration: drawData.duration * 86400, // Convert days to seconds
-        numberOfWinners: drawData.winnerCount || 1,
-        requirement: drawData.requirementType || 0,
-        requiredToken: drawData.requiredToken || undefined,
-        minTokenAmount: drawData.minTokenAmount ? Web3.utils.toWei(drawData.minTokenAmount.toString(), 'ether') : undefined,
-      };
+      console.log('=== CREATE DRAW - STARTING ===');
+      console.log('Draw Data:', drawData);
 
-      console.log('Base params:', params);
+      // Common parameters
+      const ticketPriceWei = Web3.utils.toWei(drawData.ticketPrice.toString(), 'ether');
+      const maxTickets = drawData.maxTickets || 0;
+      const duration = drawData.duration * 86400; // Convert days to seconds
+      const minParticipants = drawData.minParticipants || 0;
+      const platformFeePercent = 500; // 5% = 500 basis points
 
-      // Optional parameters
-      if (drawData.ticketPrice > 0) {
-        params.ticketPrice = Web3.utils.toWei(drawData.ticketPrice.toString(), 'ether');
-        console.log('Ticket price set:', params.ticketPrice);
-      }
-      
-      if (drawData.maxTickets > 0) {
-        params.maxTickets = drawData.maxTickets;
-        console.log('Max tickets set:', params.maxTickets);
-      }
-
-      if (drawData.creatorFeePercent && drawData.creatorFeePercent > 0) {
-        params.creatorFeePercent = drawData.creatorFeePercent;
-        console.log('Creator fee set:', params.creatorFeePercent);
-      }
-
-      if (drawData.minParticipants && drawData.minParticipants > 0) {
-        params.minParticipants = drawData.minParticipants;
-        console.log('Min participants set:', params.minParticipants);
-      }
-
-      if (drawData.maxParticipants && drawData.maxParticipants > 0) {
-        params.maxParticipants = drawData.maxParticipants;
-        console.log('Max participants set:', params.maxParticipants);
-      }
-
-      // Add type-specific parameters
       if (drawData.drawType === 'LYX') {
-        if (drawData.prizeAmount && drawData.prizeAmount > 0) {
-          params.initialPrize = Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether');
-          console.log('Initial prize set:', params.initialPrize);
-        }
+        // LYX Draw
+        const creatorContribution = drawData.prizeAmount && drawData.prizeAmount > 0 
+          ? Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether')
+          : '0';
+        
+        console.log('Creating LYX draw with params:', {
+          ticketPrice: ticketPriceWei,
+          maxTickets,
+          duration,
+          minParticipants,
+          platformFeePercent,
+          creatorContribution
+        });
+
+        await createLYXDraw(
+          ticketPriceWei,
+          maxTickets,
+          duration,
+          minParticipants,
+          platformFeePercent,
+          creatorContribution
+        );
       } else if (drawData.drawType === 'TOKEN') {
-        params.tokenAddress = drawData.tokenAddress;
-        if (drawData.prizeAmount && drawData.prizeAmount > 0) {
-          params.initialPrize = Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether');
+        // Token Draw
+        if (!drawData.prizeAsset || !drawData.prizeAmount) {
+          throw new Error('Token address and amount are required');
         }
-        console.log('Token draw params:', { tokenAddress: params.tokenAddress, initialPrize: params.initialPrize });
+
+        const tokenAmountWei = Web3.utils.toWei(drawData.prizeAmount.toString(), 'ether');
+
+        console.log('Creating TOKEN draw with params:', {
+          ticketPrice: ticketPriceWei,
+          maxTickets,
+          duration,
+          minParticipants,
+          platformFeePercent,
+          tokenAddress: drawData.prizeAsset,
+          tokenAmount: tokenAmountWei
+        });
+
+        await createLSP7Draw(
+          drawData.prizeAsset,  // tokenAddress first
+          ticketPriceWei,
+          maxTickets,
+          duration,
+          minParticipants,
+          platformFeePercent,
+          tokenAmountWei
+        );
       } else if (drawData.drawType === 'NFT') {
-        params.nftContract = drawData.nftContract;
-        params.nftTokenIds = drawData.tokenIds;
-        console.log('NFT draw params:', { nftContract: params.nftContract, nftTokenIds: params.nftTokenIds });
+        // NFT Draw
+        if (!drawData.prizeAsset || !drawData.tokenIds || drawData.tokenIds.length === 0) {
+          throw new Error('NFT contract and token IDs are required');
+        }
+
+        console.log('Creating NFT draw with params:', {
+          ticketPrice: ticketPriceWei,
+          maxTickets,
+          duration,
+          minParticipants,
+          platformFeePercent,
+          nftAddress: drawData.prizeAsset,
+          tokenIds: drawData.tokenIds
+        });
+
+        await createLSP8Draw(
+          drawData.prizeAsset,  // nftContract first
+          drawData.tokenIds,    // then tokenIds
+          ticketPriceWei,
+          maxTickets,
+          duration,
+          minParticipants,
+          platformFeePercent
+        );
       }
-
-      console.log('Final params to send:', params);
-
-      await createDraw(params);
       
       onCreate();
       router.push('/draws');

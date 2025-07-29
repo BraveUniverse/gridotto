@@ -50,7 +50,7 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Initial Prize Pool (LYX)
+              Initial Prize Pool (Optional)
             </label>
             <div className="relative">
               <input
@@ -58,17 +58,39 @@ export const PrizeConfiguration = ({ drawData, updateDrawData }: PrizeConfigurat
                 step="0.1"
                 min="0"
                 value={drawData.prizeAmount || ''}
-                onChange={(e) => updateDrawData({ prizeAmount: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  updateDrawData({ 
+                    prizeAmount: value === '' ? 0 : parseFloat(value),
+                    creatorContribution: value === '' ? 0 : parseFloat(value)
+                  });
+                }}
                 className="input-glass w-full pr-16"
-                placeholder="Enter initial prize amount"
+                placeholder="0"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                 LYX
               </span>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              The prize pool will grow as participants buy tickets
+              Leave empty or 0 if you don't want to add an initial prize. The prize pool will grow as participants buy tickets.
             </p>
+          </div>
+
+          <div className="glass-card p-4 border border-blue-500/30">
+            <div className="flex items-start space-x-3">
+              <InformationCircleIcon className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium text-white mb-1">How LYX Draws Work</h4>
+                <ul className="text-xs text-gray-400 space-y-1">
+                  <li>• Initial prize is optional - you can start with 0 LYX</li>
+                  <li>• Prize pool grows with each ticket sold</li>
+                  <li>• Platform takes 5% fee from ticket sales</li>
+                  <li>• Executor gets 5% fee as reward</li>
+                  <li>• 70-88% of ticket sales go to the prize pool</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       )}
