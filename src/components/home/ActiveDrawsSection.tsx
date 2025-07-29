@@ -23,6 +23,7 @@ interface ActiveDraw {
   timeRemaining: number;
   isActive: boolean;
   maxTickets: number;
+  executorFee_LYX?: number;
 }
 
 export function ActiveDrawsSection() {
@@ -92,7 +93,9 @@ export function ActiveDrawsSection() {
               endTime: endTime,
               timeRemaining: timeRemaining,
               isActive: true,
-              maxTickets: Number((drawDetails as any).maxTickets)
+              maxTickets: Number((drawDetails as any).maxTickets),
+              executorFee_LYX: (drawDetails as any).executorFeeCollected ? 
+                Number(Web3.utils.fromWei((drawDetails as any).executorFeeCollected.toString(), 'ether')) : 0
             };
             
             draws.push(draw);
@@ -222,6 +225,14 @@ export function ActiveDrawsSection() {
                     <span>Participants: {draw.participantCount}</span>
                     <span>Max: {draw.maxTickets > 1000000 ? '∞' : draw.maxTickets}</span>
                   </div>
+
+                  {draw.executorFee_LYX && draw.executorFee_LYX > 0 && (
+                    <div className="text-center mb-4 p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                      <p className="text-sm text-purple-400">
+                        🎯 Executor Reward: {draw.executorFee_LYX.toFixed(4)} LYX
+                      </p>
+                    </div>
+                  )}
 
                   <Link
                     href={`/draws/${draw.drawId}`}

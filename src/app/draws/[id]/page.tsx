@@ -307,6 +307,31 @@ export default function DrawDetailPage() {
               </div>
             </div>
 
+            {/* Executor Reward Section */}
+            {draw.executorFeeCollected && BigInt(draw.executorFeeCollected) > BigInt(0) && (
+              <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 rounded-2xl p-8 border border-purple-500/30">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-white">🎯 Executor Reward</h2>
+                  <SparklesIcon className="w-6 h-6 text-purple-400" />
+                </div>
+                
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-purple-400 mb-2">
+                    {Web3.utils.fromWei(draw.executorFeeCollected.toString(), 'ether')} LYX
+                  </p>
+                  <p className="text-gray-400">Execute this draw after it ends to earn this reward!</p>
+                </div>
+
+                {!isActive && !draw.isCompleted && !draw.isCancelled && (
+                  <div className="mt-4 p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                    <p className="text-sm text-purple-300 text-center">
+                      ⏰ This draw has ended and is ready to be executed
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Participants */}
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 border border-white/10">
               <h2 className="text-xl font-bold text-white mb-6">Recent Participants</h2>

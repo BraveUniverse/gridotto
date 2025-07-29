@@ -54,7 +54,8 @@ export const HeroSection = () => {
                 ticketsSold: Number((weeklyDetails as any).ticketsSold),
                 participantCount: Number((weeklyDetails as any).participantCount),
                 timeRemaining: timeRemaining,
-                endTime: Number((weeklyDetails as any).endTime)
+                endTime: Number((weeklyDetails as any).endTime),
+                executorFee_LYX: Number(Web3.utils.fromWei(((weeklyDetails as any).executorFeeCollected || 0).toString(), 'ether'))
               });
             }
           }
@@ -73,7 +74,8 @@ export const HeroSection = () => {
                 ticketsSold: Number((monthlyDetails as any).ticketsSold),
                 participantCount: Number((monthlyDetails as any).participantCount),
                 timeRemaining: timeRemaining,
-                endTime: Number((monthlyDetails as any).endTime)
+                endTime: Number((monthlyDetails as any).endTime),
+                executorFee_LYX: Number(Web3.utils.fromWei(((monthlyDetails as any).executorFeeCollected || 0).toString(), 'ether'))
               });
             }
           } else {
@@ -279,6 +281,11 @@ export const HeroSection = () => {
                 <p>Tickets sold: {weeklyDraw.ticketsSold}</p>
                 <p>Participants: {weeklyDraw.participantCount}</p>
                 <p>Draw ID: #{weeklyDraw.drawId}</p>
+                {weeklyDraw.executorFee_LYX && weeklyDraw.executorFee_LYX > 0 && (
+                  <p className="text-purple-400 font-medium">
+                    🎯 Executor Reward: {weeklyDraw.executorFee_LYX.toFixed(4)} LYX
+                  </p>
+                )}
               </div>
             )}
             
@@ -357,6 +364,11 @@ export const HeroSection = () => {
                 <p>📧 From weekly: {userMonthlyTickets.fromWeekly}</p>
                 <p>✏️ From creating: {userMonthlyTickets.fromCreating}</p>
                 <p>🎯 From participating: {userMonthlyTickets.fromParticipating}</p>
+                {monthlyDraw && !monthlyDraw.isUpcoming && monthlyDraw.executorFee_LYX && monthlyDraw.executorFee_LYX > 0 && (
+                  <p className="text-purple-400 font-medium mt-2">
+                    🎯 Executor Reward: {monthlyDraw.executorFee_LYX.toFixed(4)} LYX
+                  </p>
+                )}
               </div>
             ) : (
               <div className="text-center text-sm text-gray-400 mb-6 space-y-1">
@@ -364,6 +376,11 @@ export const HeroSection = () => {
                 <p>📧 Buying weekly tickets</p>
                 <p>✏️ Creating draws (max 5/month)</p>
                 <p>🎯 Participating in draws (max 15/month)</p>
+                {monthlyDraw && !monthlyDraw.isUpcoming && monthlyDraw.executorFee_LYX && monthlyDraw.executorFee_LYX > 0 && (
+                  <p className="text-purple-400 font-medium mt-2">
+                    🎯 Executor Reward: {monthlyDraw.executorFee_LYX.toFixed(4)} LYX
+                  </p>
+                )}
               </div>
             )}
             

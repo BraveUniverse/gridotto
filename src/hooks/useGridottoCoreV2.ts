@@ -33,6 +33,7 @@ export interface DrawDetails {
   isCancelled: boolean;
   participantCount: bigint;
   monthlyPoolContribution: bigint;
+  executorFeeCollected: bigint; // NEW: Pre-collected executor fee
 }
 
 export function useGridottoCoreV2() {
@@ -356,7 +357,8 @@ export function useGridottoCoreV2() {
         isCompleted: details.isCompleted,
         isCancelled: details.isCancelled,
         participantCount: details.participantCount,
-        monthlyPoolContribution: details.monthlyPoolContribution
+        monthlyPoolContribution: details.monthlyPoolContribution,
+        executorFeeCollected: details.executorFeeCollected
       };
       
       console.log('[getDrawDetails] Processed details for draw #' + drawId + ':', {
@@ -474,7 +476,8 @@ export function useGridottoCoreV2() {
             isCompleted: details.isCompleted,
             isCancelled: details.isCancelled,
             participantCount: Number(details.participantCount),
-            monthlyPoolContribution: details.monthlyPoolContribution.toString()
+            monthlyPoolContribution: details.monthlyPoolContribution.toString(),
+            executorFeeCollected: details.executorFeeCollected.toString()
           });
         }
       });
