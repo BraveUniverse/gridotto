@@ -32,6 +32,12 @@ Universal Profile'lar Key Manager üzerinden işlem yapar. Sistem otomatik olara
 
 ## Teknik Detaylar
 
+### Kontrat Adresleri
+
+- Diamond kontrat adresi: `0x00102a0aAb6027bB027C0F032583Cf88353E4900`
+- LUKSO Testnet Chain ID: 4201
+- RPC URL: https://rpc.testnet.lukso.network
+
 ### Universal Profile Tespiti
 
 ```typescript
