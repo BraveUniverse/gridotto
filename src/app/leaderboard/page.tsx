@@ -35,7 +35,7 @@ const LeaderboardPage = () => {
     getTopTicketBuyers, 
     getTopDrawCreators, 
     getTopExecutors,
-    getPlatformStatistics,
+    getPlatformStats,
     loading: contractLoading 
   } = useGridottoLeaderboard();
   
@@ -65,7 +65,7 @@ const LeaderboardPage = () => {
           getTopTicketBuyers(20),
           getTopDrawCreators(20),
           getTopExecutors(20),
-          getPlatformStatistics()
+          getPlatformStats()
         ]);
         
         setWinners(winnersData);
@@ -89,7 +89,7 @@ const LeaderboardPage = () => {
     };
 
     loadLeaderboardData();
-  }, [contractLoading, getTopWinners, getTopTicketBuyers, getTopDrawCreators, getTopExecutors, getPlatformStatistics]);
+  }, [contractLoading, getTopWinners, getTopTicketBuyers, getTopDrawCreators, getTopExecutors, getPlatformStats]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;

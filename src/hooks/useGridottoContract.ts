@@ -63,17 +63,31 @@ export const useGridottoContract = () => {
     return result;
   }, [platform.getPlatformDrawsInfo]);
 
+  const getPlatformStats = useCallback(async () => {
+    console.log('[getPlatformStats] Starting...');
+    const stats = await leaderboard.getPlatformStats();
+    const drawInfo = await getOfficialDrawInfo();
+    
+    return {
+      stats,
+      drawInfo
+    };
+  }, [leaderboard.getPlatformStats, getOfficialDrawInfo]);
+
   const getContractInfo = useCallback(async () => {
-    const stats = await leaderboard.getPlatformStatistics();
+    const stats = await leaderboard.getPlatformStats();
     const officialInfo = await getOfficialDrawInfo();
     
     return {
-      totalPrizePool: stats?.totalPrizesDistributed.toString() || '0',
-      currentDrawNumber: officialInfo?.currentDrawNumber || 0,
-      nextDrawTime: officialInfo?.nextDrawTime || 0,
-      ticketPrice: officialInfo?.ticketPrice || '100000000000000000'
+      stats: {
+        totalPrizeDistributed: stats?.totalPrizesDistributed || BigInt(0),
+        totalDraws: stats?.totalDrawsCreated || BigInt(0),
+        totalTickets: stats?.totalTicketsSold || BigInt(0),
+        totalExecutions: stats?.totalExecutions || BigInt(0)
+      },
+      officialInfo
     };
-  }, [leaderboard.getPlatformStatistics, getOfficialDrawInfo]);
+  }, [leaderboard.getPlatformStats, getOfficialDrawInfo]);
 
   const createDraw = async (params: any) => {
     if (params.drawType === 'LYX') {
@@ -190,7 +204,7 @@ export const useGridottoContract = () => {
   return {
     contract: core.contract,
     loading: core.loading || execution.loading || platform.loading || refund.loading || leaderboard.loading,
-    error: core.error || execution.error || platform.error || refund.error || leaderboard.error,
+    error: core.error || execution.error || platform.error || refund.error,
     
     // Core functions
     getActiveUserDraws,
@@ -220,6 +234,11 @@ export const useGridottoContract = () => {
     
     // Leaderboard functions
     getRecentWinners,
+    getTopWinners: leaderboard.getTopWinners,
+    getTopTicketBuyers: leaderboard.getTopTicketBuyers,
+    getTopDrawCreators: leaderboard.getTopDrawCreators,
+    getTopExecutors: leaderboard.getTopExecutors,
+    getPlatformStats: leaderboard.getPlatformStats,
     
     // Platform functions
     getCurrentDrawInfo: platform.getPlatformDrawsInfo,
@@ -236,7 +255,6 @@ export const useGridottoContract = () => {
     forceExecuteDraw: execution.executeDraw,
     refundDraw: async (drawId: number) => {},
     claimRefund: refund.claimRefund,
-    getUserDraws: async (userAddress: string) => [],
-    getPlatformStats: leaderboard.getPlatformStatistics
+    getUserDraws: async (userAddress: string) => []
   };
 };

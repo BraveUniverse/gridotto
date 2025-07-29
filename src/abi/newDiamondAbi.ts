@@ -10,7 +10,25 @@ export const PLATFORM_ABI = [
   "function getPlatformDrawsInfo() view returns (uint256 weeklyDrawId, uint256 monthlyDrawId, uint256 weeklyEndTime, uint256 monthlyEndTime, uint256 monthlyPoolBalance, uint256 weeklyCount)",
   "function getUserMonthlyTickets(address user) view returns (uint256 fromWeekly, uint256 fromCreating, uint256 fromParticipating, uint256 total)",
   "function executeWeeklyDraw()",
-  "function executeMonthlyDraw()"
+  "function executeMonthlyDraw()",
+  {
+    "inputs": [],
+    "name": "getPlatformStats",
+    "outputs": [
+      {
+        "components": [
+          {"name": "totalPrizesDistributed", "type": "uint256"},
+          {"name": "totalTicketsSold", "type": "uint256"},
+          {"name": "totalDrawsCreated", "type": "uint256"},
+          {"name": "totalExecutions", "type": "uint256"}
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ];
 
 // Execution Functions ABI

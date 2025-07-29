@@ -112,26 +112,30 @@ export function useGridottoLeaderboard() {
   };
 
   // Get overall platform statistics
-  const getPlatformStatistics = useCallback(async (): Promise<PlatformStats | null> => {
+  const getPlatformStats = useCallback(async (): Promise<PlatformStats | null> => {
     if (!contract) return null;
     
     try {
-      const stats = await contract.methods.getPlatformStatistics().call();
-      return stats;
-    } catch (err: any) {
-      console.error('Error fetching platform statistics:', err);
+      const stats = await contract.methods.getPlatformStats().call();
+      
+      return {
+        totalPrizesDistributed: BigInt(stats.totalPrizesDistributed),
+        totalTicketsSold: BigInt(stats.totalTicketsSold),
+        totalDrawsCreated: BigInt(stats.totalDrawsCreated),
+        totalExecutions: BigInt(stats.totalExecutions)
+      };
+    } catch (error) {
+      console.error('[useGridottoLeaderboard] Error fetching platform stats:', error);
       return null;
     }
   }, [contract]);
 
   return {
-    contract,
-    loading,
-    error,
     getTopWinners,
     getTopTicketBuyers,
     getTopDrawCreators,
     getTopExecutors,
-    getPlatformStatistics
+    getPlatformStats,
+    loading: !contract
   };
-}
+};

@@ -116,7 +116,7 @@ export const HeroSection = () => {
       
       // Get platform stats
       try {
-        const stats = await contract.methods.getPlatformStatistics().call();
+        const stats = await contract.methods.getPlatformStats().call();
         
         // Type guard for platform stats
         if (stats && typeof stats === 'object') {

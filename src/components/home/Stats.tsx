@@ -39,7 +39,7 @@ export const Stats = () => {
         });
         
         setStats({
-          totalPrizePool: contractInfo?.totalPrizePool || '0',
+          totalPrizePool: contractInfo?.stats?.totalPrizeDistributed?.toString() || '0',
           totalWinners: winners.length,
           activeDraws: activeDraws.length,
           totalDistributed: totalDistributed.toString()
