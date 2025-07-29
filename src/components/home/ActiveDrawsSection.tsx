@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
+import { CONTRACTS } from '@/config/contracts';
 
-const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
+const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
 interface ActiveDraw {
   drawId: number;

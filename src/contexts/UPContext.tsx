@@ -8,9 +8,9 @@ import type { EthExecutionAPI, SupportedProviders } from 'web3';
 import { ERC725 } from '@erc725/erc725.js';
 import LSP3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json';
 import { diamondAbi } from '@/abi';
+import { CONTRACTS } from '@/config/contracts';
 
-// Use the Diamond contract address from our project
-const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
+const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
 interface ProfileData {
   name?: string;

@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import Web3 from 'web3';
 import { useUPProvider } from './useUPProvider';
 import { diamondAbi } from '@/abi';
+import { sendTransaction } from '@/utils/luksoTransactionHelper';
+import { CONTRACTS } from '@/config/contracts';
 
-const DIAMOND_ADDRESS = "0x5Ad808FAE645BA3682170467114e5b80A70bF276";
+const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
 export interface TopWinner {
   player: string;
