@@ -106,23 +106,17 @@ export function ReviewAndCreate({ drawData, onCreate }: ReviewAndCreateProps) {
         }
 
         // First, approve NFTs to the diamond contract
-        console.log('Checking NFT approvals...');
+        console.log('Approving NFTs to diamond contract...');
         
-        if (account && web3) { // Ensure account and web3 are available
-          console.log('Checking NFT ownership and approvals for:', {
+        if (account && web3) {
+          console.log('Setting NFT approvals for:', {
             nftContract: drawData.prizeAsset,
             tokenIds: drawData.tokenIds,
-            account
+            account,
+            diamondAddress: DIAMOND_ADDRESS
           });
 
           const nftContract = new web3.eth.Contract([
-            {
-              "inputs": [{"internalType": "address", "name": "to", "type": "address"}, {"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
-              "name": "approve",
-              "outputs": [],
-              "stateMutability": "nonpayable",
-              "type": "function"
-            },
             {
               "inputs": [{"internalType": "address", "name": "operator", "type": "address"}, {"internalType": "bool", "name": "approved", "type": "bool"}],
               "name": "setApprovalForAll", 
@@ -136,54 +130,24 @@ export function ReviewAndCreate({ drawData, onCreate }: ReviewAndCreateProps) {
               "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
               "stateMutability": "view",
               "type": "function"
-            },
-            {
-              "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
-              "name": "ownerOf",
-              "outputs": [{"internalType": "address", "name": "", "type": "address"}],
-              "stateMutability": "view",
-              "type": "function"
             }
           ], drawData.prizeAsset);
 
-          // Check ownership of all tokens first
-          console.log('Checking NFT ownership...');
-          for (const tokenId of drawData.tokenIds) {
-            try {
-              const owner = await nftContract.methods.ownerOf(tokenId).call();
-              console.log(`Token ${tokenId} owner:`, owner);
-              
-              const ownerStr = String(owner);
-              const accountStr = String(account);
-              
-              if (ownerStr && accountStr && ownerStr.toLowerCase() !== accountStr.toLowerCase()) {
-                throw new Error(`You don't own NFT token ${tokenId}. Current owner: ${ownerStr}`);
-              }
-              
-              if (!owner) {
-                throw new Error(`Token ${tokenId} has no owner or does not exist`);
-              }
-            } catch (error: any) {
-              console.error(`Error checking ownership of token ${tokenId}:`, error);
-              throw new Error(`Failed to verify ownership of token ${tokenId}: ${error.message}`);
-            }
-          }
-          console.log('✅ All tokens are owned by the user');
-
-          // Check if already approved for all
-          const isApprovedForAll = await nftContract.methods.isApprovedForAll(account, DIAMOND_ADDRESS).call();
-          
-          if (!isApprovedForAll) {
-            console.log('Setting approval for all NFTs...');
-            try {
+          try {
+            // Check if already approved for all
+            console.log('Checking current approval status...');
+            const isApprovedForAll = await nftContract.methods.isApprovedForAll(account, DIAMOND_ADDRESS).call();
+            
+            if (!isApprovedForAll) {
+              console.log('Setting approval for all NFTs...');
               await nftContract.methods.setApprovalForAll(DIAMOND_ADDRESS, true).send({ from: account });
               console.log('✅ NFT approval successful');
-            } catch (error: any) {
-              console.error('NFT approval failed:', error);
-              throw new Error(`Failed to approve NFTs: ${error.message}`);
+            } else {
+              console.log('✅ NFTs already approved');
             }
-          } else {
-            console.log('✅ NFTs already approved');
+          } catch (error: any) {
+            console.error('NFT approval failed:', error);
+            throw new Error(`Failed to approve NFTs to diamond contract: ${error.message}`);
           }
         }
 
