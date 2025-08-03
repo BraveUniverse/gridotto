@@ -583,9 +583,11 @@ export function useGridottoCoreV2() {
       });
       
       console.log('[getActiveDraws] Found', draws.length, 'active draws');
+      console.log('[getActiveDraws] Draw types:', draws.map(d => `Draw ${d.drawId}: type ${d.drawType}`));
       
       // Fetch NFT details for NFT draws
       for (const draw of draws) {
+        console.log(`[getActiveDraws] Checking draw ${draw.drawId}, type: ${draw.drawType}`);
         if (draw.drawType === 2) { // USER_LSP8
           try {
             console.log(`[getActiveDraws] Fetching NFT details for draw ${draw.drawId}`);
