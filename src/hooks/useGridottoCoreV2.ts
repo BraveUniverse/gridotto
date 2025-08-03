@@ -464,25 +464,36 @@ export function useGridottoCoreV2() {
           const endTime = Number(details.endTime);
           
           if (endTime > currentTime) {
+            // Safe BigInt to string conversion with fallbacks
+            const safeToString = (value: any): string => {
+              if (value === null || value === undefined) return "0";
+              return value.toString();
+            };
+            
+            const safeToNumber = (value: any): number => {
+              if (value === null || value === undefined) return 0;
+              return Number(value);
+            };
+            
             // Convert BigInt values to strings/numbers for safe serialization
             draws.push({ 
               drawId: startId + index,
-              creator: details.creator,
-              drawType: details.drawType,
-              tokenAddress: details.tokenAddress,
-              ticketPrice: details.ticketPrice.toString(),
-              maxTickets: details.maxTickets.toString(),
-              ticketsSold: details.ticketsSold.toString(),
-              prizePool: details.prizePool.toString(),
-              startTime: Number(details.startTime),
-              endTime: Number(details.endTime),
-              minParticipants: Number(details.minParticipants),
-              platformFeePercent: Number(details.platformFeePercent),
-              isCompleted: details.isCompleted,
-              isCancelled: details.isCancelled,
-              participantCount: Number(details.participantCount),
-              monthlyPoolContribution: details.monthlyPoolContribution.toString(),
-              executorFeeCollected: details.executorFeeCollected.toString()
+              creator: details.creator || '',
+              drawType: safeToNumber(details.drawType),
+              tokenAddress: details.tokenAddress || '',
+              ticketPrice: safeToString(details.ticketPrice),
+              maxTickets: safeToString(details.maxTickets),
+              ticketsSold: safeToString(details.ticketsSold),
+              prizePool: safeToString(details.prizePool),
+              startTime: safeToNumber(details.startTime),
+              endTime: safeToNumber(details.endTime),
+              minParticipants: safeToNumber(details.minParticipants),
+              platformFeePercent: safeToNumber(details.platformFeePercent),
+              isCompleted: details.isCompleted || false,
+              isCancelled: details.isCancelled || false,
+              participantCount: safeToNumber(details.participantCount),
+              monthlyPoolContribution: safeToString(details.monthlyPoolContribution),
+              executorFeeCollected: safeToString(details.executorFeeCollected)
             });
           }
         }
