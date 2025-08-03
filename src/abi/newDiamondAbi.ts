@@ -2,6 +2,7 @@
 export const CORE_ABI = [
   "function buyTickets(uint256 drawId, uint256 amount) payable",
   "function getDrawDetails(uint256 drawId) view returns (address creator, uint8 drawType, address tokenAddress, uint256 ticketPrice, uint256 maxTickets, uint256 ticketsSold, uint256 prizePool, uint256 startTime, uint256 endTime, uint256 minParticipants, uint256 platformFeePercent, bool isCompleted, bool isCancelled, uint256 participantCount, uint256 monthlyPoolContribution, uint256 executorFeeCollected)",
+  "function getDrawNFTDetails(uint256 drawId) view returns (address nftContract, bytes32[] tokenIds, uint8 drawType)",
   "function createLYXDraw(uint256 ticketPrice, uint256 maxTickets, uint256 duration, uint256 minParticipants, uint256 platformFeePercent, uint256 creatorContribution) payable"
 ];
 

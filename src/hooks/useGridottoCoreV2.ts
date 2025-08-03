@@ -573,16 +573,9 @@ export function useGridottoCoreV2() {
               participantCount: safeToNumber(details.participantCount),
               monthlyPoolContribution: safeToString(details.monthlyPoolContribution),
               executorFee_LYX: safeFromWei(safeToString(details.executorFeeCollected || '0')),
-              // NFT specific fields - Test with real NFT contract
-              nftContract: safeToNumber(details.drawType) === 2 ? 
-                (details.tokenAddress && details.tokenAddress !== '0x0000000000000000000000000000000000000000' ? 
-                  details.tokenAddress : 
-                  '0x7EA73c947c773ea5D6506322B9c1c81e93b0672f' // Test LSP8 contract
-                ) : undefined,
-              tokenIds: safeToNumber(details.drawType) === 2 ? [
-                '0x0000000000000000000000000000000000000000000000000000000000000001',
-                '0x0000000000000000000000000000000000000000000000000000000000000002'
-              ] : undefined, // Test token IDs
+              // NFT specific fields - Will be fetched separately for NFT draws
+              nftContract: safeToNumber(details.drawType) === 2 ? '' : undefined, // Will be updated via getDrawNFTDetails
+              tokenIds: safeToNumber(details.drawType) === 2 ? [] : undefined, // Will be updated via getDrawNFTDetails
               isPlatformDraw: false // Will be updated by ActiveDrawsSection logic
             });
           }
@@ -590,6 +583,29 @@ export function useGridottoCoreV2() {
       });
       
       console.log('[getActiveDraws] Found', draws.length, 'active draws');
+      
+      // Fetch NFT details for NFT draws
+      for (const draw of draws) {
+        if (draw.drawType === 2) { // USER_LSP8
+          try {
+            console.log(`[getActiveDraws] Fetching NFT details for draw ${draw.drawId}`);
+            const nftDetails = await contract.methods.getDrawNFTDetails(draw.drawId).call();
+            
+            // Update draw with NFT details
+            draw.nftContract = nftDetails.nftContract;
+            draw.tokenIds = Array.isArray(nftDetails.tokenIds) ? nftDetails.tokenIds : [nftDetails.tokenIds];
+            
+            console.log(`[getActiveDraws] NFT details for draw ${draw.drawId}:`, {
+              nftContract: draw.nftContract,
+              tokenIds: draw.tokenIds
+            });
+          } catch (error) {
+            console.error(`[getActiveDraws] Failed to fetch NFT details for draw ${draw.drawId}:`, error);
+            // Keep empty values if fetch fails
+          }
+        }
+      }
+      
       return draws;
     } catch (err: any) {
       console.error('Error fetching active draws:', err);
