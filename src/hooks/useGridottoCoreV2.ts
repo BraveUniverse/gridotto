@@ -473,12 +473,33 @@ export function useGridottoCoreV2() {
             // Safe BigInt to string conversion with fallbacks
             const safeToString = (value: any): string => {
               if (value === null || value === undefined) return "0";
-              return value.toString();
+              try {
+                return value.toString();
+              } catch (error) {
+                console.warn('[getActiveDraws] Error converting to string:', value, error);
+                return "0";
+              }
             };
             
             const safeToNumber = (value: any): number => {
               if (value === null || value === undefined) return 0;
-              return Number(value);
+              try {
+                return Number(value);
+              } catch (error) {
+                console.warn('[getActiveDraws] Error converting to number:', value, error);
+                return 0;
+              }
+            };
+
+            const safeFromWei = (value: any): number => {
+              try {
+                const stringValue = safeToString(value);
+                if (!web3 || stringValue === "0") return 0;
+                return parseFloat(web3.utils.fromWei(stringValue, 'ether'));
+              } catch (error) {
+                console.warn('[getActiveDraws] Error converting from Wei:', value, error);
+                return 0;
+              }
             };
 
             const getDrawTypeName = (drawType: number) => {
@@ -506,11 +527,11 @@ export function useGridottoCoreV2() {
               drawTypeName: getDrawTypeName(safeToNumber(details.drawType)),
               tokenAddress: details.tokenAddress || '',
               ticketPrice: safeToString(details.ticketPrice),
-              ticketPrice_LYX: parseFloat(web3?.utils.fromWei(safeToString(details.ticketPrice), 'ether') || '0'),
+              ticketPrice_LYX: safeFromWei(safeToString(details.ticketPrice)),
               maxTickets: safeToNumber(details.maxTickets),
               ticketsSold: safeToNumber(details.ticketsSold),
               prizePool: safeToString(details.prizePool),
-              prizePool_LYX: parseFloat(web3?.utils.fromWei(safeToString(details.prizePool), 'ether') || '0'),
+              prizePool_LYX: safeFromWei(safeToString(details.prizePool)),
               startTime: safeToNumber(details.startTime),
               endTime: safeToNumber(details.endTime),
               timeRemaining: safeToNumber(details.endTime) - Math.floor(Date.now() / 1000),
@@ -521,7 +542,7 @@ export function useGridottoCoreV2() {
               isActive: true, // Since we filter for active draws
               participantCount: safeToNumber(details.participantCount),
               monthlyPoolContribution: safeToString(details.monthlyPoolContribution),
-              executorFee_LYX: parseFloat(web3?.utils.fromWei(safeToString(details.executorFeeCollected || '0'), 'ether') || '0'),
+              executorFee_LYX: safeFromWei(safeToString(details.executorFeeCollected || '0')),
               // NFT specific fields
               nftContract: safeToNumber(details.drawType) === 2 ? details.tokenAddress : undefined,
               tokenIds: safeToNumber(details.drawType) === 2 ? ['0x0000000000000000000000000000000000000000000000000000000000000001'] : undefined, // Placeholder until we can get real token IDs
