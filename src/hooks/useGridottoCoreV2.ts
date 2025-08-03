@@ -342,12 +342,6 @@ export function useGridottoCoreV2() {
       const details = await activeContract.methods.getDrawDetails(drawId).call();
       console.log('[getDrawDetails] Raw details:', details);
       
-      // Check if draw exists
-      if (!details || details.creator === '0x0000000000000000000000000000000000000000') {
-        console.log('[getDrawDetails] Draw does not exist');
-        return null;
-      }
-      
       const result = {
         creator: details.creator,
         drawType: Number(details.drawType),
@@ -366,6 +360,17 @@ export function useGridottoCoreV2() {
         monthlyPoolContribution: details.monthlyPoolContribution,
         executorFeeCollected: details.executorFeeCollected
       };
+      
+      console.log('[getDrawDetails] Checking field values:');
+      console.log('- ticketPrice:', details.ticketPrice, 'type:', typeof details.ticketPrice);
+      console.log('- prizePool:', details.prizePool, 'type:', typeof details.prizePool);
+      console.log('- executorFeeCollected:', details.executorFeeCollected, 'type:', typeof details.executorFeeCollected);
+      
+      // Check if draw exists
+      if (!details || details.creator === '0x0000000000000000000000000000000000000000') {
+        console.log('[getDrawDetails] Draw does not exist');
+        return null;
+      }
       
       console.log('[getDrawDetails] Processed details for draw #' + drawId + ':', {
         creator: result.creator,
@@ -493,11 +498,36 @@ export function useGridottoCoreV2() {
 
             const safeFromWei = (value: any): number => {
               try {
+                console.log('[safeFromWei] Input value:', value, 'type:', typeof value);
+                
+                // Extra safety checks
+                if (value === null || value === undefined || value === '') {
+                  console.log('[safeFromWei] Null/undefined/empty value, returning 0');
+                  return 0;
+                }
+                
                 const stringValue = safeToString(value);
-                if (!web3 || stringValue === "0") return 0;
-                return parseFloat(web3.utils.fromWei(stringValue, 'ether'));
+                console.log('[safeFromWei] After safeToString:', stringValue);
+                
+                if (!web3) {
+                  console.log('[safeFromWei] No web3 instance, returning 0');
+                  return 0;
+                }
+                
+                if (stringValue === "0" || stringValue === "" || stringValue === "null" || stringValue === "undefined") {
+                  console.log('[safeFromWei] Zero or invalid string value, returning 0');
+                  return 0;
+                }
+                
+                const weiResult = web3.utils.fromWei(stringValue, 'ether');
+                console.log('[safeFromWei] FromWei result:', weiResult);
+                
+                const finalResult = parseFloat(weiResult);
+                console.log('[safeFromWei] Final result:', finalResult);
+                
+                return finalResult;
               } catch (error) {
-                console.warn('[getActiveDraws] Error converting from Wei:', value, error);
+                console.error('[safeFromWei] Error converting from Wei:', value, error);
                 return 0;
               }
             };
