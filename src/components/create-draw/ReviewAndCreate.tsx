@@ -10,18 +10,21 @@ import {
   ExclamationCircleIcon 
 } from '@heroicons/react/24/outline';
 import Web3 from 'web3';
+import { CONTRACTS } from '@/config/contracts';
+
+const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
 interface ReviewAndCreateProps {
   drawData: DrawData;
   onCreate: () => void;
 }
 
-export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) => {
-  const { account } = useUPProvider();
-  const { createLYXDraw, createLSP7Draw, createLSP8Draw } = useGridottoContract();
+export function ReviewAndCreate({ drawData, onCreate }: ReviewAndCreateProps) {
+  const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const { createLYXDraw, createLSP7Draw, createLSP8Draw } = useGridottoContract();
+  const { account, web3 } = useUPProvider();
 
   const handleCreate = async () => {
     if (!account) {
@@ -100,6 +103,46 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
         // NFT Draw
         if (!drawData.prizeAsset || !drawData.tokenIds || drawData.tokenIds.length === 0) {
           throw new Error('NFT contract and token IDs are required');
+        }
+
+        // First, approve NFTs to the diamond contract
+        console.log('Checking NFT approvals...');
+        
+        if (account && web3) { // Ensure account and web3 are available
+          const nftContract = new web3.eth.Contract([
+            {
+              "inputs": [{"internalType": "address", "name": "to", "type": "address"}, {"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
+              "name": "approve",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [{"internalType": "address", "name": "operator", "type": "address"}, {"internalType": "bool", "name": "approved", "type": "bool"}],
+              "name": "setApprovalForAll", 
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [{"internalType": "address", "name": "owner", "type": "address"}, {"internalType": "address", "name": "operator", "type": "address"}],
+              "name": "isApprovedForAll",
+              "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+              "stateMutability": "view",
+              "type": "function"
+            }
+          ], drawData.prizeAsset);
+
+          // Check if already approved for all
+          const isApprovedForAll = await nftContract.methods.isApprovedForAll(account, DIAMOND_ADDRESS).call();
+          
+          if (!isApprovedForAll) {
+            console.log('Setting approval for all NFTs...');
+            await nftContract.methods.setApprovalForAll(DIAMOND_ADDRESS, true).send({ from: account });
+            console.log('NFT approval successful');
+          } else {
+            console.log('NFTs already approved');
+          }
         }
 
         console.log('Creating NFT draw with params:', {
