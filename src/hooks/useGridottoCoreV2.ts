@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useUPProvider } from './useUPProvider';
-import { diamondAbi } from '@/abi';
+import { NEW_DIAMOND_ABI } from '@/abi/newDiamondAbi';
 import Web3 from 'web3';
 import { CONTRACTS } from '@/config/contracts';
 import { sendTransaction } from '@/utils/luksoTransactionHelper';
@@ -51,9 +51,9 @@ export function useGridottoCoreV2() {
     
     if (web3) {
       console.log('[useGridottoCoreV2] Creating contract instance...');
-      const coreContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+      const coreContract = new web3.eth.Contract(NEW_DIAMOND_ABI as any, DIAMOND_ADDRESS);
       setContract(coreContract);
-      console.log('[useGridottoCoreV2] Contract instance created with diamondAbi');
+      console.log('[useGridottoCoreV2] Contract instance created with NEW_DIAMOND_ABI (includes getDrawNFTDetails)');
     } else {
       console.log('[useGridottoCoreV2] No web3 instance available');
       setContract(null);
@@ -323,7 +323,7 @@ export function useGridottoCoreV2() {
     let activeContract = contract;
     if (!activeContract) {
       console.log('[getDrawDetails] Contract not ready, creating new instance...');
-      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+      activeContract = new web3.eth.Contract(NEW_DIAMOND_ABI as any, DIAMOND_ADDRESS);
     }
     
     if (!activeContract) {
@@ -645,7 +645,7 @@ export function useGridottoCoreV2() {
     let activeContract = contract;
     if (!activeContract) {
       console.log('[getDrawParticipants] Contract not ready, creating new instance...');
-      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+      activeContract = new web3.eth.Contract(NEW_DIAMOND_ABI as any, DIAMOND_ADDRESS);
     }
     
     if (!activeContract) {
@@ -747,7 +747,7 @@ export function useGridottoCoreV2() {
     let activeContract = contract;
     if (!activeContract) {
       console.log('[getUnclaimedPrizes] Contract not ready, creating new instance...');
-      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+      activeContract = new web3.eth.Contract(NEW_DIAMOND_ABI as any, DIAMOND_ADDRESS);
     }
     
     if (!activeContract) {
@@ -789,7 +789,7 @@ export function useGridottoCoreV2() {
     let activeContract = contract;
     if (!activeContract) {
       console.log('[getClaimableExecutorFees] Contract not ready, creating new instance...');
-      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
+      activeContract = new web3.eth.Contract(NEW_DIAMOND_ABI as any, DIAMOND_ADDRESS);
     }
     
     if (!activeContract) {
