@@ -573,9 +573,16 @@ export function useGridottoCoreV2() {
               participantCount: safeToNumber(details.participantCount),
               monthlyPoolContribution: safeToString(details.monthlyPoolContribution),
               executorFee_LYX: safeFromWei(safeToString(details.executorFeeCollected || '0')),
-              // NFT specific fields
-              nftContract: safeToNumber(details.drawType) === 2 ? details.tokenAddress : undefined,
-              tokenIds: safeToNumber(details.drawType) === 2 ? ['0x0000000000000000000000000000000000000000000000000000000000000001'] : undefined, // Placeholder until we can get real token IDs
+              // NFT specific fields - Test with real NFT contract
+              nftContract: safeToNumber(details.drawType) === 2 ? 
+                (details.tokenAddress && details.tokenAddress !== '0x0000000000000000000000000000000000000000' ? 
+                  details.tokenAddress : 
+                  '0x7EA73c947c773ea5D6506322B9c1c81e93b0672f' // Test LSP8 contract
+                ) : undefined,
+              tokenIds: safeToNumber(details.drawType) === 2 ? [
+                '0x0000000000000000000000000000000000000000000000000000000000000001',
+                '0x0000000000000000000000000000000000000000000000000000000000000002'
+              ] : undefined, // Test token IDs
               isPlatformDraw: false // Will be updated by ActiveDrawsSection logic
             });
           }
