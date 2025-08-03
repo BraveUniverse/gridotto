@@ -459,11 +459,13 @@ export function useGridottoCoreV2() {
       
       console.log('[getActiveDraws] Fetching ALL draws from', startId, 'to', nextDrawIdNum - 1);
       
-      // Batch fetch draw details
+      // Batch fetch draw details  
       const promises = [];
       for (let i = startId; i < nextDrawIdNum; i++) {
         promises.push(getDrawDetails(i));
       }
+      
+      console.log('[getActiveDraws] Created', promises.length, 'promises for draws', startId, 'to', nextDrawIdNum - 1);
       
       const results = await Promise.all(promises);
       
@@ -483,6 +485,8 @@ export function useGridottoCoreV2() {
           // Check if draw is still active (not expired)
           const currentTime = Math.floor(Date.now() / 1000);
           const endTime = Number(details.endTime);
+          
+          console.log(`[getActiveDraws] Time check for draw ${drawId}: currentTime=${currentTime}, endTime=${endTime}, active=${endTime > currentTime}`);
           
           if (endTime > currentTime) {
             // Safe BigInt to string conversion with fallbacks
