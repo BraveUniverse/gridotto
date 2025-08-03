@@ -23,15 +23,32 @@ export function DrawSettings({ drawData, updateDrawData }: DrawSettingsProps) {
           </label>
           <input
             type="number"
-            step="0.01"
-            min="0.01"
-            value={drawData.ticketPrice || ''}
-            onChange={(e) => updateDrawData({ ticketPrice: parseFloat(e.target.value) || 0.01 })}
+            step="0.001"
+            min="0"
+            value={drawData.ticketPrice === 0 ? '' : drawData.ticketPrice || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '') {
+                updateDrawData({ ticketPrice: 0 });
+              } else {
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue) && numValue >= 0) {
+                  updateDrawData({ ticketPrice: numValue });
+                }
+              }
+            }}
+            onBlur={(e) => {
+              // On blur, if value is empty or 0, keep it as 0
+              const value = e.target.value;
+              if (value === '' || parseFloat(value) === 0) {
+                updateDrawData({ ticketPrice: 0 });
+              }
+            }}
             className="input-glass w-full"
-            placeholder="0.01"
+            placeholder="0"
           />
           <p className="text-xs text-gray-400 mt-1">
-            Minimum 0.01 LYX per ticket
+            Enter 0 for free tickets, or any amount in LYX
           </p>
         </div>
 
@@ -73,49 +90,6 @@ export function DrawSettings({ drawData, updateDrawData }: DrawSettingsProps) {
             Leave as 0 for unlimited tickets
           </p>
         </div>
-
-        {/* Winner Count - Only for NFT draws with multiple tokens */}
-        {drawData.drawType === 'NFT' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Number of Winners
-            </label>
-            <input
-              type="number"
-              min="1"
-              max={drawData.tokenIds?.length || 1}
-              value={drawData.winnerCount || 1}
-              onChange={(e) => updateDrawData({ winnerCount: parseInt(e.target.value) || 1 })}
-              className="input-glass w-full"
-              disabled={!drawData.tokenIds || drawData.tokenIds.length <= 1}
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              {drawData.tokenIds && drawData.tokenIds.length > 1 
-                ? `You have ${drawData.tokenIds.length} NFTs. Each winner gets one NFT.`
-                : 'Add multiple NFTs to have multiple winners'}
-            </p>
-          </div>
-        )}
-
-        {/* Winner Count - For other draw types */}
-        {drawData.drawType !== 'NFT' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Number of Winners
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              value={drawData.winnerCount || 1}
-              onChange={(e) => updateDrawData({ winnerCount: parseInt(e.target.value) || 1 })}
-              className="input-glass w-full"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Prize will be split equally among winners
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Advanced Settings */}

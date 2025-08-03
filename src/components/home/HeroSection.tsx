@@ -68,12 +68,32 @@ export const HeroSection = () => {
               const currentTime = Math.floor(Date.now() / 1000);
               const timeRemaining = Math.max(0, Number((monthlyDetails as any).endTime) - currentTime);
               
+              // Try to get total participants from monthly draw stats
+              let totalParticipants = Number((monthlyDetails as any).participantCount);
+              
+              // If participantCount is 0, try to get it from getUserMonthlyTickets if user is connected
+              if (totalParticipants === 0 && account) {
+                try {
+                  const monthlyTickets = await contract.methods.getUserMonthlyTickets(account).call();
+                  if (monthlyTickets && typeof monthlyTickets === 'object') {
+                    // Use total tickets as an approximation for participants
+                    const totalTickets = Number((monthlyTickets as any).total || 0) +
+                                       Number((monthlyTickets as any).fromWeekly || 0) +
+                                       Number((monthlyTickets as any).fromCreating || 0) +
+                                       Number((monthlyTickets as any).fromParticipating || 0);
+                    totalParticipants = Math.max(totalParticipants, totalTickets > 0 ? 1 : 0);
+                  }
+                } catch (error) {
+                  console.log('[HeroSection] Could not get monthly participants from user tickets:', error);
+                }
+              }
+              
               setMonthlyDraw({
                 drawId: Number((platformInfo as any).monthlyDrawId),
                 prizePool_LYX: Number(Web3.utils.fromWei((monthlyDetails as any).prizePool.toString(), 'ether')),
                 ticketPrice_LYX: 0, // Monthly draws don't have direct ticket purchase
                 ticketsSold: Number((monthlyDetails as any).ticketsSold),
-                participantCount: Number((monthlyDetails as any).participantCount),
+                participantCount: totalParticipants,
                 timeRemaining: timeRemaining,
                 endTime: Number((monthlyDetails as any).endTime),
                 executorFee_LYX: Number(Web3.utils.fromWei(((monthlyDetails as any).executorFeeCollected || 0).toString(), 'ether'))
@@ -81,12 +101,29 @@ export const HeroSection = () => {
             }
           } else {
             // Monthly draw info from platform info
+            // Try to estimate participants from platform stats
+            let estimatedParticipants = 0;
+            if (account) {
+              try {
+                const monthlyTickets = await contract.methods.getUserMonthlyTickets(account).call();
+                if (monthlyTickets && typeof monthlyTickets === 'object') {
+                  const totalTickets = Number((monthlyTickets as any).total || 0) +
+                                     Number((monthlyTickets as any).fromWeekly || 0) +
+                                     Number((monthlyTickets as any).fromCreating || 0) +
+                                     Number((monthlyTickets as any).fromParticipating || 0);
+                  estimatedParticipants = totalTickets > 0 ? 1 : 0; // At least 1 if user has tickets
+                }
+              } catch (error) {
+                console.log('[HeroSection] Could not estimate monthly participants:', error);
+              }
+            }
+            
             setMonthlyDraw({
               drawId: 0,
               prizePool_LYX: Number(Web3.utils.fromWei(((platformInfo as any).monthlyPoolBalance || 0).toString(), 'ether')),
               ticketPrice_LYX: 0,
               ticketsSold: 0,
-              participantCount: 0,
+              participantCount: estimatedParticipants,
               timeRemaining: 0,
               endTime: 0,
               isUpcoming: true // Next monthly draw

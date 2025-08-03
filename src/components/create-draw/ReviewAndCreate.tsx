@@ -170,7 +170,9 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
           
           <div>
             <p className="text-sm text-gray-400">Ticket Price</p>
-            <p className="text-white font-medium">{drawData.ticketPrice} LYX</p>
+            <p className="text-white font-medium">
+              {drawData.ticketPrice === 0 ? 'Free' : `${drawData.ticketPrice} LYX`}
+            </p>
           </div>
           
           <div>

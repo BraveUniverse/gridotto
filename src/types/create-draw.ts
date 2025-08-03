@@ -15,12 +15,4 @@ export interface DrawData {
   // NFT specific
   nftContract?: string;
   tokenIds: string[];
-  
-  // Multi-winner
-  isMultiWinner?: boolean;
-  winnerCount?: number;
-  tiers?: Array<{
-    position: number;
-    percentage: number;
-  }>;
 }

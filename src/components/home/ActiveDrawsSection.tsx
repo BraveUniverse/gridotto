@@ -25,6 +25,7 @@ interface ActiveDraw {
   isActive: boolean;
   maxTickets: number;
   executorFee_LYX?: number;
+  isPlatformDraw?: boolean;
 }
 
 export function ActiveDrawsSection() {
@@ -38,7 +39,7 @@ export function ActiveDrawsSection() {
 
     try {
       setLoading(true);
-      console.log('[ActiveDrawsSection] Loading real draws...');
+      console.log('[ActiveDrawsSection] Loading all active draws...');
       
       const contract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
       
@@ -49,8 +50,8 @@ export function ActiveDrawsSection() {
       const draws: ActiveDraw[] = [];
       const currentTime = Math.floor(Date.now() / 1000);
       
-      // Check draws 1 to nextDrawId-1
-      for (let i = 1; i < Number(nextDrawId) && i <= 10; i++) {
+      // Check ALL draws from 1 to nextDrawId-1 (removed limit of 10)
+      for (let i = 1; i < Number(nextDrawId); i++) {
         try {
           const drawDetails = await contract.methods.getDrawDetails(i).call();
           
@@ -71,6 +72,7 @@ export function ActiveDrawsSection() {
           
           if (isActive && creator) {
             const drawTypeNames = ["LYX", "LSP7", "LSP8", "WEEKLY", "MONTHLY"];
+            const drawType = Number((drawDetails as any).drawType);
             const timeRemaining = Math.max(0, endTime - currentTime);
             
             // Safely convert BigInt values
@@ -83,8 +85,8 @@ export function ActiveDrawsSection() {
             const draw: ActiveDraw = {
               drawId: i,
               creator: creator.toString(),
-              drawType: Number((drawDetails as any).drawType),
-              drawTypeName: drawTypeNames[Number((drawDetails as any).drawType)] || 'UNKNOWN',
+              drawType: drawType,
+              drawTypeName: drawTypeNames[drawType] || 'UNKNOWN',
               ticketPrice: ticketPriceStr,
               ticketPrice_LYX: Number(Web3.utils.fromWei(ticketPriceStr, 'ether')),
               prizePool: prizePoolStr,
@@ -96,7 +98,8 @@ export function ActiveDrawsSection() {
               isActive: true,
               maxTickets: Number((drawDetails as any).maxTickets),
               executorFee_LYX: (drawDetails as any).executorFeeCollected ? 
-                Number(Web3.utils.fromWei((drawDetails as any).executorFeeCollected.toString(), 'ether')) : 0
+                Number(Web3.utils.fromWei((drawDetails as any).executorFeeCollected.toString(), 'ether')) : 0,
+              isPlatformDraw: drawType === 3 || drawType === 4 // WEEKLY or MONTHLY
             };
             
             draws.push(draw);
@@ -106,6 +109,13 @@ export function ActiveDrawsSection() {
           console.error(`[ActiveDrawsSection] Error fetching draw #${i}:`, error);
         }
       }
+      
+      // Sort draws: Platform draws first, then by ending time
+      draws.sort((a, b) => {
+        if (a.isPlatformDraw && !b.isPlatformDraw) return -1;
+        if (!a.isPlatformDraw && b.isPlatformDraw) return 1;
+        return a.timeRemaining - b.timeRemaining; // Ending soonest first
+      });
       
       setActiveDraws(draws);
       setLastUpdate(new Date().toLocaleTimeString());
@@ -148,7 +158,7 @@ export function ActiveDrawsSection() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-pink-400 mb-4">
-            Active Community Draws
+            Active Draws
           </h2>
           <div className="flex items-center justify-center gap-4">
             <p className="text-sm text-gray-400">
@@ -191,8 +201,20 @@ export function ActiveDrawsSection() {
               {activeDraws.map((draw) => (
                 <div
                   key={draw.drawId}
-                  className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 hover:border-pink-500/50 transition-all"
+                  className={`bg-white/5 backdrop-blur-lg rounded-xl p-6 border transition-all ${
+                    draw.isPlatformDraw 
+                      ? 'border-yellow-500/50 hover:border-yellow-500/70 ring-2 ring-yellow-500/20' 
+                      : 'border-white/10 hover:border-pink-500/50'
+                  }`}
                 >
+                  {draw.isPlatformDraw && (
+                    <div className="mb-4 text-center">
+                      <span className="inline-block px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-medium rounded-full border border-yellow-500/30">
+                        🏆 PLATFORM DRAW
+                      </span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-white">

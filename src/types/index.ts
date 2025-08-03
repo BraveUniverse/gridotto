@@ -20,7 +20,6 @@ export interface DrawData {
   minFollowers?: number;
   
   // Advanced settings (all optional)
-  winnerCount?: number;
   platformFeePercent?: number; // Platform fee is 5% by default
   minParticipants?: number;
   maxParticipants?: number;

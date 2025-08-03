@@ -32,7 +32,6 @@ export default function CreateDrawPage() {
     maxTickets: 100,
     requirementType: 0,
     tokenIds: [],
-    winnerCount: 1,
     prizeAsset: '', // For token/NFT draws
     selectedAsset: null // Store selected asset metadata
   });
