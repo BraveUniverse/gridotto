@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { useUPProvider } from './useUPProvider';
-import { COMPLETE_DIAMOND_ABI } from '@/abi/completeDiamondAbi';
+import { diamondAbi } from '@/abi';
 import { CONTRACTS } from '@/config/contracts';
 import { sendTransaction } from '@/utils/luksoTransactionHelper';
 
@@ -23,7 +23,7 @@ export function useGridottoRefund() {
   useEffect(() => {
     if (web3) {
       const refundContract = new web3.eth.Contract(
-        COMPLETE_DIAMOND_ABI as any,
+        diamondAbi as any,
         DIAMOND_ADDRESS
       );
       setContract(refundContract);

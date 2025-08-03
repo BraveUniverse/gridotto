@@ -1,7 +1,7 @@
 // Complete Diamond ABI - Unified version
 // This includes all functions from GridottoDiamond.json plus documented functions
 
-export const COMPLETE_DIAMOND_ABI = [
+export const diamondAbi = [
   // === CORE FUNCTIONS ===
   "function buyTickets(uint256 drawId, uint256 amount) payable",
   "function getDrawDetails(uint256 drawId) view returns (address creator, uint8 drawType, address tokenAddress, uint256 ticketPrice, uint256 maxTickets, uint256 ticketsSold, uint256 prizePool, uint256 startTime, uint256 endTime, uint256 minParticipants, uint256 platformFeePercent, bool isCompleted, bool isCancelled, uint256 participantCount, uint256 monthlyPoolContribution, uint256 executorFeeCollected)",
@@ -75,10 +75,10 @@ export const COMPLETE_DIAMOND_ABI = [
 ];
 
 // Legacy exports for backward compatibility
-export const NEW_DIAMOND_ABI = COMPLETE_DIAMOND_ABI;
-export const CORE_ABI = COMPLETE_DIAMOND_ABI;
-export const PLATFORM_ABI = COMPLETE_DIAMOND_ABI;
-export const EXECUTION_ABI = COMPLETE_DIAMOND_ABI;
+export const NEW_DIAMOND_ABI = diamondAbi;
+export const CORE_ABI = diamondAbi;
+export const PLATFORM_ABI = diamondAbi;
+export const EXECUTION_ABI = diamondAbi;
 
 // Default export
-export default COMPLETE_DIAMOND_ABI;
+export default diamondAbi;

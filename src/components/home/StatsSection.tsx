@@ -8,7 +8,7 @@ import {
   UsersIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-import { COMPLETE_DIAMOND_ABI } from '@/abi/completeDiamondAbi';
+import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 import { CONTRACTS } from '@/config/contracts';
 
@@ -33,7 +33,7 @@ export const StatsSection = () => {
       setLoading(true);
       console.log('[StatsSection] Loading real contract data...');
       
-      const contract = new web3.eth.Contract(COMPLETE_DIAMOND_ABI as any, DIAMOND_ADDRESS);
+      const contract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
       
       // Get next draw ID to know how many draws exist
       const nextDrawId = await contract.methods.getNextDrawId().call();

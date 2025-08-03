@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUPProvider } from './useUPProvider';
-import { COMPLETE_DIAMOND_ABI } from '@/abi/completeDiamondAbi';
+import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 import { CONTRACTS } from '@/config/contracts';
 
@@ -23,7 +23,7 @@ export function useGridottoAdmin() {
 
   useEffect(() => {
     if (web3) {
-      const adminContract = new web3.eth.Contract(COMPLETE_DIAMOND_ABI as any, DIAMOND_ADDRESS);
+      const adminContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
       setContract(adminContract);
     }
   }, [web3]);

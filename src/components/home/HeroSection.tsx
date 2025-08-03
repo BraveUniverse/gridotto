@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { SparklesIcon, TicketIcon, TrophyIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
-import { COMPLETE_DIAMOND_ABI } from '@/abi/completeDiamondAbi';
+import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 import { CONTRACTS } from '@/config/contracts';
 
@@ -32,7 +32,7 @@ export const HeroSection = () => {
       setLoading(true);
       console.log('[HeroSection] Loading platform data...');
       
-      const contract = new web3.eth.Contract(COMPLETE_DIAMOND_ABI as any, DIAMOND_ADDRESS);
+      const contract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
       
       // Get platform draws info
       try {
