@@ -467,8 +467,18 @@ export function useGridottoCoreV2() {
       
       const results = await Promise.all(promises);
       
+      console.log('[getActiveDraws] Promise results:', results.map((r, i) => `Draw ${i+1}: ${r ? 'OK' : 'NULL'}`));
+      
       // Filter active draws
       results.forEach((details, index) => {
+        const drawId = startId + index;
+        console.log(`[getActiveDraws] Processing draw ${drawId}:`, {
+          exists: !!details,
+          isCompleted: details?.isCompleted,
+          isCancelled: details?.isCancelled,
+          endTime: details?.endTime
+        });
+        
         if (details && !details.isCompleted && !details.isCancelled) {
           // Check if draw is still active (not expired)
           const currentTime = Math.floor(Date.now() / 1000);
