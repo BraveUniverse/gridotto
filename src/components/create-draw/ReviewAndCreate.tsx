@@ -121,7 +121,7 @@ export function ReviewAndCreate({ drawData, onCreate }: ReviewAndCreateProps) {
               "inputs": [
                 {"internalType": "address", "name": "operator", "type": "address"},
                 {"internalType": "bytes32", "name": "tokenId", "type": "bytes32"},
-                {"internalType": "bool", "name": "operatorNotificationData", "type": "bool"}
+                {"internalType": "bytes", "name": "operatorNotificationData", "type": "bytes"}
               ],
               "name": "authorizeOperator",
               "outputs": [],
@@ -151,7 +151,7 @@ export function ReviewAndCreate({ drawData, onCreate }: ReviewAndCreateProps) {
               
               if (!isOperator) {
                 console.log(`Authorizing operator for token ${tokenId}...`);
-                await nftContract.methods.authorizeOperator(DIAMOND_ADDRESS, tokenId, true).send({ from: account });
+                await nftContract.methods.authorizeOperator(DIAMOND_ADDRESS, tokenId, '0x').send({ from: account });
                 console.log(`✅ Token ${tokenId} operator authorized`);
               } else {
                 console.log(`✅ Token ${tokenId} already authorized`);
