@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useUPProvider } from './useUPProvider';
-import { CORE_ABI, PLATFORM_ABI } from '@/abi/newDiamondAbi';
+import { diamondAbi } from '@/abi';
 import Web3 from 'web3';
 import { CONTRACTS } from '@/config/contracts';
 import { sendTransaction } from '@/utils/luksoTransactionHelper';
@@ -51,11 +51,9 @@ export function useGridottoCoreV2() {
     
     if (web3) {
       console.log('[useGridottoCoreV2] Creating contract instance...');
-      // Combine CORE_ABI and PLATFORM_ABI
-      const combinedAbi = [...CORE_ABI, ...PLATFORM_ABI];
-      const coreContract = new web3.eth.Contract(combinedAbi as any, DIAMOND_ADDRESS);
+      const coreContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
       setContract(coreContract);
-      console.log('[useGridottoCoreV2] Contract instance created with newDiamondAbi');
+      console.log('[useGridottoCoreV2] Contract instance created with diamondAbi');
     } else {
       console.log('[useGridottoCoreV2] No web3 instance available');
       setContract(null);
@@ -325,8 +323,7 @@ export function useGridottoCoreV2() {
     let activeContract = contract;
     if (!activeContract) {
       console.log('[getDrawDetails] Contract not ready, creating new instance...');
-      const combinedAbi = [...CORE_ABI, ...PLATFORM_ABI];
-      activeContract = new web3.eth.Contract(combinedAbi as any, DIAMOND_ADDRESS);
+      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
     }
     
     if (!activeContract) {
@@ -425,39 +422,18 @@ export function useGridottoCoreV2() {
     }
   };
 
-  // Get next draw ID by finding highest existing draw
+  // Get next draw ID
   const getNextDrawId = useCallback(async (): Promise<number> => {
     if (!contract) return 0;
     
     try {
-      console.log('[getNextDrawId] Manual detection - finding highest draw ID...');
-      
-      // Binary search to find highest existing draw ID
-      let low = 1;
-      let high = 100; // reasonable upper bound
-      let maxFoundId = 0;
-      
-      // First, find a reasonable upper bound
-      for (let testId = 1; testId <= 20; testId++) {
-        try {
-          const details = await contract.methods.getDrawDetails(testId).call();
-          if (details && details.creator && details.creator !== '0x0000000000000000000000000000000000000000') {
-            maxFoundId = testId;
-            console.log(`[getNextDrawId] Found draw #${testId}`);
-          } else {
-            break; // No more draws
-          }
-        } catch (err) {
-          break; // No more draws
-        }
-      }
-      
-      console.log(`[getNextDrawId] Highest draw ID found: ${maxFoundId}, next should be: ${maxFoundId + 1}`);
-      return maxFoundId + 1;
-      
+      console.log('[getNextDrawId] Calling contract.methods.getNextDrawId()...');
+      const nextId = await contract.methods.getNextDrawId().call();
+      console.log('[getNextDrawId] Contract returned:', nextId, 'type:', typeof nextId);
+      return Number(nextId);
     } catch (err: any) {
-      console.error('[getNextDrawId] Error in manual detection:', err);
-      return 7; // Fallback based on your analysis
+      console.error('[getNextDrawId] Error fetching next draw ID:', err);
+      return 0;
     }
   }, [contract]);
 
@@ -667,8 +643,7 @@ export function useGridottoCoreV2() {
     let activeContract = contract;
     if (!activeContract) {
       console.log('[getDrawParticipants] Contract not ready, creating new instance...');
-      const combinedAbi = [...CORE_ABI, ...PLATFORM_ABI];
-      activeContract = new web3.eth.Contract(combinedAbi as any, DIAMOND_ADDRESS);
+      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
     }
     
     if (!activeContract) {
@@ -770,8 +745,7 @@ export function useGridottoCoreV2() {
     let activeContract = contract;
     if (!activeContract) {
       console.log('[getUnclaimedPrizes] Contract not ready, creating new instance...');
-      const combinedAbi = [...CORE_ABI, ...PLATFORM_ABI];
-      activeContract = new web3.eth.Contract(combinedAbi as any, DIAMOND_ADDRESS);
+      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
     }
     
     if (!activeContract) {
@@ -813,8 +787,7 @@ export function useGridottoCoreV2() {
     let activeContract = contract;
     if (!activeContract) {
       console.log('[getClaimableExecutorFees] Contract not ready, creating new instance...');
-      const combinedAbi = [...CORE_ABI, ...PLATFORM_ABI];
-      activeContract = new web3.eth.Contract(combinedAbi as any, DIAMOND_ADDRESS);
+      activeContract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
     }
     
     if (!activeContract) {
