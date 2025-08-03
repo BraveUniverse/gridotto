@@ -105,11 +105,11 @@ export function ReviewAndCreate({ drawData, onCreate }: ReviewAndCreateProps) {
           throw new Error('NFT contract and token IDs are required');
         }
 
-        // First, approve NFTs to the diamond contract
-        console.log('Approving NFTs to diamond contract...');
+        // Approve NFTs to diamond contract using LSP8 interface
+        console.log('Authorizing diamond contract as operator for LSP8 NFTs...');
         
         if (account && web3) {
-          console.log('Setting NFT approvals for:', {
+          console.log('Setting LSP8 operator authorization for:', {
             nftContract: drawData.prizeAsset,
             tokenIds: drawData.tokenIds,
             account,
@@ -118,15 +118,22 @@ export function ReviewAndCreate({ drawData, onCreate }: ReviewAndCreateProps) {
 
           const nftContract = new web3.eth.Contract([
             {
-              "inputs": [{"internalType": "address", "name": "operator", "type": "address"}, {"internalType": "bool", "name": "approved", "type": "bool"}],
-              "name": "setApprovalForAll", 
+              "inputs": [
+                {"internalType": "address", "name": "operator", "type": "address"},
+                {"internalType": "bytes32", "name": "tokenId", "type": "bytes32"},
+                {"internalType": "bool", "name": "operatorNotificationData", "type": "bool"}
+              ],
+              "name": "authorizeOperator",
               "outputs": [],
               "stateMutability": "nonpayable",
               "type": "function"
             },
             {
-              "inputs": [{"internalType": "address", "name": "owner", "type": "address"}, {"internalType": "address", "name": "operator", "type": "address"}],
-              "name": "isApprovedForAll",
+              "inputs": [
+                {"internalType": "address", "name": "operator", "type": "address"},
+                {"internalType": "bytes32", "name": "tokenId", "type": "bytes32"}
+              ],
+              "name": "isOperatorFor",
               "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
               "stateMutability": "view",
               "type": "function"
@@ -134,20 +141,27 @@ export function ReviewAndCreate({ drawData, onCreate }: ReviewAndCreateProps) {
           ], drawData.prizeAsset);
 
           try {
-            // Check if already approved for all
-            console.log('Checking current approval status...');
-            const isApprovedForAll = await nftContract.methods.isApprovedForAll(account, DIAMOND_ADDRESS).call();
+            // Authorize operator for each token ID
+            console.log('Checking and setting operator authorization for each token...');
             
-            if (!isApprovedForAll) {
-              console.log('Setting approval for all NFTs...');
-              await nftContract.methods.setApprovalForAll(DIAMOND_ADDRESS, true).send({ from: account });
-              console.log('✅ NFT approval successful');
-            } else {
-              console.log('✅ NFTs already approved');
+            for (const tokenId of drawData.tokenIds) {
+              console.log(`Processing authorization for token ${tokenId}...`);
+              
+              const isOperator = await nftContract.methods.isOperatorFor(DIAMOND_ADDRESS, tokenId).call();
+              
+              if (!isOperator) {
+                console.log(`Authorizing operator for token ${tokenId}...`);
+                await nftContract.methods.authorizeOperator(DIAMOND_ADDRESS, tokenId, true).send({ from: account });
+                console.log(`✅ Token ${tokenId} operator authorized`);
+              } else {
+                console.log(`✅ Token ${tokenId} already authorized`);
+              }
             }
+            
+            console.log('✅ All NFT tokens authorized successfully');
           } catch (error: any) {
-            console.error('NFT approval failed:', error);
-            throw new Error(`Failed to approve NFTs to diamond contract: ${error.message}`);
+            console.error('LSP8 operator authorization failed:', error);
+            throw new Error(`Failed to authorize diamond contract as operator: ${error.message}`);
           }
         }
 
