@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Web3 from 'web3';
 import { useUPProvider } from './useUPProvider';
-import { diamondAbi } from '@/abi';
+import { COMPLETE_DIAMOND_ABI } from '@/abi/completeDiamondAbi';
 import { sendTransaction } from '@/utils/luksoTransactionHelper';
 import { CONTRACTS } from '@/config/contracts';
 
@@ -34,7 +34,7 @@ export function useGridottoPlatformDraws() {
   useEffect(() => {
     if (web3) {
       const platformContract = new web3.eth.Contract(
-        diamondAbi as any,
+        COMPLETE_DIAMOND_ABI as any,
         DIAMOND_ADDRESS
       );
       setContract(platformContract);
