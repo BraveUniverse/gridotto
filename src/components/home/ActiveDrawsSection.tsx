@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
+import { useNFTMetadata } from '@/hooks/useNFTMetadata';
 import { CONTRACTS } from '@/config/contracts';
 import Web3 from 'web3';
 
@@ -31,6 +33,8 @@ interface ActiveDraw {
   maxTickets: number;
   executorFee_LYX?: number;
   isPlatformDraw?: boolean;
+  nftContract?: string;
+  tokenIds?: string[];
 }
 
 export function ActiveDrawsSection() {
@@ -133,6 +137,122 @@ export function ActiveDrawsSection() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  // NFTDrawCard component for NFT draws
+  const NFTDrawCard = ({ draw }: { draw: ActiveDraw }) => {
+    const nftMetadata = useNFTMetadata(
+      draw.nftContract || '', 
+      draw.tokenIds || []
+    );
+
+    return (
+      <div
+        className={`bg-white/5 backdrop-blur-lg rounded-xl p-6 border transition-all ${
+          draw.isPlatformDraw 
+            ? 'border-yellow-500/50 hover:border-yellow-500/70 ring-2 ring-yellow-500/20' 
+            : 'border-white/10 hover:border-pink-500/50'
+        }`}
+      >
+        {draw.isPlatformDraw && (
+          <div className="mb-4 text-center">
+            <span className="inline-block px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-medium rounded-full border border-yellow-500/30">
+              🏆 PLATFORM DRAW
+            </span>
+          </div>
+        )}
+        
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-white">
+              {draw.drawTypeName} Draw #{draw.drawId}
+            </h3>
+            <p className="text-sm text-gray-400">
+              {formatTimeRemaining(draw.timeRemaining)}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-pink-400">
+              {parseFloat(draw.prizePool_LYX.toFixed(4))} LYX
+            </p>
+            <p className="text-xs text-gray-400">Prize Pool</p>
+          </div>
+        </div>
+
+        {/* NFT Image */}
+        {nftMetadata.image && !nftMetadata.loading && (
+          <div className="mb-4">
+            <div className="relative w-full h-32 rounded-lg overflow-hidden bg-gray-800">
+              <Image
+                src={nftMetadata.image}
+                alt={nftMetadata.name || 'NFT Prize'}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+              <div className="absolute bottom-2 left-2">
+                <p className="text-white text-sm font-medium truncate max-w-[180px]">
+                  {nftMetadata.name || 'NFT Prize'}
+                </p>
+                {draw.tokenIds && draw.tokenIds.length > 1 && (
+                  <p className="text-gray-300 text-xs">
+                    +{draw.tokenIds.length - 1} more
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* NFT Loading State */}
+        {nftMetadata.loading && (
+          <div className="mb-4">
+            <div className="w-full h-32 rounded-lg bg-gray-800 animate-pulse flex items-center justify-center">
+              <div className="w-8 h-8 rounded bg-gray-700"></div>
+            </div>
+          </div>
+        )}
+
+        <div className="mb-4">
+          <p className="text-sm text-gray-400 mb-1">Created by</p>
+          {draw.isPlatformDraw || PLATFORM_ADDRESSES.includes(draw.creator.toLowerCase()) ? (
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xs">G</span>
+              </div>
+              <span className="text-white font-medium">Gridotto</span>
+            </div>
+          ) : (
+            <ProfileDisplay address={draw.creator} size="sm" showName={true} />
+          )}
+        </div>
+
+        <div className="flex justify-between text-sm text-gray-400 mb-4">
+          <span>{draw.ticketsSold} tickets sold</span>
+          <span>{parseFloat(draw.ticketPrice_LYX.toFixed(4))} LYX per ticket</span>
+        </div>
+
+        <div className="flex justify-between text-xs text-gray-500 mb-4">
+          <span>Participants: {draw.participantCount}</span>
+          <span>Max: {draw.maxTickets > 1000000 ? '∞' : draw.maxTickets}</span>
+        </div>
+
+        {draw.executorFee_LYX && draw.executorFee_LYX > 0 && (
+          <div className="text-center mb-4 p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
+            <p className="text-sm text-purple-400">
+              🎯 Executor Reward: {draw.executorFee_LYX.toFixed(4)} LYX
+            </p>
+          </div>
+        )}
+
+        <Link href={`/draws/${draw.drawId}`}>
+          <button className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium rounded-lg hover:from-pink-600 hover:to-purple-700 transition-all transform hover:scale-105">
+            View Draw
+          </button>
+        </Link>
+      </div>
+    );
+  };
+
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
@@ -179,78 +299,7 @@ export function ActiveDrawsSection() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {activeDraws.map((draw) => (
-                <div
-                  key={draw.drawId}
-                  className={`bg-white/5 backdrop-blur-lg rounded-xl p-6 border transition-all ${
-                    draw.isPlatformDraw 
-                      ? 'border-yellow-500/50 hover:border-yellow-500/70 ring-2 ring-yellow-500/20' 
-                      : 'border-white/10 hover:border-pink-500/50'
-                  }`}
-                >
-                  {draw.isPlatformDraw && (
-                    <div className="mb-4 text-center">
-                      <span className="inline-block px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-medium rounded-full border border-yellow-500/30">
-                        🏆 PLATFORM DRAW
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">
-                        {draw.drawTypeName} Draw #{draw.drawId}
-                      </h3>
-                      <p className="text-sm text-gray-400">
-                        {formatTimeRemaining(draw.timeRemaining)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-pink-400">
-                        {parseFloat(draw.prizePool_LYX.toFixed(4))} LYX
-                      </p>
-                      <p className="text-xs text-gray-400">Prize Pool</p>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-400 mb-1">Created by</p>
-                    {draw.isPlatformDraw || PLATFORM_ADDRESSES.includes(draw.creator.toLowerCase()) ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center">
-                          <span className="text-white font-bold text-xs">G</span>
-                        </div>
-                        <span className="text-white font-medium">Gridotto</span>
-                      </div>
-                    ) : (
-                      <ProfileDisplay address={draw.creator} size="sm" showName={true} />
-                    )}
-                  </div>
-
-                  <div className="flex justify-between text-sm text-gray-400 mb-4">
-                    <span>{draw.ticketsSold} tickets sold</span>
-                    <span>{parseFloat(draw.ticketPrice_LYX.toFixed(4))} LYX per ticket</span>
-                  </div>
-
-                  <div className="flex justify-between text-xs text-gray-500 mb-4">
-                    <span>Participants: {draw.participantCount}</span>
-                    <span>Max: {draw.maxTickets > 1000000 ? '∞' : draw.maxTickets}</span>
-                  </div>
-
-                  {draw.executorFee_LYX && draw.executorFee_LYX > 0 && (
-                    <div className="text-center mb-4 p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
-                      <p className="text-sm text-purple-400">
-                        🎯 Executor Reward: {draw.executorFee_LYX.toFixed(4)} LYX
-                      </p>
-                    </div>
-                  )}
-
-                  <Link
-                    href={`/draws/${draw.drawId}`}
-                    className="block w-full text-center py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:from-pink-600 hover:to-purple-700 transition-all"
-                  >
-                    View Details
-                  </Link>
-                </div>
+                <NFTDrawCard key={draw.drawId} draw={draw} />
               ))}
             </div>
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { UserDraw } from '@/types/gridotto';
 import Web3 from 'web3';
 import { 
@@ -17,6 +18,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
 import { useLSP3Profile } from '@/hooks/useLSP3Profile';
+import { useNFTMetadata } from '@/hooks/useNFTMetadata';
 
 interface DrawCardProps {
   draw: UserDraw;
@@ -44,6 +46,13 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [progress, setProgress] = useState(0);
   const { profileData } = useLSP3Profile(draw.creator);
+  
+  // Fetch NFT metadata for NFT draws
+  const isNFTDraw = draw.prizeType === 'LSP8' || (typeof draw.prizeType === 'number' && draw.prizeType === 2);
+  const nftMetadata = useNFTMetadata(
+    isNFTDraw ? (draw.prizeAddress || '') : '', 
+    isNFTDraw ? (draw.tokenIds || []) : []
+  );
 
   const config = drawTypeConfig[draw.prizeType === 'LYX' ? 0 : draw.prizeType === 'LSP7' ? 1 : 2] || drawTypeConfig[0];
 
@@ -122,6 +131,41 @@ export const DrawCard = ({ draw }: DrawCardProps) => {
               <div className="text-xs text-gray-500">Ended</div>
             )}
           </div>
+
+          {/* NFT Image for NFT draws */}
+          {isNFTDraw && nftMetadata.image && !nftMetadata.loading && (
+            <div className="mb-4">
+              <div className="relative w-full h-32 rounded-lg overflow-hidden bg-gray-800">
+                <Image
+                  src={nftMetadata.image}
+                  alt={nftMetadata.name || 'NFT Prize'}
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                <div className="absolute bottom-2 left-2">
+                  <p className="text-white text-sm font-medium truncate max-w-[200px]">
+                    {nftMetadata.name || 'NFT Prize'}
+                  </p>
+                  {draw.tokenIds && draw.tokenIds.length > 1 && (
+                    <p className="text-gray-300 text-xs">
+                      +{draw.tokenIds.length - 1} more
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* NFT Loading State */}
+          {isNFTDraw && nftMetadata.loading && (
+            <div className="mb-4">
+              <div className="w-full h-32 rounded-lg bg-gray-800 animate-pulse flex items-center justify-center">
+                <PhotoIcon className="w-8 h-8 text-gray-600" />
+              </div>
+            </div>
+          )}
 
           {/* Prize Pool */}
           <div className="flex items-center justify-between">

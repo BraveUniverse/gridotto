@@ -10,6 +10,9 @@ export interface UserDraw {
   isActive: boolean;
   totalTicketsSold: number;
   participants: string[];
+  // NFT specific fields
+  prizeAddress?: string; // Contract address for LSP7/LSP8
+  tokenIds?: string[]; // Token IDs for LSP8 NFTs
 }
 
 export interface DrawInfo {
