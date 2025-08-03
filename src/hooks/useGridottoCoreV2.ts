@@ -443,33 +443,17 @@ export function useGridottoCoreV2() {
     
     try {
       const draws: any[] = [];
-      const nextDrawId = await getNextDrawId();
       
-      // If nextDrawId is 0, no draws have been created yet
-      if (nextDrawId === 0) {
-        console.log('No draws created yet (nextDrawId is 0)');
-        return [];
-      }
+      // FALLBACK: Since getNextDrawId doesn't exist in contract, scan manually
+      console.log('[getActiveDraws] getNextDrawId not available, scanning manually for draws 1-10');
       
-      console.log('[getActiveDraws] nextDrawId:', nextDrawId, 'type:', typeof nextDrawId);
-      
-      // Convert to number if it's not already
-      const nextDrawIdNum = Number(nextDrawId);
-      
-      // Get ALL draws instead of limiting to last 20
-      const startId = 1;
-      
-      // FIX: UI was using wrong range (1 to nextDrawId-1) instead of (1 to nextDrawId)
-      console.log('[getActiveDraws] nextDrawId from contract:', nextDrawIdNum);
-      console.log('[getActiveDraws] Correct range: 1 to', nextDrawIdNum, '(inclusive)');
-      
-      // Batch fetch draw details with correct range
+      // Scan draws 1-10 to find active ones (should cover all existing draws)
       const promises = [];
-      for (let i = startId; i <= nextDrawIdNum; i++) {
+      for (let i = 1; i <= 10; i++) {
         promises.push(getDrawDetails(i));
       }
       
-      console.log('[getActiveDraws] Created', promises.length, 'promises for draws', startId, 'to', nextDrawIdNum);
+      console.log('[getActiveDraws] Created', promises.length, 'promises for draws 1 to 10');
       
       const results = await Promise.all(promises);
       
@@ -477,7 +461,7 @@ export function useGridottoCoreV2() {
       
       // Filter active draws
       results.forEach((details, index) => {
-        const drawId = startId + index;
+        const drawId = 1 + index;
         console.log(`[getActiveDraws] Processing draw ${drawId}:`, {
           exists: !!details,
           isCompleted: details?.isCompleted,
