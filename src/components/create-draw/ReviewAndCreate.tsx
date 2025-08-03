@@ -103,23 +103,25 @@ export const ReviewAndCreate = ({ drawData, onCreate }: ReviewAndCreateProps) =>
         }
 
         console.log('Creating NFT draw with params:', {
+          nftContract: drawData.prizeAsset,
+          tokenIds: drawData.tokenIds,
           ticketPrice: ticketPriceWei,
-          maxTickets,
           duration,
-          minParticipants,
-          platformFeePercent,
-          nftAddress: drawData.prizeAsset,
-          tokenIds: drawData.tokenIds
+          maxTickets,
+          requirement: drawData.requirementType,
+          requiredToken: drawData.requiredToken || '0x0000000000000000000000000000000000000000',
+          minTokenAmount: drawData.minTokenAmount || 0
         });
 
         await createLSP8Draw(
-          drawData.prizeAsset,  // nftContract first
-          drawData.tokenIds,    // then tokenIds
-          ticketPriceWei,
-          maxTickets,
-          duration,
-          minParticipants,
-          platformFeePercent
+          drawData.prizeAsset,  // nftContract
+          drawData.tokenIds,    // tokenIds
+          ticketPriceWei,       // ticketPrice
+          duration,             // duration
+          maxTickets,           // maxTickets
+          drawData.requirementType, // requirement
+          drawData.requiredToken || '0x0000000000000000000000000000000000000000', // requiredToken
+          drawData.minTokenAmount || 0 // minTokenAmount
         );
       }
       

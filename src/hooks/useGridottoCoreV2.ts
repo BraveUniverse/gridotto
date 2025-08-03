@@ -186,10 +186,11 @@ export function useGridottoCoreV2() {
     nftContract: string,
     nftTokenIds: string[], // Will be converted to bytes32
     ticketPrice: string, // already in Wei (LYX)
+    duration: number, // duration in seconds
     maxTickets: number,
-    duration: number,
-    minParticipants: number,
-    platformFeePercent: number
+    requirement: number = 0, // ParticipationRequirement enum
+    requiredToken: string = '0x0000000000000000000000000000000000000000',
+    minTokenAmount: number = 0
   ) => {
     if (!contract || !account || !web3) throw new Error('Wallet not connected');
     
@@ -202,16 +203,19 @@ export function useGridottoCoreV2() {
         nftTokenIds,
         ticketPrice,
         ticketPriceInLYX: web3.utils.fromWei(ticketPrice, 'ether'),
-        maxTickets,
         duration,
-        minParticipants,
-        platformFeePercent
+        maxTickets,
+        requirement,
+        requiredToken,
+        minTokenAmount
       });
       
       // Convert token IDs to bytes32
       const bytes32TokenIds = nftTokenIds.map(id => 
         Web3.utils.padLeft(Web3.utils.toHex(id), 64)
       );
+      
+      console.log('[createNFTDraw] Converted token IDs:', bytes32TokenIds);
       
       // Note: NFT authorization should be done before this
       const tx = await sendTransaction(
@@ -220,11 +224,12 @@ export function useGridottoCoreV2() {
         [
           nftContract,
           bytes32TokenIds,
-          ticketPrice, // Already in Wei, no conversion needed
+          ticketPrice, // Already in Wei
+          duration, // Duration in seconds
           maxTickets,
-          duration,
-          minParticipants,
-          platformFeePercent
+          requirement, // ParticipationRequirement enum
+          requiredToken, // Required token address (0x0 if none)
+          minTokenAmount // Minimum token amount (0 if none)
         ],
         { from: account },
         web3,
@@ -240,6 +245,7 @@ export function useGridottoCoreV2() {
       
       return null;
     } catch (err: any) {
+      console.error('[createNFTDraw] Error:', err);
       setError(err.message);
       throw err;
     } finally {

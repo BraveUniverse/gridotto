@@ -4,7 +4,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useUPProvider } from '@/hooks/useUPProvider';
 import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
+import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
+import { CONTRACTS } from '@/config/contracts';
 import Web3 from 'web3';
+
+const PLATFORM_ADDRESSES = [
+  CONTRACTS.LUKSO_TESTNET.DIAMOND.toLowerCase(),
+  CONTRACTS.LUKSO_TESTNET.GRIDOTTO_CORE_V2_FACET.toLowerCase(),
+  CONTRACTS.LUKSO_TESTNET.GRIDOTTO_PLATFORM_DRAWS_FACET.toLowerCase()
+];
 
 interface ActiveDraw {
   drawId: number;
@@ -206,9 +214,16 @@ export function ActiveDrawsSection() {
 
                   <div className="mb-4">
                     <p className="text-sm text-gray-400 mb-1">Created by</p>
-                    <p className="text-white font-mono text-sm">
-                      {formatAddress(draw.creator)}
-                    </p>
+                    {draw.isPlatformDraw || PLATFORM_ADDRESSES.includes(draw.creator.toLowerCase()) ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-xs">G</span>
+                        </div>
+                        <span className="text-white font-medium">Gridotto</span>
+                      </div>
+                    ) : (
+                      <ProfileDisplay address={draw.creator} size="sm" showName={true} />
+                    )}
                   </div>
 
                   <div className="flex justify-between text-sm text-gray-400 mb-4">
