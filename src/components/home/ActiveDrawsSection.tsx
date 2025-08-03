@@ -74,19 +74,21 @@ export function ActiveDrawsSection() {
             drawId: drawDetails.drawId,
             creator: drawDetails.creator.toString(),
             drawType: drawType,
-            drawTypeName: drawTypeNames[drawType] || 'UNKNOWN',
+            drawTypeName: drawDetails.drawTypeName || drawTypeNames[drawType] || 'UNKNOWN',
             ticketPrice: drawDetails.ticketPrice,
-            ticketPrice_LYX: Number(Web3.utils.fromWei(drawDetails.ticketPrice, 'ether')),
+            ticketPrice_LYX: drawDetails.ticketPrice_LYX || 0, // Use hook's conversion
             prizePool: drawDetails.prizePool,
-            prizePool_LYX: Number(Web3.utils.fromWei(drawDetails.prizePool, 'ether')),
+            prizePool_LYX: drawDetails.prizePool_LYX || 0, // Use hook's conversion
             ticketsSold: Number(drawDetails.ticketsSold),
             participantCount: Number(drawDetails.participantCount),
             endTime: endTime,
             timeRemaining: timeRemaining,
             isActive: true,
             maxTickets: Number(drawDetails.maxTickets),
-            executorFee_LYX: Number(Web3.utils.fromWei(drawDetails.executorFeeCollected, 'ether')),
-            isPlatformDraw: drawType === 3 || drawType === 4 // WEEKLY or MONTHLY
+            executorFee_LYX: drawDetails.executorFee_LYX || 0, // Use hook's conversion
+            isPlatformDraw: drawType === 3 || drawType === 4, // WEEKLY or MONTHLY
+            nftContract: drawDetails.nftContract,
+            tokenIds: drawDetails.tokenIds
           };
           
           draws.push(draw);
