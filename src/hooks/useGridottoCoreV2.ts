@@ -459,15 +459,19 @@ export function useGridottoCoreV2() {
       // Get ALL draws instead of limiting to last 20
       const startId = 1;
       
-      console.log('[getActiveDraws] Fetching ALL draws from', startId, 'to', nextDrawIdNum - 1);
+      // HOTFIX: Contract getNextDrawId() bug - returns 6 but draw #6 exists
+      const actualEndId = nextDrawIdNum + 2; // Extend by +2 to catch missing draws
+      console.log('[getActiveDraws] HOTFIX: Contract nextDrawId bug detected');
+      console.log('[getActiveDraws] Original range:', startId, 'to', nextDrawIdNum - 1);
+      console.log('[getActiveDraws] Extended range:', startId, 'to', actualEndId);
       
-      // Batch fetch draw details  
+      // Batch fetch draw details with extended range
       const promises = [];
-      for (let i = startId; i < nextDrawIdNum; i++) {
+      for (let i = startId; i <= actualEndId; i++) {
         promises.push(getDrawDetails(i));
       }
       
-      console.log('[getActiveDraws] Created', promises.length, 'promises for draws', startId, 'to', nextDrawIdNum - 1);
+      console.log('[getActiveDraws] Created', promises.length, 'promises for draws', startId, 'to', actualEndId);
       
       const results = await Promise.all(promises);
       
