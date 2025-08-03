@@ -480,26 +480,52 @@ export function useGridottoCoreV2() {
               if (value === null || value === undefined) return 0;
               return Number(value);
             };
+
+            const getDrawTypeName = (drawType: number) => {
+              switch (drawType) {
+                case DrawType.USER_LYX:
+                  return 'User LYX';
+                case DrawType.USER_LSP7:
+                  return 'User LSP7';
+                case DrawType.USER_LSP8:
+                  return 'User LSP8';
+                case DrawType.PLATFORM_WEEKLY:
+                  return 'Platform Weekly';
+                case DrawType.PLATFORM_MONTHLY:
+                  return 'Platform Monthly';
+                default:
+                  return 'Unknown';
+              }
+            };
             
             // Convert BigInt values to strings/numbers for safe serialization
             draws.push({ 
               drawId: startId + index,
               creator: details.creator || '',
               drawType: safeToNumber(details.drawType),
+              drawTypeName: getDrawTypeName(safeToNumber(details.drawType)),
               tokenAddress: details.tokenAddress || '',
               ticketPrice: safeToString(details.ticketPrice),
-              maxTickets: safeToString(details.maxTickets),
-              ticketsSold: safeToString(details.ticketsSold),
+              ticketPrice_LYX: parseFloat(web3?.utils.fromWei(safeToString(details.ticketPrice), 'ether') || '0'),
+              maxTickets: safeToNumber(details.maxTickets),
+              ticketsSold: safeToNumber(details.ticketsSold),
               prizePool: safeToString(details.prizePool),
+              prizePool_LYX: parseFloat(web3?.utils.fromWei(safeToString(details.prizePool), 'ether') || '0'),
               startTime: safeToNumber(details.startTime),
               endTime: safeToNumber(details.endTime),
+              timeRemaining: safeToNumber(details.endTime) - Math.floor(Date.now() / 1000),
               minParticipants: safeToNumber(details.minParticipants),
               platformFeePercent: safeToNumber(details.platformFeePercent),
               isCompleted: details.isCompleted || false,
               isCancelled: details.isCancelled || false,
+              isActive: true, // Since we filter for active draws
               participantCount: safeToNumber(details.participantCount),
               monthlyPoolContribution: safeToString(details.monthlyPoolContribution),
-              executorFeeCollected: safeToString(details.executorFeeCollected)
+              executorFee_LYX: parseFloat(web3?.utils.fromWei(safeToString(details.executorFeeCollected || '0'), 'ether') || '0'),
+              // NFT specific fields
+              nftContract: safeToNumber(details.drawType) === 2 ? details.tokenAddress : undefined,
+              tokenIds: safeToNumber(details.drawType) === 2 ? ['0x0000000000000000000000000000000000000000000000000000000000000001'] : undefined, // Placeholder until we can get real token IDs
+              isPlatformDraw: false // Will be updated by ActiveDrawsSection logic
             });
           }
         }
@@ -511,7 +537,7 @@ export function useGridottoCoreV2() {
       console.error('Error fetching active draws:', err);
       return [];
     }
-  }, [contract, getNextDrawId, getDrawDetails]);
+  }, [contract, getNextDrawId, getDrawDetails, web3]);
 
   // Get draw participants
   const getDrawParticipants = useCallback(async (drawId: number): Promise<any[]> => {

@@ -20,13 +20,17 @@ export function useNFTMetadata(contractAddress: string, tokenIds: string[] = [])
 
   useEffect(() => {
     const fetchNFTMetadata = async () => {
+      console.log('[useNFTMetadata] Called with:', { contractAddress, tokenIds });
+      
       if (!contractAddress) {
+        console.log('[useNFTMetadata] No contract address provided');
         setMetadata({ loading: false, error: 'No contract address' });
         return;
       }
 
       try {
         setMetadata({ loading: true });
+        console.log('[useNFTMetadata] Starting metadata fetch for:', contractAddress);
 
         // Create Web3 instance
         const web3 = new Web3('https://rpc.testnet.lukso.network');
@@ -93,6 +97,8 @@ export function useNFTMetadata(contractAddress: string, tokenIds: string[] = [])
                   const response = await fetch(decodedMetadata[0].value.url);
                   const jsonMetadata = await response.json();
                   
+                  console.log('[useNFTMetadata] Found token metadata:', jsonMetadata);
+                  
                   setMetadata({
                     loading: false,
                     name: jsonMetadata.LSP4Metadata?.name || jsonMetadata.name,
@@ -110,11 +116,14 @@ export function useNFTMetadata(contractAddress: string, tokenIds: string[] = [])
 
         // Fallback: Get collection metadata
         try {
+          console.log('[useNFTMetadata] Trying collection metadata...');
           const collectionMetadata = await erc725.fetchData('LSP4Metadata') as any;
           
           if (collectionMetadata?.value?.url) {
             const response = await fetch(collectionMetadata.value.url);
             const jsonMetadata = await response.json();
+            
+            console.log('[useNFTMetadata] Found collection metadata:', jsonMetadata);
             
             setMetadata({
               loading: false,
@@ -125,7 +134,7 @@ export function useNFTMetadata(contractAddress: string, tokenIds: string[] = [])
             return;
           }
         } catch (error) {
-          console.log('Collection metadata not found');
+          console.log('[useNFTMetadata] Collection metadata not found:', error);
         }
 
         // No metadata found
