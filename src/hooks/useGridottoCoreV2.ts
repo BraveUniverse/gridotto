@@ -443,10 +443,10 @@ export function useGridottoCoreV2() {
       // Convert to number if it's not already
       const nextDrawIdNum = Number(nextDrawId);
       
-      // Limit to last 20 draws to avoid too many requests
-      const startId = Math.max(1, nextDrawIdNum - 20);
+      // Get ALL draws instead of limiting to last 20
+      const startId = 1;
       
-      console.log('[getActiveDraws] Fetching draws from', startId, 'to', nextDrawIdNum - 1);
+      console.log('[getActiveDraws] Fetching ALL draws from', startId, 'to', nextDrawIdNum - 1);
       
       // Batch fetch draw details
       const promises = [];
@@ -459,26 +459,32 @@ export function useGridottoCoreV2() {
       // Filter active draws
       results.forEach((details, index) => {
         if (details && !details.isCompleted && !details.isCancelled) {
-          // Convert BigInt values to strings/numbers for safe serialization
-          draws.push({ 
-            drawId: startId + index,
-            creator: details.creator,
-            drawType: details.drawType,
-            tokenAddress: details.tokenAddress,
-            ticketPrice: details.ticketPrice.toString(),
-            maxTickets: details.maxTickets.toString(),
-            ticketsSold: details.ticketsSold.toString(),
-            prizePool: details.prizePool.toString(),
-            startTime: Number(details.startTime),
-            endTime: Number(details.endTime),
-            minParticipants: Number(details.minParticipants),
-            platformFeePercent: Number(details.platformFeePercent),
-            isCompleted: details.isCompleted,
-            isCancelled: details.isCancelled,
-            participantCount: Number(details.participantCount),
-            monthlyPoolContribution: details.monthlyPoolContribution.toString(),
-            executorFeeCollected: details.executorFeeCollected.toString()
-          });
+          // Check if draw is still active (not expired)
+          const currentTime = Math.floor(Date.now() / 1000);
+          const endTime = Number(details.endTime);
+          
+          if (endTime > currentTime) {
+            // Convert BigInt values to strings/numbers for safe serialization
+            draws.push({ 
+              drawId: startId + index,
+              creator: details.creator,
+              drawType: details.drawType,
+              tokenAddress: details.tokenAddress,
+              ticketPrice: details.ticketPrice.toString(),
+              maxTickets: details.maxTickets.toString(),
+              ticketsSold: details.ticketsSold.toString(),
+              prizePool: details.prizePool.toString(),
+              startTime: Number(details.startTime),
+              endTime: Number(details.endTime),
+              minParticipants: Number(details.minParticipants),
+              platformFeePercent: Number(details.platformFeePercent),
+              isCompleted: details.isCompleted,
+              isCancelled: details.isCancelled,
+              participantCount: Number(details.participantCount),
+              monthlyPoolContribution: details.monthlyPoolContribution.toString(),
+              executorFeeCollected: details.executorFeeCollected.toString()
+            });
+          }
         }
       });
       

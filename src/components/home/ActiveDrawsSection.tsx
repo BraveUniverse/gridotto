@@ -3,11 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useUPProvider } from '@/hooks/useUPProvider';
-import { diamondAbi } from '@/abi';
+import { useGridottoCoreV2 } from '@/hooks/useGridottoCoreV2';
 import Web3 from 'web3';
-import { CONTRACTS } from '@/config/contracts';
-
-const DIAMOND_ADDRESS = CONTRACTS.LUKSO_TESTNET.DIAMOND;
 
 interface ActiveDraw {
   drawId: number;
@@ -30,6 +27,7 @@ interface ActiveDraw {
 
 export function ActiveDrawsSection() {
   const { web3, isConnected } = useUPProvider();
+  const { getActiveDraws } = useGridottoCoreV2();
   const [activeDraws, setActiveDraws] = useState<ActiveDraw[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
@@ -39,76 +37,50 @@ export function ActiveDrawsSection() {
 
     try {
       setLoading(true);
-      console.log('[ActiveDrawsSection] Loading all active draws...');
+      console.log('[ActiveDrawsSection] Loading active draws using hook...');
       
-      const contract = new web3.eth.Contract(diamondAbi as any, DIAMOND_ADDRESS);
-      
-      // Get next draw ID
-      const nextDrawId = await contract.methods.getNextDrawId().call();
-      console.log('[ActiveDrawsSection] Next draw ID:', nextDrawId);
+      // Use the hook's getActiveDraws function
+      const hookDraws = await getActiveDraws();
+      console.log('[ActiveDrawsSection] Hook returned draws:', hookDraws);
       
       const draws: ActiveDraw[] = [];
       const currentTime = Math.floor(Date.now() / 1000);
       
-      // Check ALL draws from 1 to nextDrawId-1 (removed limit of 10)
-      for (let i = 1; i < Number(nextDrawId); i++) {
-        try {
-          const drawDetails = await contract.methods.getDrawDetails(i).call();
+      // Process draws from hook
+      hookDraws.forEach((drawDetails: any) => {
+        if (!drawDetails) return;
+        
+        const endTime = Number(drawDetails.endTime);
+        const isActive = !drawDetails.isCompleted && !drawDetails.isCancelled && endTime > currentTime;
+        
+        if (isActive && drawDetails.creator) {
+          const drawTypeNames = ["LYX", "LSP7", "LSP8", "WEEKLY", "MONTHLY"];
+          const drawType = Number(drawDetails.drawType);
+          const timeRemaining = Math.max(0, endTime - currentTime);
           
-          // Type guard - ensure drawDetails has the expected structure
-          if (!drawDetails || typeof drawDetails !== 'object') {
-            console.log(`[ActiveDrawsSection] Invalid draw details for draw #${i}`);
-            continue;
-          }
+          const draw: ActiveDraw = {
+            drawId: drawDetails.drawId,
+            creator: drawDetails.creator.toString(),
+            drawType: drawType,
+            drawTypeName: drawTypeNames[drawType] || 'UNKNOWN',
+            ticketPrice: drawDetails.ticketPrice,
+            ticketPrice_LYX: Number(Web3.utils.fromWei(drawDetails.ticketPrice, 'ether')),
+            prizePool: drawDetails.prizePool,
+            prizePool_LYX: Number(Web3.utils.fromWei(drawDetails.prizePool, 'ether')),
+            ticketsSold: Number(drawDetails.ticketsSold),
+            participantCount: Number(drawDetails.participantCount),
+            endTime: endTime,
+            timeRemaining: timeRemaining,
+            isActive: true,
+            maxTickets: Number(drawDetails.maxTickets),
+            executorFee_LYX: Number(Web3.utils.fromWei(drawDetails.executorFeeCollected, 'ether')),
+            isPlatformDraw: drawType === 3 || drawType === 4 // WEEKLY or MONTHLY
+          };
           
-          // Check if draw is active with safe property access
-          const isCompleted = (drawDetails as any).isCompleted;
-          const isCancelled = (drawDetails as any).isCancelled;
-          const endTimeBigInt = (drawDetails as any).endTime;
-          const endTime = typeof endTimeBigInt === 'bigint' ? Number(endTimeBigInt) : Number(endTimeBigInt);
-          const creator = (drawDetails as any).creator;
-          
-          const isActive = !isCompleted && !isCancelled && endTime > currentTime;
-          
-          if (isActive && creator) {
-            const drawTypeNames = ["LYX", "LSP7", "LSP8", "WEEKLY", "MONTHLY"];
-            const drawType = Number((drawDetails as any).drawType);
-            const timeRemaining = Math.max(0, endTime - currentTime);
-            
-            // Safely convert BigInt values
-            const ticketPriceBigInt = (drawDetails as any).ticketPrice;
-            const ticketPriceStr = typeof ticketPriceBigInt === 'bigint' ? ticketPriceBigInt.toString() : String(ticketPriceBigInt);
-            
-            const prizePoolBigInt = (drawDetails as any).prizePool;
-            const prizePoolStr = typeof prizePoolBigInt === 'bigint' ? prizePoolBigInt.toString() : String(prizePoolBigInt);
-            
-            const draw: ActiveDraw = {
-              drawId: i,
-              creator: creator.toString(),
-              drawType: drawType,
-              drawTypeName: drawTypeNames[drawType] || 'UNKNOWN',
-              ticketPrice: ticketPriceStr,
-              ticketPrice_LYX: Number(Web3.utils.fromWei(ticketPriceStr, 'ether')),
-              prizePool: prizePoolStr,
-              prizePool_LYX: Number(Web3.utils.fromWei(prizePoolStr, 'ether')),
-              ticketsSold: Number((drawDetails as any).ticketsSold),
-              participantCount: Number((drawDetails as any).participantCount),
-              endTime: endTime,
-              timeRemaining: timeRemaining,
-              isActive: true,
-              maxTickets: Number((drawDetails as any).maxTickets),
-              executorFee_LYX: (drawDetails as any).executorFeeCollected ? 
-                Number(Web3.utils.fromWei((drawDetails as any).executorFeeCollected.toString(), 'ether')) : 0,
-              isPlatformDraw: drawType === 3 || drawType === 4 // WEEKLY or MONTHLY
-            };
-            
-            draws.push(draw);
-            console.log(`[ActiveDrawsSection] Active Draw #${i}:`, draw);
-          }
-        } catch (error) {
-          console.error(`[ActiveDrawsSection] Error fetching draw #${i}:`, error);
+          draws.push(draw);
+          console.log(`[ActiveDrawsSection] Processed Draw #${drawDetails.drawId}:`, draw);
         }
-      }
+      });
       
       // Sort draws: Platform draws first, then by ending time
       draws.sort((a, b) => {
